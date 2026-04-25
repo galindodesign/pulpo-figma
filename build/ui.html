@@ -180,6 +180,7 @@
       --color-royal-blue-alpha-900: #2470ebe5;
      
       --color-transparent: #ffffff00;
+
       /* --- Malachite (Success Green) --- */
       --color-malachite-50: #effef4;
       --color-malachite-100: #dafee5;
@@ -192,6 +193,28 @@
       --color-malachite-800: #126930;
       --color-malachite-900: #10572a;
       --color-malachite-950: #033015;   
+
+      /* Malachite Alpha */
+      --color-malachite-alpha-20: #0eab4305;
+      --color-malachite-alpha-50: #0eab430c;
+      --color-malachite-alpha-100: #0eab4319;
+      --color-malachite-alpha-200: #0eab4333;
+      --color-malachite-alpha-300: #0eab434c;
+      --color-malachite-alpha-400: #0eab4366;
+      --color-malachite-alpha-500: #0eab437f;
+      --color-malachite-alpha-600: #0eab4399;
+      --color-malachite-alpha-900: #0eab43e5;
+
+      /* Coral Red Alpha */
+      --color-coral-red-alpha-100: #ff383819;
+      --color-coral-red-alpha-200: #ff383833;
+      --color-coral-red-alpha-300: #ff38384c;
+      --color-coral-red-alpha-400: #ff383866;
+      --color-coral-red-alpha-500: #ff38387f;
+      --color-coral-red-alpha-600: #ff383899;
+      --color-coral-red-alpha-700: #ff3838b2;
+      --color-coral-red-alpha-800: #ff3838cc;
+      --color-coral-red-alpha-900: #ff3838e5;
 
       /* --- Lochinvar (Teal) --- */
       --color-lochinvar-50: #eefffb;
@@ -1029,20 +1052,21 @@
     }
 
     .goal-step-badge {
-      min-width: 28px;
-      height: 16px;
-      border-radius: 0;
-      border: 0;
+      min-width: 20px;
+      height: 20px;
+      border-radius: var(--radius-xs);
+      border: 1px solid transparent;
       background: transparent;
       color: var(--text-secondary);
       font-size: 10px;
       font-weight: 600;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: center;
       position: relative;
       z-index: 1;
-      padding-right: 1px;
+      padding: 0 4px;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
 
     .goal-step-badge__number,
@@ -1075,10 +1099,14 @@
     }
 
     .goal-row:hover .goal-step-badge {
+      background: var(--button-secondary-hover-bg);
+      border-color: transparent;
       color: var(--text-primary);
     }
 
     .goal-row.drag-active .goal-step-badge {
+      background: var(--button-secondary-hover-bg);
+      border-color: transparent;
       color: var(--text-link);
     }
 
@@ -1129,9 +1157,10 @@
     .goal-title-editor {
       display: flex;
       align-items: center;
-      gap: var(--space-8);
+      gap: var(--space-12);
       width: 100%;
       min-width: 0;
+      margin-right: var(--space-8);
     }
 
     .goal-title-static {
@@ -1164,22 +1193,52 @@
       flex: 0 0 96px;
     }
 
-    /* Direction chip: match inline field height + styling */
+    /* Direction badge prefix (inside metric InputField, like color-indicator in variant name) */
+    .direction-badge {
+      position: relative;
+      z-index: 10;
+      width: 18px;
+      height: 18px;
+      border-radius: var(--radius-xs);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1;
+      padding: 0;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .direction-badge:hover { opacity: 0.8; }
+    .direction-badge:focus { outline: none; }
+    .direction-badge[data-dir="increase"] { color: var(--variant-color-green); }
+    .direction-badge[data-dir="decrease"] { color: var(--variant-color-red); }
+    .direction-badge[data-dir="neutral"]  { color: var(--text-secondary); }
+
+    /* Direction chip: compact 3-state arrow button — matches SelectField styling */
     .Chip.Chip--direction {
       height: 26px;
-      padding: 0 var(--space-8);
+      min-width: 28px;
+      padding: 0 6px;
       border-radius: var(--input-field-radius);
-      background: var(--input-field-bg);
+      background: var(--input-field-dropdown-bg);
       border: var(--input-field-border);
-      border-color: var(--input-field-border-no-color);
-      color: var(--text-primary);
-      font-weight: 500;
+      font-size: 14px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
     .Chip.Chip--direction:hover {
       background: var(--input-field-hover-bg);
       border-color: var(--input-field-hover-border);
-      color: var(--text-primary);
     }
 
     .Chip.Chip--direction:focus-visible {
@@ -1188,18 +1247,10 @@
       box-shadow: var(--input-field-focus-shadow);
     }
 
-    /* Override selected styling so Decrease doesn't look like \"Primary\" */
-    .Chip.Chip--direction[aria-pressed="true"] {
-      background: var(--background-surface);
-      border-color: var(--input-field-hover-border);
-      color: var(--text-primary);
-    }
-
-    .Chip.Chip--direction[aria-pressed="true"]:hover {
-      background: var(--background-surface);
-      border-color: var(--input-field-hover-border);
-      color: var(--text-primary);
-    }
+    /* Color states per direction */
+    .Chip.Chip--direction[data-dir="increase"] { color: var(--variant-color-green); }
+    .Chip.Chip--direction[data-dir="decrease"] { color: var(--variant-color-red); }
+    .Chip.Chip--direction[data-dir="neutral"]  { color: var(--text-secondary); }
 
     /* Tighten right padding for the goal direction dropdown only */
     .goal-title-field--direction.CustomDropdown .CustomDropdown__trigger {
@@ -1207,15 +1258,15 @@
     }
 
     .goal-title-field--threshold {
-      width: 70px;
+      width: 80px;
       flex-shrink: 0;
     }
 
     /* Override InputField horizontal wrapper flex:1 so it doesn't stretch */
     .goal-title-field--threshold.InputField {
-      width: 58px;
-      max-width: 58px;
-      flex: 0 0 58px;
+      width: 100px;
+      max-width: 73px;
+      flex: 0 0 73px;
     }
 
     .goal-title-field--threshold.InputField.horizontal .InputField__wrapper {
@@ -2470,6 +2521,227 @@
       z-index: 10000;
     }
 
+    /* ── Date Range Field ─────────────────────────────────── */
+    /* ── Date Range Field ─────────────────────────────────── */
+    .date-range-field {
+      min-width: 0;
+    }
+
+    .date-range-wrapper {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .date-range-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+      height: 24px;
+      width: 100%;
+      padding: var(--input-field-padding-y) var(--input-field-padding-x);
+      background: var(--input-field-bg);
+      border: var(--input-field-border);
+      border-color: var(--input-field-border-no-color);
+      border-radius: var(--input-field-radius);
+      font-size: var(--body-md-size);
+      font-weight: var(--body-md-weight);
+      color: var(--text-primary);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+
+    .date-range-trigger:hover {
+      border-color: var(--input-field-hover-border);
+    }
+
+    .date-range-trigger[aria-expanded="true"] {
+      border-color: var(--input-field-focus-border);
+      box-shadow: var(--input-field-focus-shadow);
+    }
+
+    .date-range-label.placeholder {
+      color: var(--text-secondary);
+    }
+
+    .date-range-icon {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+      color: var(--text-secondary);
+    }
+
+    /* ── Calendar Popover ─────────────────────────────────── */
+    .date-range-popover {
+      position: fixed;
+      z-index: 9999;
+      background: var(--background-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      padding: 6px;
+      display: none;
+      width: 192px;
+      user-select: none;
+    }
+
+    .date-range-popover.open {
+      display: block;
+    }
+
+    /* Header row: prev  April 2026  next */
+    .drp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 2px 6px;
+    }
+
+    .drp-nav {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 13px;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-xs);
+      padding: 0;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+
+    .drp-nav:hover {
+      background: var(--dropdown-hover-bg);
+      color: var(--text-link);
+    }
+
+    .drp-month-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1;
+      text-align: center;
+    }
+
+    /* Day-of-week headers */
+    .drp-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      margin-bottom: 2px;
+    }
+
+    .drp-weekdays span {
+      font-size: 9px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 2px 0;
+    }
+
+    /* Day grid */
+    .drp-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 1px;
+    }
+
+    .drp-day {
+      width: 100%;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--text-primary);
+      cursor: pointer;
+      border-radius: var(--radius-xs);
+      border: none;
+      background: none;
+      padding: 0;
+      font-family: inherit;
+      transition: background 0.1s, color 0.1s;
+    }
+
+    .drp-day:hover:not(.drp-day--outside) {
+      background: var(--dropdown-hover-bg);
+      color: var(--text-link);
+    }
+
+    .drp-day--outside {
+      color: var(--text-secondary);
+      opacity: 0.35;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .drp-day--today {
+      font-weight: 700;
+    }
+
+    /* Single selected (start or end when no range yet) */
+    .drp-day--selected {
+      background: var(--text-link) !important;
+      color: #fff !important;
+      border-radius: var(--radius-xs) !important;
+    }
+
+    /* In-range (between start and end) */
+    .drp-day--in-range {
+      background: var(--dropdown-selected-bg);
+      color: var(--text-link);
+      border-radius: 0;
+    }
+
+    /* Range start cap */
+    .drp-day--range-start {
+      background: var(--text-link) !important;
+      color: #fff !important;
+      border-radius: var(--radius-xs) 0 0 var(--radius-xs) !important;
+    }
+
+    /* Range end cap */
+    .drp-day--range-end {
+      background: var(--text-link) !important;
+      color: #fff !important;
+      border-radius: 0 var(--radius-xs) var(--radius-xs) 0 !important;
+    }
+
+    /* When start == end (single day range) */
+    .drp-day--range-start.drp-day--range-end {
+      border-radius: var(--radius-xs) !important;
+    }
+
+    /* Hint row at the bottom */
+    .drp-hint {
+      font-size: 9px;
+      color: var(--text-secondary);
+      text-align: center;
+      padding-top: 5px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Section info icon ───────────────────────────────── */
+    .section-info-icon {
+      display: inline-flex;
+      align-items: center;
+      color: var(--text-secondary);
+      opacity: 0.5;
+      cursor: default;
+      transition: opacity 0.15s;
+      position: relative;
+    }
+
+    .section-info-icon:hover {
+      opacity: 1;
+    }
+
     /* Color Picker Popover */
     .color-popover {
       position: absolute;
@@ -3359,6 +3631,7 @@
       background: var(--button-secondary-hover-bg);
     }
 
+
     /* Compact toggle-sized button (for inline controls like Primary) */
     .Button.Button--toggle {
       height: 24px;
@@ -4107,80 +4380,83 @@
       <section class="section-header">
         <div class="header-row">
           <div class="header-content">
-            <h2>Experiment</h2>
-            <p class="body-md">Define what you’re testing, where it runs, and how you’ll measure success.</p>
+            <div style="display: flex; align-items: center; gap: var(--space-4);">
+              <h2>Experiment</h2>
+              <span class="section-info-icon" data-tooltip="Name, hypothesis, audience &amp; timeline for your test." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Experiment">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
+                  <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
+                  <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                  <circle cx="8" cy="5.25" r="0.75" fill="currentColor"/>
+                </svg>
+              </span>
+            </div>
           </div>
         </div>
         <div class="header-inputs">
           <!-- Experiment Name (Required - Always Visible) -->
           <div class="InputField" data-state="default" data-variant="vertical">
-            <label class="InputField__label">Experiment name</label>
+            <label class="InputField__label">Title</label>
             <div class="InputField__wrapper">
-              <input class="InputField__input" type="text" id="experimentName" placeholder="e.g., Landing page CTA: Primary button copy">
+              <input class="InputField__input" type="text" id="experimentName" placeholder="Landing page CTA: Primary button copy">
             </div>
           </div>
           <!-- Description -->
           <div class="InputField" data-state="default" data-variant="vertical">
             <label class="InputField__label">Description</label>
             <div class="InputField__wrapper">
-              <input class="InputField__input" type="text" id="experimentDescription" placeholder="e.g., Changing the CTA copy will increase click-through rate">
+              <input class="InputField__input" type="text" id="experimentDescription" placeholder="Changing the CTA copy will increase click-through rate">
             </div>
           </div>
 
-
-          <!-- Status Row (Always Visible) -->
-          <div class="experiment-status-section">
-            <div class="experiment-status-row">
-              <!-- Hidden Experiment Type (auto-inferred from variant count) -->
-              <input type="hidden" id="experimentType" name="experimentType" value="ab_test">
-
-              <!-- Status Dropdown -->
-              <div class="status-field">
-                <div class="SelectField">
-                  <label class="SelectField__label">Status</label>
-                  <div class="CustomDropdown" id="statusDropdown">
-                    <button type="button" class="CustomDropdown__trigger" id="statusTrigger">
-                      <span class="CustomDropdown__text">Running</span>
-                      <span class="CustomDropdown__icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="m6 9 6 6 6-6"/>
-                        </svg>
-                      </span>
-                    </button>
-                    <div class="CustomDropdown__menu" id="statusMenu"></div>
-                    <input type="hidden" id="experimentStatus" name="experimentStatus" value="running">
-                  </div>
-                </div>
+          <!-- Audience + Sample Size + Dates Row -->
+          <div class="audience-sample-fields" style="display: flex; gap: var(--space-12); align-items: flex-end;">
+            <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
+              <label class="InputField__label">Audience</label>
+              <div class="InputField__wrapper">
+                <input class="InputField__input" type="text" id="experimentAudience" placeholder="All users">
               </div>
-
-              <!-- Arrow indicator (shown when Concluded is selected) -->
-              <div class="status-arrow hidden" id="statusArrow">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M5 12h14"/>
-                  <path d="m12 5 7 7-7 7"/>
-                </svg>
+            </div>
+            <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
+              <label class="InputField__label">Sample Size</label>
+              <div class="InputField__wrapper">
+                <input class="InputField__input" type="number" id="experimentSampleSize" placeholder="10000" min="0">
               </div>
+            </div>
 
-              <!-- Rolled-out Variant Dropdown (shown only when status is "Concluded") -->
-              <div class="rolledout-field hidden" id="rolledoutField">
-                <div class="SelectField">
-                  <label class="SelectField__label">Rolled out</label>
-                  <div class="CustomDropdown" id="rolledoutVariantDropdown">
-                    <button type="button" class="CustomDropdown__trigger placeholder" id="rolledoutVariantTrigger">
-                      <span class="CustomDropdown__text">Add variants first</span>
-                      <span class="CustomDropdown__icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="m6 9 6 6 6-6"/>
-                        </svg>
-                      </span>
-                    </button>
-                    <div class="CustomDropdown__menu" id="rolledoutVariantMenu"></div>
-                    <input type="hidden" id="rolledoutVariant" name="rolledoutVariant" value="">
+            <!-- Hidden date inputs -->
+            <input type="hidden" id="experimentStartDate">
+            <input type="hidden" id="experimentEndDate">
+
+            <!-- Dates picker -->
+            <div class="InputField date-range-field" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
+              <label class="InputField__label">Dates</label>
+              <div class="date-range-wrapper" id="dateRangeWrapper">
+                <button type="button" class="date-range-trigger" id="dateRangeTrigger" aria-haspopup="true" aria-expanded="false">
+                  <svg class="date-range-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+                    <path d="M2 6.5h12" stroke="currentColor" stroke-width="1.25"/>
+                    <path d="M5.5 2v2M10.5 2v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                  </svg>
+                  <span class="date-range-label placeholder" id="dateRangeLabel">Pick dates</span>
+                </button>
+                <div class="date-range-popover" id="dateRangePopover" role="dialog" aria-label="Date range picker">
+                  <div class="drp-header">
+                    <button type="button" class="drp-nav" id="drpPrev" aria-label="Previous month">‹</button>
+                    <span class="drp-month-label" id="drpMonthLabel"></span>
+                    <button type="button" class="drp-nav" id="drpNext" aria-label="Next month">›</button>
                   </div>
+                  <div class="drp-weekdays">
+                    <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                  </div>
+                  <div class="drp-grid" id="drpGrid"></div>
+                  <div class="drp-hint" id="drpHint">Select start date</div>
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- Hidden Experiment Type (auto-inferred from variant count) -->
+          <input type="hidden" id="experimentType" name="experimentType" value="ab_test">
 
           <!-- Collapsible More Options Section -->
           <details class="more-options" id="moreOptionsSection">
@@ -4188,9 +4464,61 @@
               <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m9 18 6-6-6-6"/>
               </svg>
-              Advanced settings
+              Details
             </summary>
             <div class="more-options-content">
+
+              <!-- Status + Rolled out Row -->
+              <div class="experiment-status-section">
+                <div class="experiment-status-row">
+                  <!-- Status Dropdown -->
+                  <div class="status-field">
+                    <div class="SelectField">
+                      <label class="SelectField__label">Status</label>
+                      <div class="CustomDropdown" id="statusDropdown">
+                        <button type="button" class="CustomDropdown__trigger" id="statusTrigger">
+                          <span class="CustomDropdown__text">Running</span>
+                          <span class="CustomDropdown__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                          </span>
+                        </button>
+                        <div class="CustomDropdown__menu" id="statusMenu"></div>
+                        <input type="hidden" id="experimentStatus" name="experimentStatus" value="running">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Arrow indicator (shown when Concluded is selected) -->
+                  <div class="status-arrow hidden" id="statusArrow">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M5 12h14"/>
+                      <path d="m12 5 7 7-7 7"/>
+                    </svg>
+                  </div>
+
+                  <!-- Rolled-out Variant Dropdown (shown only when status is "Concluded") -->
+                  <div class="rolledout-field hidden" id="rolledoutField">
+                    <div class="SelectField">
+                      <label class="SelectField__label">Rolled out</label>
+                      <div class="CustomDropdown" id="rolledoutVariantDropdown">
+                        <button type="button" class="CustomDropdown__trigger placeholder" id="rolledoutVariantTrigger">
+                          <span class="CustomDropdown__text">Add variants first</span>
+                          <span class="CustomDropdown__icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                          </span>
+                        </button>
+                        <div class="CustomDropdown__menu" id="rolledoutVariantMenu"></div>
+                        <input type="hidden" id="rolledoutVariant" name="rolledoutVariant" value="">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Hypothesis -->
               <div class="InputField" data-state="default" data-variant="vertical">
                 <label class="InputField__label">Hypothesis</label>
@@ -4199,37 +4527,6 @@
                 </div>
               </div>
 
-              <!-- Timeline Fields -->
-              <div class="timeline-fields" style="display: flex; gap: var(--space-12);">
-                <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
-                  <label class="InputField__label">Start Date</label>
-                  <div class="InputField__wrapper">
-                    <input class="InputField__input" type="date" id="experimentStartDate">
-                  </div>
-                </div>
-                <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
-                  <label class="InputField__label">End Date</label>
-                  <div class="InputField__wrapper">
-                    <input class="InputField__input" type="date" id="experimentEndDate">
-                  </div>
-                </div>
-              </div>
-
-              <!-- Audience + Sample Size Row (Who + How Many) -->
-              <div class="audience-sample-fields" style="display: flex; gap: var(--space-12);">
-                <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
-                  <label class="InputField__label">Audience</label>
-                  <div class="InputField__wrapper">
-                    <input class="InputField__input" type="text" id="experimentAudience" placeholder="e.g., US mobile users">
-                  </div>
-                </div>
-                <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
-                  <label class="InputField__label">Sample Size</label>
-                  <div class="InputField__wrapper">
-                    <input class="InputField__input" type="number" id="experimentSampleSize" placeholder="e.g., 10000" min="0">
-                  </div>
-                </div>
-              </div>
               <!-- Confidence Level (hardcoded to 95%) -->
               <input type="hidden" id="experimentConfidenceLevel" value="95">
 
@@ -4272,8 +4569,16 @@
       <section class="section-metrics">
         <div class="metrics-header">
           <div class="section-block-left">
-            <h2>Goals</h2>
-            <p class="body-md" data-tooltip="Drag to reorder priority. Top priority is primary." data-tooltip-position="top" data-tooltip-align="start" data-tooltip-cursor="default">Define success metrics. Drag to reorder priority.</p>
+            <div style="display: flex; align-items: center; gap: var(--space-4);">
+              <h2>Goals</h2>
+              <span class="section-info-icon" data-tooltip="Metrics you’re optimizing for. Primary goal picks the winner." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Goals">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
+                  <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
+                  <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                  <circle cx="8" cy="5.25" r="0.75" fill="currentColor"/>
+                </svg>
+              </span>
+            </div>
             <span class="section-count" id="metricsCount"></span>
           </div>
           <button class="icon-btn btn-add-metric" type="button" aria-label="Add goal" data-tooltip="Add goal" data-tooltip-position="bottom" data-tooltip-align="end" data-tooltip-cursor="pointer" style="display:none">
@@ -4296,8 +4601,16 @@
       <section class="section-events">
         <div class="events-header">
           <div class="section-block-left">
-            <h2>Journey</h2>
-            <p class="body-md" data-tooltip="Drag touchpoints to reorder journey." data-tooltip-position="top" data-tooltip-align="start" data-tooltip-cursor="default">Map the sequence of touchpoints. Add variants to experiment step only.</p>
+            <div style="display: flex; align-items: center; gap: var(--space-4);">
+              <h2>Journey</h2>
+              <span class="section-info-icon" data-tooltip="User steps through your flow. Variants live at the experiment touchpoint." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Journey">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
+                  <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
+                  <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                  <circle cx="8" cy="5.25" r="0.75" fill="currentColor"/>
+                </svg>
+              </span>
+            </div>
             <span class="section-count" id="eventsCount">0 touchpoints • 0 variants</span>
           </div>
           <button class="icon-btn btn-add-event" type="button" aria-label="Add touchpoint" data-tooltip="Add touchpoint" data-tooltip-position="bottom" data-tooltip-align="end" data-tooltip-cursor="pointer" style="display:none">
@@ -4322,8 +4635,26 @@
       <footer class="section-footer">
         <button type="submit" class="Button brand">Create flow</button>
         <button type="button" id="cancel" class="Button secondary">Cancel</button>
-        <button type="button" id="refreshConnectors" class="Button secondary" title="Refresh flow">Refresh</button>
+        <button type="button" id="refreshConnectors" class="Button secondary" title="Refresh flow" style="display:none">Refresh</button>
         <span class="footer-version" id="pluginVersion" aria-label="Plugin version">v—</span>
+        <button
+          type="button"
+          id="emailMeBtn"
+          class="Button secondary"
+          aria-label="Send feedback by email"
+          data-tooltip="Send feedback"
+          data-tooltip-position="top"
+          data-tooltip-align="center"
+          data-tooltip-cursor="pointer"
+        >
+          <span class="Button__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+              <path d="m3 7 9 6 9-6"></path>
+            </svg>
+          </span>
+          Feedback
+        </button>
       </footer>
     </form>
   </div>
@@ -4339,6 +4670,26 @@
             return;
           }
         };
+
+        document.getElementById('emailMeBtn').addEventListener('click', () => {
+          const TO = 'YOUR_EMAIL@domain.com';
+          const pluginVersion = (document.getElementById('pluginVersion') || {}).textContent || '';
+          const expName = (document.getElementById('experimentName') || {}).value || '';
+          const subject = encodeURIComponent(`Petri for Figma – Feedback`);
+          const body = encodeURIComponent(
+`Hi,
+
+I have feedback about Petri for Figma.
+
+---
+${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion || 'unknown'}
+---
+
+[Write your feedback here]
+`
+          );
+          window.open(`mailto:${TO}?subject=${subject}&body=${body}`);
+        });
     /**
      * Lucide Icons - Centralized icon definitions
      * Official SVG paths from https://github.com/lucide-icons/lucide/tree/main/icons
@@ -5074,7 +5425,7 @@
       stepBadge.className = 'goal-step-badge';
       const stepBadgeNumber = document.createElement('span');
       stepBadgeNumber.className = 'goal-step-badge__number';
-      stepBadgeNumber.textContent = `#${index + 1}`;
+      stepBadgeNumber.textContent = String(index + 1);
       const stepBadgeDragIcon = document.createElement('span');
       stepBadgeDragIcon.className = 'goal-step-badge__drag-icon';
       stepBadgeDragIcon.innerHTML = getIcon(ROW_DRAG_ICON.name, { size: ROW_DRAG_ICON.size, strokeWidth: ROW_DRAG_ICON.strokeWidth });
@@ -5090,6 +5441,34 @@
       const titleEditor = document.createElement('div');
       titleEditor.className = 'goal-title-editor';
 
+      const DIRECTIONS = ['increase', 'decrease', 'neutral'];
+      const DIR_ARROWS = { increase: '↑', decrease: '↓', neutral: '→' };
+      const DIR_TOOLTIPS = { increase: 'Increase', decrease: 'Decrease', neutral: 'No change' };
+
+      // Direction badge — clickable prefix inside the threshold InputField
+      const directionBadge = document.createElement('button');
+      directionBadge.type = 'button';
+      directionBadge.className = 'direction-badge';
+      const currentDir = metric.direction || 'increase';
+      directionBadge.setAttribute('data-dir', currentDir);
+      directionBadge.textContent = DIR_ARROWS[currentDir];
+      directionBadge.setAttribute('data-tooltip', DIR_TOOLTIPS[currentDir]);
+      directionBadge.setAttribute('data-tooltip-position', 'bottom');
+      directionBadge.setAttribute('data-tooltip-cursor', 'pointer');
+
+      const toggleDirection = () => {
+        const idx = DIRECTIONS.indexOf(metric.direction || 'increase');
+        metric.direction = DIRECTIONS[(idx + 1) % DIRECTIONS.length];
+        updateTitle();
+      };
+
+      directionBadge.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleDirection();
+      });
+
+      // Metric name field — plain InputField, no prefix
       const metricInline = document.createElement('div');
       metricInline.className = 'goal-title-field goal-title-field--metric InputField';
       metricInline.dataset.variant = 'horizontal';
@@ -5109,42 +5488,7 @@
       const willText = document.createElement('span');
       willText.className = 'goal-title-static';
       willText.textContent = 'will';
-
-      // Direction: inline chip toggle (increase/Decrease)
-      const directionInline = document.createElement('div');
-      directionInline.className = 'goal-title-field goal-title-field--direction';
-
-      const directionChip = document.createElement('button');
-      directionChip.type = 'button';
-      directionChip.className = 'Chip Chip--direction Chip--noIcon';
-      directionChip.setAttribute('aria-pressed', 'false');
-      directionChip.setAttribute('data-tooltip-position', 'bottom');
-      directionChip.setAttribute('data-tooltip-cursor', 'pointer');
-      directionChip.setAttribute('aria-label', 'increase');
-      directionChip.innerHTML = `
-        <span class="Chip__labelStack" aria-hidden="true">
-          <span class="Chip__label--on">decrease</span>
-          <span class="Chip__label--off">increase</span>
-        </span>
-      `;
-
-      const toggleDirection = () => {
-        const current = metric.direction === 'decrease' ? 'decrease' : 'increase';
-        metric.direction = current === 'decrease' ? 'increase' : 'decrease';
-        updateTitle();
-      };
-
-      directionChip.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleDirection();
-      });
-
-      directionInline.appendChild(directionChip);
-
-      const byText = document.createElement('span');
-      byText.className = 'goal-title-static';
-      byText.textContent = 'by';
+      willText.style.display = 'none';
 
       const thresholdInline = createInputField({
         id: `metric-threshold-inline-${index}`,
@@ -5157,7 +5501,9 @@
         text: metric.thresholdPct !== undefined ? String(metric.thresholdPct) : '',
         variant: 'horizontal',
         inputType: 'number',
+        prefixElement: directionBadge,
         onChange: (value) => {
+          if (metric.direction === 'neutral') return;
           const raw = String(value);
           if (raw === '' || raw === '-' || raw === '.' || raw === '-.') return;
           const num = parseFloat(raw);
@@ -5176,8 +5522,6 @@
 
       titleEditor.appendChild(metricInline);
       titleEditor.appendChild(willText);
-      titleEditor.appendChild(directionInline);
-      titleEditor.appendChild(byText);
       titleEditor.appendChild(thresholdInline);
       titleEl.appendChild(titleEditor);
 
@@ -5201,33 +5545,42 @@
 
       const updateTitle = () => {
         const metricName = (typeof metric.name === 'string') ? metric.name.trim() : '';
-        const dir = metric.direction === 'decrease' ? 'decrease' : 'increase';
+        const dir = ['increase', 'decrease', 'neutral'].includes(metric.direction) ? metric.direction : 'increase';
         const pct = (metric.thresholdPct !== undefined && metric.thresholdPct !== null && metric.thresholdPct !== '') ? metric.thresholdPct : '';
 
-        // Keep inline header editor in sync with model (avoid clobbering active edits)
         if (document.activeElement !== metricInlineInput) {
           metricInlineInput.value = metricName;
         }
         metricInline.classList.toggle('entered', metricInlineInput.value.trim().length > 0);
         metricInline.dataset.state = metricInline.classList.contains('entered') ? 'entered' : 'default';
 
-        // Prefix (abbreviation), like variant metrics
         const abbr = (typeof metric.abbreviation === 'string') ? metric.abbreviation.trim() : '';
         metricInlinePrefix.textContent = abbr;
         metricInlinePrefix.classList.toggle('hidden', abbr.length === 0);
 
-        // Direction chip state (pressed = Decrease)
-        const isDecrease = dir === 'decrease';
-        directionChip.setAttribute('aria-pressed', isDecrease ? 'true' : 'false');
-        // Tooltip copy: action-oriented + consistent with other chips
-        directionChip.setAttribute('data-tooltip', isDecrease ? 'Set direction to increase' : 'Set direction to decrease');
-        directionChip.setAttribute('aria-label', isDecrease ? 'decrease' : 'increase');
+        // Direction badge: update arrow + color + tooltip
+        directionBadge.textContent = DIR_ARROWS[dir];
+        directionBadge.setAttribute('data-dir', dir);
+        directionBadge.setAttribute('data-tooltip', DIR_TOOLTIPS[dir]);
+        directionBadge.setAttribute('aria-label', dir);
 
-        if (document.activeElement !== thresholdInlineInput) {
-          thresholdInlineInput.value = pct === '' ? '' : String(pct);
+        // If neutral, clear and hide threshold; otherwise show it
+        const isNeutral = dir === 'neutral';
+        const thresholdSuffix = thresholdInline.querySelector('.InputField__suffix');
+        if (isNeutral) {
+          metric.thresholdPct = null;
+          thresholdInlineInput.value = '';
+          thresholdInlineInput.disabled = true;
+          thresholdInlineInput.placeholder = '—';
+          if (thresholdSuffix) thresholdSuffix.classList.add('hidden');
+        } else {
+          thresholdInlineInput.disabled = false;
+          thresholdInlineInput.placeholder = '2';
+          if (thresholdSuffix) thresholdSuffix.classList.remove('hidden');
+          if (document.activeElement !== thresholdInlineInput) {
+            thresholdInlineInput.value = pct === '' ? '' : String(pct);
+          }
         }
-        thresholdInline.classList.toggle('entered', thresholdInlineInput.value.trim().length > 0);
-        thresholdInline.dataset.state = thresholdInline.classList.contains('entered') ? 'entered' : 'default';
       };
 
       // Delete
@@ -5245,12 +5598,10 @@
       });
       metricInlineInput.addEventListener('change', () => {
         metric.name = metricInlineInput.value.trim();
-        // Same abbreviation behavior as the full field
         if (metric.name && !metric.abbreviation) {
           const words = metric.name.split(' ');
           metric.abbreviation = words.map(w => w[0]).join('').toUpperCase().slice(0, 3);
         }
-        // Keep prefix in sync immediately
         const abbr = (typeof metric.abbreviation === 'string') ? metric.abbreviation.trim() : '';
         metricInlinePrefix.textContent = abbr;
         metricInlinePrefix.classList.toggle('hidden', abbr.length === 0);
@@ -8358,8 +8709,7 @@
         const today = new Date();
         const startDate = today.toISOString().split('T')[0];
         const endDate = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        document.getElementById('experimentStartDate').value = startDate;
-        document.getElementById('experimentEndDate').value = endDate;
+        if (window._setDateRange) window._setDateRange(startDate, endDate);
 
         document.getElementById('experimentAudience').value = 'US users on desktop';
         document.getElementById('experimentSampleSize').value = '5000';
@@ -8407,12 +8757,228 @@
         showForm();
       }
 
+      // ── Date Range Picker (custom calendar) ─────────────────
+      (function initDateRangePicker() {
+        const trigger     = document.getElementById('dateRangeTrigger');
+        const popover     = document.getElementById('dateRangePopover');
+        const labelEl     = document.getElementById('dateRangeLabel');
+        const grid        = document.getElementById('drpGrid');
+        const monthLabel  = document.getElementById('drpMonthLabel');
+        const hintEl      = document.getElementById('drpHint');
+        const prevBtn     = document.getElementById('drpPrev');
+        const nextBtn     = document.getElementById('drpNext');
+        const hiddenStart = document.getElementById('experimentStartDate');
+        const hiddenEnd   = document.getElementById('experimentEndDate');
+
+        const MONTHS = ['January','February','March','April','May','June',
+                        'July','August','September','October','November','December'];
+
+        let viewYear, viewMonth;   // displayed month
+        let selStart = null;       // Date | null
+        let selEnd   = null;       // Date | null
+        let mode     = 'start';    // 'start' | 'end'
+
+        function toISO(d) {
+          if (!d) return '';
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return d.getFullYear() + '-' + mm + '-' + dd;
+        }
+
+        function fmtShort(d) {
+          if (!d) return '';
+          return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function sameDay(a, b) {
+          return a && b && a.getFullYear() === b.getFullYear()
+            && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+        }
+
+        function updateLabel() {
+          hiddenStart.value = toISO(selStart);
+          hiddenEnd.value   = toISO(selEnd);
+          if (selStart && selEnd) {
+            labelEl.textContent = fmtShort(selStart) + ' → ' + fmtShort(selEnd);
+            labelEl.classList.remove('placeholder');
+          } else if (selStart) {
+            labelEl.textContent = fmtShort(selStart) + ' → …';
+            labelEl.classList.remove('placeholder');
+          } else {
+            labelEl.textContent = 'Pick a date range';
+            labelEl.classList.add('placeholder');
+          }
+        }
+
+        function renderCalendar() {
+          monthLabel.textContent = MONTHS[viewMonth] + ' ' + viewYear;
+          hintEl.textContent = mode === 'start' ? 'Select start date' : 'Now select end date';
+
+          // First day of month and total days
+          const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+          const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+          const today = new Date();
+
+          grid.innerHTML = '';
+
+          // Leading blanks from previous month
+          const prevDays = new Date(viewYear, viewMonth, 0).getDate();
+          for (let i = firstDay - 1; i >= 0; i--) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'drp-day drp-day--outside';
+            btn.textContent = prevDays - i;
+            grid.appendChild(btn);
+          }
+
+          // Days of this month
+          for (let d = 1; d <= daysInMonth; d++) {
+            const date = new Date(viewYear, viewMonth, d);
+            const btn  = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'drp-day';
+            btn.textContent = d;
+            btn.dataset.date = toISO(date);
+
+            if (sameDay(date, today)) btn.classList.add('drp-day--today');
+
+            const isStart = sameDay(date, selStart);
+            const isEnd   = sameDay(date, selEnd);
+            const inRange = selStart && selEnd && date > selStart && date < selEnd;
+
+            if (selStart && selEnd) {
+              if (isStart) btn.classList.add('drp-day--range-start');
+              else if (isEnd) btn.classList.add('drp-day--range-end');
+              else if (inRange) btn.classList.add('drp-day--in-range');
+            } else if (isStart || isEnd) {
+              btn.classList.add('drp-day--selected');
+            }
+
+            grid.appendChild(btn);
+          }
+
+          // Trailing blanks
+          const totalCells = firstDay + daysInMonth;
+          const trailing = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+          for (let d = 1; d <= trailing; d++) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'drp-day drp-day--outside';
+            btn.textContent = d;
+            grid.appendChild(btn);
+          }
+        }
+
+        function openPopover() {
+          const rect       = trigger.getBoundingClientRect();
+          const popW       = 192; // matches .date-range-popover width
+          const vpW        = window.innerWidth;
+
+          // Position below trigger
+          popover.style.top = (rect.bottom + 4) + 'px';
+
+          // Prefer left-aligned; flip right-aligned if it would overflow viewport
+          if (rect.left + popW > vpW - 8) {
+            popover.style.left = 'auto';
+            popover.style.right = (vpW - rect.right) + 'px';
+          } else {
+            popover.style.right = 'auto';
+            popover.style.left  = rect.left + 'px';
+          }
+
+          popover.classList.add('open');
+          trigger.setAttribute('aria-expanded', 'true');
+          const ref = selStart || new Date();
+          viewYear  = ref.getFullYear();
+          viewMonth = ref.getMonth();
+          mode = selStart && selEnd ? 'start' : (selStart ? 'end' : 'start');
+          renderCalendar();
+        }
+
+        function closePopover() {
+          popover.classList.remove('open');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+
+        trigger.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          popover.classList.contains('open') ? closePopover() : openPopover();
+        });
+
+        prevBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          viewMonth--;
+          if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+          renderCalendar();
+        });
+
+        nextBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          viewMonth++;
+          if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+          renderCalendar();
+        });
+
+        grid.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const btn = ev.target.closest('.drp-day:not(.drp-day--outside)');
+          if (!btn) return;
+          const [y, m, d] = btn.dataset.date.split('-').map(Number);
+          const picked = new Date(y, m - 1, d);
+
+          if (mode === 'start') {
+            selStart = picked;
+            selEnd   = null;
+            mode = 'end';
+          } else {
+            if (picked < selStart) {
+              selEnd   = selStart;
+              selStart = picked;
+            } else {
+              selEnd = picked;
+            }
+            mode = 'start';
+            // Close after picking end
+            setTimeout(closePopover, 120);
+          }
+          updateLabel();
+          renderCalendar();
+        });
+
+        document.addEventListener('click', (ev) => {
+          if (!popover.contains(ev.target) && !trigger.contains(ev.target)) {
+            closePopover();
+          }
+        });
+
+        // Public setter for loadExample / reset
+        window._setDateRange = function(startISO, endISO) {
+          if (startISO) {
+            const [y, m, d] = startISO.split('-').map(Number);
+            selStart = new Date(y, m - 1, d);
+          } else { selStart = null; }
+          if (endISO) {
+            const [y, m, d] = endISO.split('-').map(Number);
+            selEnd = new Date(y, m - 1, d);
+          } else { selEnd = null; }
+          mode = 'start';
+          updateLabel();
+        };
+
+        updateLabel();
+      })();
+
       btnNewExperiment.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         // Clear any existing data for a fresh start
         document.getElementById('experimentName').value = '';
         document.getElementById('experimentDescription').value = '';
+        document.getElementById('experimentHypothesis').value = '';
+        if (window._setDateRange) window._setDateRange('', '');
+        document.getElementById('experimentAudience').value = '';
+        document.getElementById('experimentSampleSize').value = '';
+        document.getElementById('experimentOwner').value = '';
         metrics = [];
         events = [];
         renderMetrics(metrics, true);
