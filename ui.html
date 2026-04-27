@@ -349,6 +349,14 @@
      * FIGMA PLUGIN TYPOGRAPHY
      */
     
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
     /* Reset & Base Typography */
     *, *::before, *::after {
       margin: 0;
@@ -493,13 +501,17 @@
      * ============================================ */
     .intro-screen {
       display: flex;
+      position: fixed;
+      inset: 0;
       flex-direction: column;
       align-items: flex-start;
       justify-content: center;
-      height: 100%;
+      width: 100%;
+      height: 100vh;
       background: var(--background-surface);
       padding: 60px 80px 60px 60px;
       overflow: auto;
+      box-sizing: border-box;
     }
 
     .intro-screen__content {
@@ -577,6 +589,12 @@
       font-weight: 500;
     }
 
+    .intro-screen__actions .Button {
+      position: relative;
+      z-index: 2;
+      pointer-events: auto;
+    }
+
     /* Back to intro link */
    .back-to-intro-link-container {
       padding: var(--space-12) var(--space-12) var(--space-0) var(--space-16);
@@ -609,14 +627,21 @@
     /* Form Container*/
     .form-container {
       display: flex;
+      position: fixed;
+      inset: 0;
       flex-direction: column;
-      height: 100%;
+      width: 100%;
+      height: 100vh;
+      min-height: 100vh;
+      background: var(--background-surface);
       overflow: hidden;
+      box-sizing: border-box;
     }
 
     /* Scrollable content area (everything except footer) */
     .form-content {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
       overflow-x: hidden;
     }
@@ -4299,6 +4324,7 @@
   </style>
 </head>
 <body>
+  <div class="app">
   <div class="intro-screen" id="introScreen">
       <div class="intro-screen__content">
         <!-- Logo -->
@@ -4373,6 +4399,7 @@
         </div>
       </div>
     </div>
+  </div>
 
     <form id="exp-form" autocomplete="off" class="form-container" style="display:none;">
       <!-- Scrollable content area -->
@@ -4679,7 +4706,54 @@
           }
         };
 
-        document.getElementById('emailMeBtn').addEventListener('click', () => {
+        // Global intro button actions — called by inline onclick on buttons,
+        // and also wired up by initIntroScreen() below.
+        window._petriShowForm = function() {
+          var introScreen = document.getElementById('introScreen');
+          var form = document.getElementById('exp-form');
+          if (!introScreen || !form) return;
+          introScreen.style.display = 'none';
+          form.style.display = 'flex';
+          var formContent = form.querySelector('.form-content');
+          if (formContent) formContent.scrollTop = 0;
+          var nameInput = document.getElementById('experimentName');
+          if (nameInput) setTimeout(function() { nameInput.focus(); }, 50);
+        };
+
+        window.startNewExperiment = function() {
+          ['experimentName','experimentDescription','experimentHypothesis',
+           'experimentAudience','experimentSampleSize','experimentOwner'].forEach(function(id) {
+            var el = document.getElementById(id); if (el) el.value = '';
+          });
+          try { if (window._setDateRange) window._setDateRange('', ''); } catch(_) {}
+          window._petriShowForm();
+        };
+
+        window.startExampleExperiment = function() {
+          var vals = {
+            experimentName: 'Landing Page CTA Test',
+            experimentDescription: 'Testing a new primary button copy to increase click-through rate',
+            experimentHypothesis: 'If we change the CTA button text to action-oriented copy, then click-through rate will increase by 5%, because users will better understand the value proposition.',
+            experimentAudience: 'US users on desktop',
+            experimentSampleSize: '5000',
+            experimentOwner: 'Growth Team'
+          };
+          Object.keys(vals).forEach(function(id) {
+            var el = document.getElementById(id); if (el) el.value = vals[id];
+          });
+          try {
+            if (window._setDateRange) {
+              var today = new Date();
+              var s = today.toISOString().split('T')[0];
+              var e = new Date(today.getTime() + 14*24*60*60*1000).toISOString().split('T')[0];
+              window._setDateRange(s, e);
+            }
+          } catch(_) {}
+          window._petriShowForm();
+        };
+
+        const emailMeBtn = document.getElementById('emailMeBtn');
+        if (emailMeBtn) emailMeBtn.addEventListener('click', () => {
           const TO = 'YOUR_EMAIL@domain.com';
           const pluginVersion = (document.getElementById('pluginVersion') || {}).textContent || '';
           const expName = (document.getElementById('experimentName') || {}).value || '';
@@ -4697,7 +4771,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 `
           );
           window.open(`mailto:${TO}?subject=${subject}&body=${body}`);
-        });
+  });
     /**
      * Lucide Icons - Centralized icon definitions
      * Official SVG paths from https://github.com/lucide-icons/lucide/tree/main/icons
@@ -8689,80 +8763,105 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const btnNewExperiment = document.getElementById('btnNewExperiment');
       const btnLoadExample = document.getElementById('btnLoadExample');
 
-      if (!introScreen || !form || !btnNewExperiment || !btnLoadExample) return;
+      console.log('[Petri] initIntroScreen called', { introScreen: !!introScreen, form: !!form, btnNewExperiment: !!btnNewExperiment, btnLoadExample: !!btnLoadExample });
+      if (!introScreen || !form || !btnNewExperiment || !btnLoadExample) {
+        console.error('[Petri] initIntroScreen: missing required element(s)', {
+          introScreen: !!introScreen, form: !!form,
+          btnNewExperiment: !!btnNewExperiment, btnLoadExample: !!btnLoadExample
+        });
+        return;
+      }
+      console.log('[Petri] initIntroScreen: all elements found, setting up listeners');
 
       function showForm() {
         introScreen.style.display = 'none';
         form.style.display = 'flex';
-        
-        // Focus on experiment name input
+        form.style.height = (window.innerHeight || 720) + 'px';
+        form.style.minHeight = (window.innerHeight || 720) + 'px';
         const expNameInput = document.getElementById('experimentName');
-        if (expNameInput) {
-          setTimeout(() => expNameInput.focus(), 100);
-        }
+        if (expNameInput) setTimeout(() => expNameInput.focus(), 100);
       }
 
       function showIntro() {
         form.style.display = 'none';
+        form.style.height = '';
+        form.style.minHeight = '';
         introScreen.style.display = 'flex';
       }
 
+      function resetForm() {
+        metrics = [];
+        events = [];
+        renderMetrics(metrics, true);
+        renderEvents(events);
+        ['experimentName','experimentDescription','experimentHypothesis',
+         'experimentAudience','experimentSampleSize','experimentOwner'].forEach(id => {
+          const el = document.getElementById(id); if (el) el.value = '';
+        });
+        if (window._setDateRange) try { window._setDateRange('', ''); } catch(_) {}
+        try { selectStatus('running', '#506179', 'Running'); } catch(_) {}
+        const rolledoutInput = document.getElementById('rolledoutVariant');
+        if (rolledoutInput) rolledoutInput.value = '';
+        relatedLinks = [];
+        renderLinks();
+        const linkInputEl = document.getElementById('linkInput');
+        if (linkInputEl) linkInputEl.value = '';
+        const linkInputErrorEl = document.getElementById('linkInputError');
+        if (linkInputErrorEl) { linkInputErrorEl.style.display = 'none'; linkInputErrorEl.textContent = ''; }
+        const moreOptionsEl = document.getElementById('moreOptionsSection');
+        if (moreOptionsEl) moreOptionsEl.removeAttribute('open');
+      }
+
       function loadExample() {
-        // Load example data into the form
-        document.getElementById('experimentName').value = 'Landing Page CTA Test';
-        document.getElementById('experimentDescription').value = 'Testing a new primary button copy to increase click-through rate';
-        document.getElementById('experimentHypothesis').value = 'If we change the CTA button text to action-oriented copy, then click-through rate will increase by 5%, because users will better understand the value proposition.';
-
-        // Set sample date range
-        const today = new Date();
-        const startDate = today.toISOString().split('T')[0];
-        const endDate = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        if (window._setDateRange) window._setDateRange(startDate, endDate);
-
-        document.getElementById('experimentAudience').value = 'US users on desktop';
-        document.getElementById('experimentSampleSize').value = '5000';
-        document.getElementById('experimentOwner').value = 'Growth Team';
-
-        // Load example metrics
         metrics = [
           { id: 'metric-0', name: 'Click-through rate', abbreviation: 'CTR', direction: 'increase', thresholdPct: 5, isPrimary: true },
           { id: 'metric-1', name: 'Conversion rate', abbreviation: 'CR', direction: 'increase', thresholdPct: 3 }
         ];
         renderMetrics(metrics, true);
 
-        // Load example events
         events = [
           { id: 'event-0', name: 'Landing page', hasVariants: false, variants: [] },
           {
-            id: 'event-1',
-            name: 'Call-to-action',
-            hasVariants: true,
+            id: 'event-1', name: 'Call-to-action', hasVariants: true,
             variants: [
-              { 
-                id: 'var-0', 
-                name: 'Control', 
-                description: 'Original button text: "Learn More"',
-                color: '#3B8FF6',
-                traffic: 50,
-                isControl: true,
-                metrics: { ctr: 2.4, cr: 0.8 }
-              },
-              {
-                id: 'var-1',
-                name: 'Variation A',
-                description: 'New button text: "Start Your Free Trial"',
-                color: '#0EAB43',
-                traffic: 50,
-                isControl: false,
-                metrics: { ctr: 3.8, cr: 1.2 }
-              }
+              { id: 'var-0', name: 'Control', description: 'Original button text: "Learn More"', color: '#3B8FF6', traffic: 50, isControl: true, metrics: { ctr: 2.4, cr: 0.8 } },
+              { id: 'var-1', name: 'Variation A', description: 'New button text: "Start Your Free Trial"', color: '#0EAB43', traffic: 50, isControl: false, metrics: { ctr: 3.8, cr: 1.2 } }
             ]
           },
           { id: 'event-2', name: 'Checkout page', hasVariants: false, variants: [] }
         ];
         renderEvents(events);
 
-        showForm();
+        const vals = {
+          experimentName: 'Landing Page CTA Test',
+          experimentDescription: 'Testing a new primary button copy to increase click-through rate',
+          experimentHypothesis: 'If we change the CTA button text to action-oriented copy, then click-through rate will increase by 5%, because users will better understand the value proposition.',
+          experimentAudience: 'US users on desktop',
+          experimentSampleSize: '5000',
+          experimentOwner: 'Growth Team'
+        };
+        Object.keys(vals).forEach(id => { const el = document.getElementById(id); if (el) el.value = vals[id]; });
+
+        if (window._setDateRange) {
+          try {
+            const today = new Date();
+            const s = today.toISOString().split('T')[0];
+            const e = new Date(today.getTime() + 14*24*60*60*1000).toISOString().split('T')[0];
+            window._setDateRange(s, e);
+          } catch(_) {}
+        }
+
+        try { selectStatus('running', '#506179', 'Running'); } catch(_) {}
+        const rolledoutInput = document.getElementById('rolledoutVariant');
+        if (rolledoutInput) rolledoutInput.value = '';
+        relatedLinks = [];
+        renderLinks();
+        const linkInputEl = document.getElementById('linkInput');
+        if (linkInputEl) linkInputEl.value = '';
+        const linkInputErrorEl = document.getElementById('linkInputError');
+        if (linkInputErrorEl) { linkInputErrorEl.style.display = 'none'; linkInputErrorEl.textContent = ''; }
+        const moreOptionsEl = document.getElementById('moreOptionsSection');
+        if (moreOptionsEl) moreOptionsEl.setAttribute('open', '');
       }
 
       // ── Date Range Picker (custom calendar) ─────────────────
@@ -8777,6 +8876,12 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         const nextBtn     = document.getElementById('drpNext');
         const hiddenStart = document.getElementById('experimentStartDate');
         const hiddenEnd   = document.getElementById('experimentEndDate');
+
+        if (!trigger || !popover || !labelEl || !grid || !monthLabel || !hintEl || !prevBtn || !nextBtn || !hiddenStart || !hiddenEnd) {
+          // Keep API stable even if date picker markup is unavailable
+          window._setDateRange = function() {};
+          return;
+        }
 
         const MONTHS = ['January','February','March','April','May','June',
                         'July','August','September','October','November','December'];
@@ -8979,25 +9084,29 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       btnNewExperiment.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // Clear any existing data for a fresh start
-        document.getElementById('experimentName').value = '';
-        document.getElementById('experimentDescription').value = '';
-        document.getElementById('experimentHypothesis').value = '';
-        if (window._setDateRange) window._setDateRange('', '');
-        document.getElementById('experimentAudience').value = '';
-        document.getElementById('experimentSampleSize').value = '';
-        document.getElementById('experimentOwner').value = '';
-        metrics = [];
-        events = [];
-        renderMetrics(metrics, true);
-        renderEvents(events);
+        console.log('[Petri] btnNewExperiment clicked');
+        try { resetForm(); } catch(err) { console.error('[Petri] resetForm error:', err); }
         showForm();
+        console.log('[Petri] after showForm:', {
+          innerHeight: window.innerHeight,
+          introDisplay: introScreen.style.display,
+          formDisplay: form.style.display,
+          formOffsetHeight: form.offsetHeight,
+          formScrollHeight: form.scrollHeight,
+          formChildren: form.children.length
+        });
+        const formContent = form.querySelector('.form-content');
+        if (formContent) formContent.scrollTop = 0;
       });
 
       btnLoadExample.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        loadExample();
+        console.log('[Petri] btnLoadExample clicked');
+        try { loadExample(); } catch(err) { console.error('[Petri] loadExample error:', err); }
+        showForm();
+        const formContent = form.querySelector('.form-content');
+        if (formContent) formContent.scrollTop = 0;
       });
 
       // Back to intro button
