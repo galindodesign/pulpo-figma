@@ -6635,28 +6635,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       content.appendChild(row1);
       content.appendChild(subtree);
 
-      // Actions (remove variant)
-      const actions = document.createElement('div');
-      actions.className = 'variant-actions';
-
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'icon-btn';
-      removeBtn.innerHTML = getIcon('x');
-      removeBtn.setAttribute('data-tooltip', 'Remove variant');
-      removeBtn.setAttribute('data-tooltip-position', 'left');
-      removeBtn.setAttribute('data-tooltip-align', 'end');
-      removeBtn.setAttribute('data-tooltip-cursor', 'pointer');
-      removeBtn.onclick = () => {
-        events[eventIndex].variants.splice(variantIndex, 1);
-        if (events[eventIndex].variants.length === 0) {
-          events[eventIndex].hasVariants = false;
-        }
-        renderEvents(events);
-      };
-
-      actions.appendChild(removeBtn);
-
       // Assemble card
       card.appendChild(content);
 
