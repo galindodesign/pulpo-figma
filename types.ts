@@ -35,6 +35,7 @@ export interface ExperimentV2 {
     winningPaths?: Array<{ eventId: string; variantId: string }>;
     notes?: string;
     rolledOutVariantId?: string;
+    rolledoutVariantId?: string;
   };
 }
 

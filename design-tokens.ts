@@ -142,7 +142,7 @@ export const TOKENS = {
   // Text
   textPrimary: '#333b47',    // --text-primary-default (azure-900)
   textPrimaryInverted: '#ffffff', // --text-primary-inverted
-  textSecondary: '#506179',  // --text-secondary-default (azure-600)
+  textSecondary: '#7F7F7F',  // --text-secondary-default
   textSecondaryInverted: '#afbbca', // --text-secondary-inverted (azure-300)
   textTertiary: '#647993',   // --text-tertiary-default (azure-500)
   textTertiaryInverted: '#d4dae3', // --text-tertiary-inverted (azure-200)
@@ -158,6 +158,7 @@ export const TOKENS = {
   borderStrong: '#b6bac3',   // --border-strong (pale-sky-300)
 
   // Accent/Status
+  accentBrand: '#8F4BFF',  // similar to --accent-brand (electric-violet-400)
   accentSuccess: '#126930',  // --accent-success (malachite-800)
   accentSuccessLight: '#42e679', // --accent-success-light (malachite-400)
   accentSuccessBg: '#0eab4319',  // --accent-success-bg (malachite-alpha-100)

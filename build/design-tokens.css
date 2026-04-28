@@ -254,7 +254,7 @@
   /* --- Text --- */
   --text-primary-default: var(--color-azure-900);
   --text-primary-inverted: #ffffff;
-  --text-secondary-default: var(--color-azure-600);
+  --text-secondary-default: #7F7F7F;
   --text-secondary-inverted: var(--color-azure-300);
   --text-tertiary-default: var(--color-azure-500);
   --text-tertiary-inverted: var(--color-azure-200);

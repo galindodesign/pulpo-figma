@@ -856,24 +856,40 @@ async function refreshConnectors(): Promise<void> {
         return { success: false, error: 'missing_nodes' };
       }
       
-      // Remove old connector and its arrowhead (if any)
+      // Remove old connector and its endpoint markers (if any)
       const parent = connector.parent;
       
-      // Find and remove arrowhead sibling (arrowheads are created as separate VectorNodes)
+      // Find and remove arrowhead/dot siblings for this connector only
       if (parent && 'children' in parent && !parent.removed) {
         try {
           const siblings = parent.children;
-          const arrowhead = siblings.find(
-            child => child.type === 'VECTOR' && 
-            (child.name === 'Arrowhead' || child.name.includes('Arrowhead')) &&
-            child !== connector &&
-            !child.removed
+          const endpointMarkers = siblings.filter(
+            child => {
+              if ((child.type !== 'VECTOR' && child.type !== 'ELLIPSE') || child === connector || child.removed) {
+                return false;
+              }
+
+              try {
+                const markerMetaString = child.getPluginData('connectorMeta');
+                if (markerMetaString) {
+                  const markerMeta = JSON.parse(markerMetaString);
+                  return markerMeta.isEndpointMarker === true &&
+                    markerMeta.fromNodeId === meta.fromNodeId &&
+                    markerMeta.toNodeId === meta.toNodeId &&
+                    markerMeta.type === meta.type;
+                }
+              } catch {
+                // Fall back to legacy name-based cleanup below
+              }
+
+              return child.name === 'Arrowhead' || child.name.includes('Arrowhead');
+            }
           );
-          if (arrowhead) {
-            arrowhead.remove();
+          for (const marker of endpointMarkers) {
+            marker.remove();
           }
         } catch (arrowErr) {
-          // Arrowhead already removed or parent changed, continue
+          // Endpoint marker already removed or parent changed, continue
         }
       }
       
@@ -1546,21 +1562,92 @@ function createConnectorV2(
   // Always work in absolute coordinates for accurate edge positioning
   // endAbs is the EXACT card edge position - use this directly for arrowhead
   const start = { ...startAbs }, end = { ...endAbs };
+  const flowFrameAbs = flowFrame ? getAbsolutePos(flowFrame) : null;
   
   // Convert to flowFrame-local if provided (only for line path coordinates)
   // Arrowhead will always use endAbs (absolute) for precise positioning
-  if (flowFrame) {
-    const frameAbs = getAbsolutePos(flowFrame);
-    start.x = startAbs.x - frameAbs.x;
-    start.y = startAbs.y - frameAbs.y;
-    end.x = endAbs.x - frameAbs.x;
-    end.y = endAbs.y - frameAbs.y;
+  if (flowFrameAbs) {
+    start.x = startAbs.x - flowFrameAbs.x;
+    start.y = startAbs.y - flowFrameAbs.y;
+    end.x = endAbs.x - flowFrameAbs.x;
+    end.y = endAbs.y - flowFrameAbs.y;
   }
   // When flowFrame is undefined, start/end are already absolute (same as startAbs/endAbs)
+
+  const primaryFlowMarkerGap = 6;
+
+  function getPrimaryFlowEndpointMetrics(): { dotSize: number; dotStrokeWeight: number; markerOffset: number } {
+    const dotSize = Math.max(12, strokeWeight * 2.5);
+    const dotStrokeWeight = Math.max(2, Math.round(strokeWeight * 0.6));
+    return {
+      dotSize,
+      dotStrokeWeight,
+      markerOffset: dotSize / 2 - dotStrokeWeight / 2 + primaryFlowMarkerGap,
+    };
+  }
+
+  function toPathCoordinates(point: { x: number; y: number }): { x: number; y: number } {
+    return flowFrameAbs
+      ? { x: point.x - flowFrameAbs.x, y: point.y - flowFrameAbs.y }
+      : point;
+  }
+
+  function getPrimaryFlowEndpointPosition(
+    edgePoint: { x: number; y: number },
+    direction: { x: number; y: number },
+    role: 'start' | 'end'
+  ): { x: number; y: number } {
+    const { markerOffset } = getPrimaryFlowEndpointMetrics();
+    const directionLength = Math.hypot(direction.x, direction.y) || 1;
+    const unitDirection = {
+      x: direction.x / directionLength,
+      y: direction.y / directionLength,
+    };
+    const directionMultiplier = role === 'start' ? 1 : -1;
+
+    return {
+      x: edgePoint.x + unitDirection.x * markerOffset * directionMultiplier,
+      y: edgePoint.y + unitDirection.y * markerOffset * directionMultiplier,
+    };
+  }
+
+  function createPrimaryFlowEndpointDot(
+    center: { x: number; y: number },
+    role: 'start' | 'end'
+  ): EllipseNode {
+    const { dotSize, dotStrokeWeight } = getPrimaryFlowEndpointMetrics();
+
+    const dot = figma.createEllipse();
+    dot.resize(dotSize, dotSize);
+    dot.fills = [{ type: "SOLID", color }];
+    dot.strokes = [{ type: "SOLID", color }];
+    dot.strokeWeight = dotStrokeWeight;
+    dot.strokeAlign = "CENTER";
+    dot.name = role === 'start' ? "Flow Start Dot" : "Flow End Dot";
+    dot.setPluginData('connectorMeta', JSON.stringify({
+      type,
+      fromNodeId: fromNode.id,
+      toNodeId: toNode.id,
+      isEndpointMarker: true,
+      markerRole: role,
+    }));
+
+    if (flowFrameAbs) {
+      dot.x = center.x - flowFrameAbs.x - dotSize / 2;
+      dot.y = center.y - flowFrameAbs.y - dotSize / 2;
+      flowFrame!.appendChild(dot);
+    } else {
+      dot.x = center.x - dotSize / 2;
+      dot.y = center.y - dotSize / 2;
+      figma.currentPage.appendChild(dot);
+    }
+
+    return dot;
+  }
   
   const index = options?.index ?? 0;
   let midX, midY;
-  let line: VectorNode, arrow: VectorNode | null = null;
+  let line: VectorNode;
   const cornerRadius = 24; // Radius for rounded corners
   
   if (Math.abs(start.x - end.x) > Math.abs(start.y - end.y)) {
@@ -1570,16 +1657,18 @@ function createConnectorV2(
     
     let pathData: string = ''; // Initialize to avoid TypeScript error
     
-    // Track the actual end point of the path for arrowhead positioning
+    // Track the actual endpoints of the path for dot positioning
+    let actualPathStart = { x: startAbs.x, y: startAbs.y };
     let actualPathEnd = { x: end.x, y: end.y };
+    let pathStartDirection = { x: 1, y: 0 }; // Default direction (right)
     let pathEndDirection = { x: 1, y: 0 }; // Default direction (right)
     
     // Get path coordinates (for all connector types)
-    const pathStartX = flowFrame ? start.x : startAbs.x;
-    const pathStartY = flowFrame ? start.y : startAbs.y;
-    const pathEndX = flowFrame ? end.x : endAbs.x;
-    const pathEndY = flowFrame ? end.y : endAbs.y;
-    const pathDy = pathEndY - pathStartY;
+    let pathStartX = flowFrame ? start.x : startAbs.x;
+    let pathStartY = flowFrame ? start.y : startAbs.y;
+    let pathEndX = flowFrame ? end.x : endAbs.x;
+    let pathEndY = flowFrame ? end.y : endAbs.y;
+    let pathDy = pathEndY - pathStartY;
     
     // PRIMARY_FLOW_LINE: entry/exit points are always straight horizontal (0 degrees), curve only at midpoint if vertically offset
     if (type === 'PRIMARY_FLOW_LINE') {
@@ -1587,14 +1676,25 @@ function createConnectorV2(
       // Entry point: straight horizontal (0 degrees) from event right edge
       // Exit point: straight horizontal (0 degrees) to event left edge
       // Midpoint: curve only if nodes are vertically offset
+      const horizontalDirection = Math.sign(pathEndX - pathStartX) || 1;
+      const primaryStartAbs = getPrimaryFlowEndpointPosition(startAbs, { x: horizontalDirection, y: 0 }, 'start');
+      const primaryEndAbs = getPrimaryFlowEndpointPosition(endAbs, { x: horizontalDirection, y: 0 }, 'end');
+      const primaryStart = toPathCoordinates(primaryStartAbs);
+      const primaryEnd = toPathCoordinates(primaryEndAbs);
+      pathStartX = primaryStart.x;
+      pathStartY = primaryStart.y;
+      pathEndX = primaryEnd.x;
+      pathEndY = primaryEnd.y;
+      pathDy = pathEndY - pathStartY;
       const absDy = Math.abs(pathDy);
       
       // If nodes are vertically aligned, use straight horizontal line (0 degrees at entry and exit)
       if (absDy < 2) {
         // Vertically aligned - straight horizontal line
         pathData = `M ${pathStartX} ${pathStartY} L ${pathEndX} ${pathStartY}`;
-        // Actual path end is at the card edge (horizontal line, so Y matches start, X matches end)
-        actualPathEnd = { x: endAbs.x, y: startAbs.y };
+        actualPathStart = primaryStartAbs;
+        actualPathEnd = primaryEndAbs;
+        pathStartDirection = { x: Math.sign(pathEndX - pathStartX), y: 0 };
         // Direction is horizontal, pointing toward the card (0 degrees)
         pathEndDirection = { x: Math.sign(pathEndX - pathStartX), y: 0 };
       } else {
@@ -1642,7 +1742,9 @@ function createConnectorV2(
         pathData += ` L ${pathEndX} ${pathEndY}`;
         
         // Actual path end is at the card edge
-        actualPathEnd = { x: endAbs.x, y: endAbs.y };
+        actualPathStart = primaryStartAbs;
+        actualPathEnd = primaryEndAbs;
+        pathStartDirection = { x: Math.sign(pathEndX - pathStartX), y: 0 };
         // Direction is horizontal, pointing toward the card (0 degrees)
         pathEndDirection = { x: Math.sign(pathEndX - pathStartX), y: 0 };
       }
@@ -1760,63 +1862,11 @@ function createConnectorV2(
     // Append to the same parent as the coordinate system
     if (flowFrame) flowFrame.appendChild(line); else figma.currentPage.appendChild(line);
     
-    // Arrowhead - only create for PRIMARY_FLOW_LINE (not for variant connectors)
-    // Variant connectors (BRANCH_LINE, MERGE_LINE) connect directly without arrowheads
+    // Endpoint dots - only create for PRIMARY_FLOW_LINE (not for variant connectors)
+    // Variant connectors (BRANCH_LINE, MERGE_LINE) connect directly without endpoint markers
     if (type === 'PRIMARY_FLOW_LINE') {
-      const arrowSize = 8; // Arrow length (tip to base)
-      arrow = figma.createVector();
-      
-      // Calculate angle from the path end direction (points toward the card)
-      const angle = Math.atan2(pathEndDirection.y, pathEndDirection.x);
-      
-      // The arrowhead tip should be exactly at the card edge
-      // For PRIMARY_FLOW_LINE horizontal lines, use endAbs.x and startAbs.y (horizontal line Y)
-      // For other cases, use endAbs (the card edge)
-      // Convert to correct coordinate system based on where arrowhead is appended
-      let tipX: number, tipY: number;
-      if (flowFrame) {
-        // Arrowhead is in flowFrame - convert absolute to relative coordinates
-        const frameAbs = getAbsolutePos(flowFrame);
-        // For horizontal PRIMARY_FLOW_LINE, Y should match the line's Y (startAbs.y)
-        const arrowY = (type === 'PRIMARY_FLOW_LINE' && Math.abs(endAbs.y - startAbs.y) < 1) ? startAbs.y : endAbs.y;
-        tipX = endAbs.x - frameAbs.x;
-        tipY = arrowY - frameAbs.y;
-      } else {
-        // Arrowhead is on page - use absolute coordinates
-        // For horizontal PRIMARY_FLOW_LINE, Y should match the line's Y (startAbs.y)
-        const arrowY = (type === 'PRIMARY_FLOW_LINE' && Math.abs(endAbs.y - startAbs.y) < 1) ? startAbs.y : endAbs.y;
-        tipX = endAbs.x;
-        tipY = arrowY;
-      }
-      
-      // Base of arrowhead is offset inward from the tip along the direction vector
-      // This ensures the arrowhead points toward the card center
-      const baseX1 = tipX - arrowSize * Math.cos(angle);
-      const baseY1 = tipY - arrowSize * Math.sin(angle);
-      
-      // Calculate perpendicular angle for base width
-      const perpAngle = angle + Math.PI / 2;
-      const halfWidth = 5; // Half of 10px total width
-      
-      // Base points form a line perpendicular to the arrow direction
-      const baseX2 = baseX1 - halfWidth * Math.cos(perpAngle);
-      const baseY2 = baseY1 - halfWidth * Math.sin(perpAngle);
-      const baseX3 = baseX1 + halfWidth * Math.cos(perpAngle);
-      const baseY3 = baseY1 + halfWidth * Math.sin(perpAngle);
-      
-      // Create filled triangle path
-      arrow.vectorPaths = [{
-        windingRule: "NONZERO",
-        data: `M ${tipX} ${tipY} L ${baseX2} ${baseY2} L ${baseX3} ${baseY3} Z`,
-      }];
-      arrow.fills = [{ type: "SOLID", color }]; // Filled arrowhead
-      arrow.strokes = [{ type: "SOLID", color }];
-      arrow.strokeWeight = strokeWeight;
-      arrow.strokeCap = "ROUND";
-      arrow.strokeJoin = "ROUND";
-      arrow.name = "Arrowhead";
-      // Append to the same parent as the coordinate system
-      if (flowFrame) flowFrame.appendChild(arrow); else figma.currentPage.appendChild(arrow);
+      createPrimaryFlowEndpointDot(actualPathStart, 'start');
+      createPrimaryFlowEndpointDot(actualPathEnd, 'end');
     }
   } else {
     // Vertical - with vertical segments at start and end
@@ -1825,9 +1875,29 @@ function createConnectorV2(
     
     let pathData: string;
     
-    // Track the actual end point of the path for arrowhead positioning
+    // Track the actual endpoints of the path for dot positioning
+    let actualPathStart = { x: startAbs.x, y: startAbs.y };
     let actualPathEnd = { x: end.x, y: end.y };
+    let pathStartDirection = { x: 0, y: 1 }; // Default direction (down)
     let pathEndDirection = { x: 0, y: 1 }; // Default direction (down)
+    let primaryPathStartX = flowFrame ? start.x : startAbs.x;
+    let primaryPathStartY = flowFrame ? start.y : startAbs.y;
+    let primaryPathEndX = flowFrame ? end.x : endAbs.x;
+    let primaryPathEndY = flowFrame ? end.y : endAbs.y;
+    let primaryStartAbs = startAbs;
+    let primaryEndAbs = endAbs;
+
+    if (type === 'PRIMARY_FLOW_LINE') {
+      const verticalDirection = Math.sign(primaryPathEndY - primaryPathStartY) || 1;
+      primaryStartAbs = getPrimaryFlowEndpointPosition(startAbs, { x: 0, y: verticalDirection }, 'start');
+      primaryEndAbs = getPrimaryFlowEndpointPosition(endAbs, { x: 0, y: verticalDirection }, 'end');
+      const primaryStart = toPathCoordinates(primaryStartAbs);
+      const primaryEnd = toPathCoordinates(primaryEndAbs);
+      primaryPathStartX = primaryStart.x;
+      primaryPathStartY = primaryStart.y;
+      primaryPathEndX = primaryEnd.x;
+      primaryPathEndY = primaryEnd.y;
+    }
     
     // For BRANCH_LINE in vertical orientation: entry/exit points are always straight, curve only at midpoint if offset
     if (type === 'BRANCH_LINE') {
@@ -1846,7 +1916,9 @@ function createConnectorV2(
       if (absDx < 2) {
         // Horizontally aligned - straight vertical line (90 degrees at entry and exit)
         pathData = `M ${pathStartX} ${pathStartY} L ${pathEndX} ${pathEndY}`;
+        actualPathStart = { x: startAbs.x, y: startAbs.y };
         actualPathEnd = { x: endAbs.x, y: endAbs.y };
+        pathStartDirection = { x: 0, y: Math.sign(pathEndY - pathStartY) };
         pathEndDirection = { x: 0, y: Math.sign(pathEndY - pathStartY) }; // Straight vertical
       } else {
         // Not aligned - use midpoint curve with straight entry/exit segments
@@ -1892,22 +1964,26 @@ function createConnectorV2(
         // Straight vertical segment to exit (90 degrees)
         pathData += ` L ${pathEndX} ${pathEndY}`;
         
+        actualPathStart = { x: startAbs.x, y: startAbs.y };
         actualPathEnd = { x: endAbs.x, y: endAbs.y };
+        pathStartDirection = { x: 0, y: Math.sign(pathEndY - pathStartY) };
         pathEndDirection = { x: 0, y: Math.sign(pathEndY - pathStartY) }; // Exit is straight vertical
       }
     } else if (Math.abs(dx) < 1) {
       // Simple straight vertical line (for other connector types)
       // CRITICAL: Path must start and end at EXACT card edge coordinates
       // Use startAbs/endAbs directly to ensure precision (when flowFrame is undefined, start/end == startAbs/endAbs)
-      const pathStartX = flowFrame ? start.x : startAbs.x;
-      const pathStartY = flowFrame ? start.y : startAbs.y;
-      const pathEndX = flowFrame ? end.x : endAbs.x;
-      const pathEndY = flowFrame ? end.y : endAbs.y;
+      const pathStartX = primaryPathStartX;
+      const pathStartY = primaryPathStartY;
+      const pathEndX = primaryPathEndX;
+      const pathEndY = primaryPathEndY;
       
       pathData = `M ${pathStartX} ${pathStartY} L ${pathEndX} ${pathEndY}`;
+      actualPathStart = primaryStartAbs;
       // Actual path end is at the card edge
       // Use endAbs (absolute coordinates) for arrowhead positioning to ensure it's at the exact card edge
-      actualPathEnd = { x: endAbs.x, y: endAbs.y };
+      actualPathEnd = primaryEndAbs;
+      pathStartDirection = { x: 0, y: Math.sign(pathEndY - pathStartY) };
       // Direction is vertical, pointing toward the card
       pathEndDirection = { x: 0, y: Math.sign(pathEndY - pathStartY) };
     } else {
@@ -1925,11 +2001,13 @@ function createConnectorV2(
         pathData = `M ${pathStartX} ${pathStartY} L ${pathEndX} ${pathEndY}`;
         
         // actualPathEnd is the exact card edge position
+        actualPathStart = { x: startAbs.x, y: startAbs.y };
         actualPathEnd = { x: endAbs.x, y: endAbs.y };
         // Direction points directly toward the card
         const dx = pathEndX - pathStartX;
         const dy = pathEndY - pathStartY;
         const length = Math.sqrt(dx * dx + dy * dy);
+        pathStartDirection = length > 0 ? { x: dx / length, y: dy / length } : { x: 0, y: 1 };
         pathEndDirection = length > 0 ? { x: dx / length, y: dy / length } : { x: 0, y: 1 };
       } else {
         // Complex path with horizontal segment and rounded corners (for PRIMARY_FLOW_LINE with horizontal displacement)
@@ -1940,10 +2018,10 @@ function createConnectorV2(
         
         // Build path: vertical down → curve → horizontal → curve → vertical down
         // CRITICAL: Path must start and end at EXACT card edge coordinates
-        const pathStartX = flowFrame ? start.x : startAbs.x;
-        const pathStartY = flowFrame ? start.y : startAbs.y;
-        const pathEndX = flowFrame ? end.x : endAbs.x;
-        const pathEndY = flowFrame ? end.y : endAbs.y;
+        const pathStartX = primaryPathStartX;
+        const pathStartY = primaryPathStartY;
+        const pathEndX = primaryPathEndX;
+        const pathEndY = primaryPathEndY;
         
         pathData = `M ${pathStartX} ${pathStartY}`;
         
@@ -1964,7 +2042,9 @@ function createConnectorV2(
         pathData += ` L ${pathEndX} ${pathEndY}`;
         
         // actualPathEnd MUST be the exact card edge position (endAbs) for arrowhead positioning
-        actualPathEnd = { x: endAbs.x, y: endAbs.y };
+        actualPathStart = primaryStartAbs;
+        actualPathEnd = primaryEndAbs;
+        pathStartDirection = { x: 0, y: Math.sign((midY - radius) - pathStartY) || Math.sign(pathEndY - pathStartY) };
         // Direction is vertical, pointing toward the card (from final segment start to end)
         pathEndDirection = { x: 0, y: Math.sign(pathEndY - finalSegmentStart.y) };
       }
@@ -1982,65 +2062,11 @@ function createConnectorV2(
     // Append to the same parent as the coordinate system
     if (flowFrame) flowFrame.appendChild(line); else figma.currentPage.appendChild(line);
     
-    // Arrowhead - only create for PRIMARY_FLOW_LINE (not for variant connectors)
-    // Variant connectors (BRANCH_LINE, MERGE_LINE) connect directly without arrowheads
+    // Endpoint dots - only create for PRIMARY_FLOW_LINE (not for variant connectors)
+    // Variant connectors (BRANCH_LINE, MERGE_LINE) connect directly without endpoint markers
     if (type === 'PRIMARY_FLOW_LINE') {
-      const arrowSize = 8; // Arrow length (tip to base)
-      arrow = figma.createVector();
-      
-      // Calculate angle from the path end direction (points toward the card)
-      const angle = Math.atan2(pathEndDirection.y, pathEndDirection.x);
-      
-      // The arrowhead tip should be exactly at the card edge (actualPathEnd)
-      // actualPathEnd is already in absolute coordinates (from endAbs)
-      // Vector paths in Figma use absolute coordinates when appended to page
-      // Convert to relative only if appended to a flowFrame
-      let tipX: number, tipY: number;
-      let baseX1: number, baseY1: number;
-      let baseX2: number, baseY2: number;
-      let baseX3: number, baseY3: number;
-      
-      // Use endAbs directly (absolute card edge position) for arrowhead
-      // This ensures the arrowhead tip is exactly at the card boundary
-      if (flowFrame) {
-        // Arrowhead is in flowFrame - convert absolute to relative coordinates
-        const frameAbs = getAbsolutePos(flowFrame);
-        tipX = endAbs.x - frameAbs.x;
-        tipY = endAbs.y - frameAbs.y;
-      } else {
-        // Arrowhead is on page - use absolute coordinates directly from endAbs
-        tipX = endAbs.x;
-        tipY = endAbs.y;
-      }
-      
-      // Base of arrowhead is offset inward from the tip along the direction vector
-      // This ensures the arrowhead points toward the card center
-      baseX1 = tipX - arrowSize * Math.cos(angle);
-      baseY1 = tipY - arrowSize * Math.sin(angle);
-      
-      // Calculate perpendicular angle for base width
-      const perpAngle = angle + Math.PI / 2;
-      const halfWidth = 5; // Half of 10px total width
-      
-      // Base points form a line perpendicular to the arrow direction
-      baseX2 = baseX1 - halfWidth * Math.cos(perpAngle);
-      baseY2 = baseY1 - halfWidth * Math.sin(perpAngle);
-      baseX3 = baseX1 + halfWidth * Math.cos(perpAngle);
-      baseY3 = baseY1 + halfWidth * Math.sin(perpAngle);
-      
-      // Create filled triangle path
-      arrow.vectorPaths = [{
-        windingRule: "NONZERO",
-        data: `M ${tipX} ${tipY} L ${baseX2} ${baseY2} L ${baseX3} ${baseY3} Z`,
-      }];
-      arrow.fills = [{ type: "SOLID", color }]; // Filled arrowhead
-      arrow.strokes = [{ type: "SOLID", color }];
-      arrow.strokeWeight = strokeWeight;
-      arrow.strokeCap = "ROUND";
-      arrow.strokeJoin = "ROUND";
-      arrow.name = "Arrowhead";
-      // Append to the same parent as the coordinate system
-      if (flowFrame) flowFrame.appendChild(arrow); else figma.currentPage.appendChild(arrow);
+      createPrimaryFlowEndpointDot(actualPathStart, 'start');
+      createPrimaryFlowEndpointDot(actualPathEnd, 'end');
     }
   }
   
@@ -2131,23 +2157,23 @@ function getConnectorStyle(
   switch (type) {
     case 'PRIMARY_FLOW_LINE':
       return {
-        strokeWeight: 1,
-        color: hexToRgb(TOKENS.textPrimary),
+        strokeWeight: 3,
+        color: hexToRgb(TOKENS.accentSuccessLight),
         dashPattern: undefined, // Solid line
         arrowhead: true,
       };
     case 'BRANCH_LINE':
       return {
-        strokeWeight: 1,
-        color: hexToRgb(TOKENS.textPrimary),
-        dashPattern: [6, 3], // Dashed pattern
+        strokeWeight: 3,
+        color: hexToRgb(TOKENS.accentBrand),
+        dashPattern: [6, 8], // Dashed pattern
         arrowhead: true,
       };
     case 'MERGE_LINE':
       return {
-        strokeWeight: 1,
-        color: hexToRgb(TOKENS.textPrimary),
-        dashPattern: [6, 3], // Dashed pattern
+        strokeWeight: 3,
+        color: hexToRgb(TOKENS.accentBrand),
+        dashPattern: [6, 8], // Dashed pattern
         arrowhead: true,
       };
     default:
@@ -2763,7 +2789,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     // Entry node is leftmost on horizontal spine - represents where users enter the experiment
     const entry = flow.entry;
     const entryCard = createNodeCard(entry.label, undefined, undefined, entry.note);
-    entryCard.name = 'Entry Node';
+    entryCard.name = 'Entry';
     attachNodeMeta(entryCard, {
       name: entry.label,
       type: 'frame' as CanvasNodeType,
@@ -2864,7 +2890,8 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
       // Create event card
       const eventCard = createEventCard(safeEventName, event.variants?.length ?? 0, eventIdx);
       // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
-      eventCard.name = `Touchpoint: ${safeEventName}`;
+      eventCard.name = `Touchpoint`;
+      // eventCard.name = `Touchpoint: ${safeEventName}`;
       attachNodeMeta(eventCard, {
         name: safeEventName,
         type: 'frame' as CanvasNodeType,
@@ -2920,7 +2947,8 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
             : `Variant ${vIdx + 1}`;
           
           // Set variant card metadata (if not already set)
-          variantCard.name = `Variant: ${safeVariantName}`;
+          variantCard.name = `Variant`;
+          // variantCard.name = `Variant: ${safeVariantName}`;
           attachNodeMeta(variantCard, {
             name: safeVariantName,
             type: 'frame' as CanvasNodeType,
@@ -2951,7 +2979,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     // Exit node is rightmost on horizontal spine - represents where users exit the experiment
     const exit = flow.exit;
     const exitCard = createNodeCard(exit.label);
-    exitCard.name = 'Exit Node';
+    exitCard.name = 'Exit';
     attachNodeMeta(exitCard, {
       name: exit.label,
       type: 'frame' as CanvasNodeType,

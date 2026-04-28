@@ -239,7 +239,7 @@
       --foreground: var(--figma-color-text, var(--color-azure-900));
       --text-primary: var(--figma-color-text, #22272f);
       --text-primary-inverse: var(--figma-color-text-onbrand, var(--color-white-100));
-      --text-secondary: var(--figma-color-text-secondary, var(--color-azure-dark-alpha-600));
+      --text-secondary: var(--figma-color-text-secondary, #7F7F7F);
       --text-link: var(--figma-color-text-brand, var(--color-royal-blue-600));
       --border: var(--figma-color-border, var(--color-pale-sky-200));
       --border-dark: var(--figma-color-border-strong, var(--color-azure-300));
@@ -284,12 +284,12 @@
       --input-height: 40px;
       --button-height: 32px;
       --button-secondary-bg: var(--background-transparent);
-      --button-secondary-hover-bg: var(--figma-color-bg-hover, var(--color-azure-dark-alpha-50));
+      --button-secondary-hover-bg: var(--color-azure-dark-alpha-50);
       --button-secondary-selected-bg: var(--figma-color-bg-selected-secondary, var(--color-azure-dark-alpha-100));
       --button-padding: 6px;
       --button-radius: var(--radius-md);
       --button-gap: var(--space-4);
-      --dropdown-hover-bg: var(--button-secondary-hover-bg);
+      --dropdown-hover-bg: var(--color-azure-dark-alpha-50);
       --dropdown-selected-bg: var(--figma-color-bg-selected-secondary, var(--color-royal-blue-50));
       --container-gap: var(--space-4);
       --variant-card-bg: #ffffff;
@@ -313,7 +313,7 @@
 
       /* === Input Field Component (from Figma node 353-7322) === */
       --input-field-bg: var(--figma-color-bg-secondary, var(--color-azure-dark-alpha-50)); 
-      --input-field-hover-bg: var(--figma-color-bg-hover, var(--color-azure-dark-alpha-50)); 
+      --input-field-hover-bg: var(--color-azure-dark-alpha-50); 
       --input-field-dropdown-bg: var(--background-surface);
       --input-field-hover-border: var(--input-field-border-color);
       --input-field-focus-border: var(--color-electric-violet-500);
@@ -1172,32 +1172,36 @@
     }
 
     .goal-step-badge__number,
-    .goal-step-badge__drag-icon {
+    .event-step-badge__number,
+    .goal-step-badge__drag-icon,
+    .event-step-badge__drag-icon {
       position: absolute;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: opacity 0.12s ease;
+      transition: opacity 0.12s ease, color 0.15s ease;
     }
 
-    .goal-step-badge__number {
+    .goal-step-badge__number,
+    .event-step-badge__number {
       opacity: 1;
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 600;
     }
 
-    .goal-step-badge__drag-icon {
+    .goal-step-badge__drag-icon,
+    .event-step-badge__drag-icon {
       opacity: 0;
+      color: inherit;
+      cursor: pointer;
     }
 
     .goal-step-badge__drag-icon .lucide,
     .event-step-badge__drag-icon .lucide {
       width: 10px;
       height: 10px;
-    }
-
-    .event-step-badge__drag-icon .lucide {
-      width: 9px;
-      height: 9px;
     }
 
     .goal-row:hover .goal-step-badge {
@@ -1231,6 +1235,7 @@
       color: var(--text-secondary);
       border-radius: var(--radius-xs);
       flex-shrink: 0;
+      cursor: pointer;
       transition: background 0.15s, color 0.15s;
     }
 
@@ -2196,8 +2201,8 @@
       height: 20px;
       border-radius: 50%;
       /* background: var(--text-secondary);*/
-      border: 1px solid var(--text-primary);
-      color: var(--text-primary);
+      border: 1px solid var(--text-secondary);
+      color: var(--text-secondary);
       font-size: 10px;
       font-weight: 600;
       display: flex;
@@ -2205,24 +2210,13 @@
       justify-content: center;
       position: relative;
       z-index: 1;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
 
-    .event-step-badge__number,
-    .event-step-badge__drag-icon {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: opacity 0.12s ease;
-    }
-
-    .event-step-badge__number {
-      opacity: 1;
-    }
-
-    .event-step-badge__drag-icon {
-      opacity: 0;
+    .event-row:not(.system):not(.add-step-row):not(:has(.event-variants-badge)):hover .event-step-badge {
+      background: var(--button-secondary-hover-bg);
+      border-color: transparent;
+      color: var(--text-primary);
     }
 
     .event-row:not(.system):not(.add-step-row):hover .event-step-badge__number,
@@ -2298,7 +2292,7 @@
       right: 0;
       top: 50%;
       transform: translateY(-50%);
-      border-top: 1px solid var(--text-link);
+        border-top: 1px solid var(--text-link);
       opacity: 0;
       transition: opacity 0.12s ease;
       z-index: 2;
@@ -2312,6 +2306,7 @@
       transform: translate(-50%, -50%);
       width: 16px;
       height: 16px;
+      /*border: 1px solid var(--text-secondary);*/
       border-radius: 999px;
       background: var(--text-link);
       color: #fff;
@@ -2520,7 +2515,6 @@
     }
 
     .variant-card:hover {
-      background: var(--variant-card-hover-bg);
       border-color: var(--color-royal-blue-alpha-200);
       box-shadow: 0 6px 18px rgba(40, 60, 90, 0.1);
       transform: translateY(-1px);
@@ -2969,6 +2963,10 @@
     /* Control toggle always visible */
     .variant-control-toggle {
       opacity: 1;
+    }
+
+    .variant-control-toggle:hover {
+      background: var(--button-secondary-hover-bg);
     }
 
     /* Variant subtree toggle button */
@@ -3839,6 +3837,9 @@
     .radio-selection:hover {
       background: var(--baseline-chip-hover-bg);
     }
+    .radio-selection.variant-control-toggle:hover {
+      background: var(--button-secondary-hover-bg);
+    }
     .radio-selection__indicator {
       width: 14px;
       height: 14px;
@@ -4127,10 +4128,15 @@
       display: flex;
       align-items: center;
       gap: var(--space-4);
-      margin-bottom: var(--space-8);
-      margin-top: var(--space-4);
+      margin: 0;
       cursor: pointer;
       user-select: none;
+    }
+
+    .links-subsection {
+      display: flex;
+      flex-direction: column;
+      gap: var(--input-field-label-gap);
     }
 
     .links-header:hover {
