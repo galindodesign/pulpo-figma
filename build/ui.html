@@ -1680,15 +1680,15 @@
     }
 
     :root[data-figma-theme="light"] {
-      --tooltip-bg: var(--tooltip-bg-light);
-      --tooltip-text: var(--tooltip-text-light);
-      --tooltip-border: 1px solid var(--tooltip-border-light);
-    }
-
-    :root[data-figma-theme="dark"] {
       --tooltip-bg: var(--tooltip-bg-dark);
       --tooltip-text: var(--tooltip-text-dark);
       --tooltip-border: 1px solid transparent;
+    }
+
+    :root[data-figma-theme="dark"] {
+      --tooltip-bg: var(--tooltip-bg-light);
+      --tooltip-text: var(--tooltip-text-light);
+      --tooltip-border: 1px solid var(--tooltip-border-light);
       --tooltip-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     }
 
