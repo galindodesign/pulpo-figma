@@ -2514,7 +2514,7 @@
       align-items: flex-start;
       flex-direction: column;
       gap: var(--space-8);
-      padding: var(--space-12);
+      padding: var(--space-8);
       background: var(--variant-card-bg);
       border-radius: var(--radius-md);
       /* border: var(--variant-card-border); */
@@ -5835,10 +5835,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       deleteBtn.className = 'icon-btn';
       deleteBtn.type = 'button';
       deleteBtn.innerHTML = getIcon('x');
-      deleteBtn.setAttribute('data-tooltip', 'Remove goal');
-      deleteBtn.setAttribute('data-tooltip-position', 'bottom');
-      deleteBtn.setAttribute('data-tooltip-align', 'end');
-      deleteBtn.setAttribute('data-tooltip-cursor', 'pointer');
 
       actions.appendChild(deleteBtn);
 
@@ -6195,9 +6191,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         const treeToggle = document.createElement('button');
         treeToggle.type = 'button';
         treeToggle.className = 'variant-tree-toggle';
-        treeToggle.setAttribute('data-tooltip', 'Expand/collapse variant details');
-        treeToggle.setAttribute('data-tooltip-position', 'top');
-        treeToggle.setAttribute('data-tooltip-cursor', 'pointer');
         treeToggle.setAttribute('aria-label', 'Expand variant details');
         treeToggle.innerHTML = '<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>';
 
@@ -6409,10 +6402,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       removeBtnEl.type = 'button';
       removeBtnEl.className = 'icon-btn';
       removeBtnEl.innerHTML = getIcon('x');
-      removeBtnEl.setAttribute('data-tooltip', 'Remove variant');
-      removeBtnEl.setAttribute('data-tooltip-position', 'left');
-      removeBtnEl.setAttribute('data-tooltip-align', 'end');
-      removeBtnEl.setAttribute('data-tooltip-cursor', 'pointer');
       removeBtnEl.onclick = () => {
         events[eventIndex].variants.splice(variantIndex, 1);
         if (events[eventIndex].variants.length === 0) {
@@ -6437,7 +6426,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       // Toggle subtree visibility on chevron click
       const updateTreeToggleTooltip = () => {
         const isCollapsed = treeToggle.classList.contains('collapsed');
-        treeToggle.setAttribute('data-tooltip', isCollapsed ? 'Expand variant details' : 'Collapse variant details');
         treeToggle.setAttribute('aria-label', isCollapsed ? 'Expand variant details' : 'Collapse variant details');
       };
       treeToggle.addEventListener('click', (e) => {
@@ -6942,10 +6930,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       actionsTrigger.type = 'button';
       actionsTrigger.className = 'icon-btn';
       actionsTrigger.innerHTML = getIcon('ellipsis-vertical', { size: 18 });
-      actionsTrigger.setAttribute('data-tooltip', 'Touchpoint actions');
-      actionsTrigger.setAttribute('data-tooltip-position', 'bottom');
-      actionsTrigger.setAttribute('data-tooltip-align', 'end');
-      actionsTrigger.setAttribute('data-tooltip-cursor', 'pointer');
       actionsTrigger.addEventListener('click', (e) => {
         e.stopPropagation();
         // Close other dropdowns
