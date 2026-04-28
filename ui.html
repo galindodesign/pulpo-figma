@@ -301,6 +301,14 @@
       --event-variants-badge-bg: color-mix(in srgb, var(--brand) 12%, var(--background-surface));
       --event-variants-badge-border: color-mix(in srgb, var(--brand) 16%, transparent);
       --event-variants-badge-color: color-mix(in srgb, var(--brand) 78%, var(--text-primary));
+      --event-variants-row-bg: var(--color-royal-blue-alpha-50);
+      --event-variants-step-bg: var(--color-electric-violet-500);
+      --event-variants-step-text: var(--color-white-100);
+      --rolledout-chip-bg: #FFF420;
+      --rolledout-chip-text: #22272f;
+      --variant-name-input-bg: var(--color-white-alpha-700);
+      --variant-name-input-hover-bg: var(--color-white-alpha-700);
+      --variant-name-input-border-color: var(--color-azure-light-alpha-100);
       --baseline-chip-hover-bg: color-mix(in srgb, var(--background-surface) 82%, var(--brand) 18%);
       --baseline-indicator-border: color-mix(in srgb, var(--border) 88%, var(--foreground) 12%);
       --baseline-indicator-fill: var(--foreground);
@@ -403,6 +411,14 @@
       --event-variants-badge-bg: color-mix(in srgb, var(--brand) 24%, var(--background-surface));
       --event-variants-badge-border: color-mix(in srgb, var(--brand) 36%, transparent);
       --event-variants-badge-color: color-mix(in srgb, var(--brand) 86%, white);
+      --event-variants-row-bg: color-mix(in srgb, var(--brand) 18%, var(--background-surface));
+      --event-variants-step-bg: color-mix(in srgb, var(--brand) 88%, white 12%);
+      --event-variants-step-text: #ffffff;
+      --rolledout-chip-bg: color-mix(in srgb, #FFF420 88%, white 12%);
+      --rolledout-chip-text: #22272f;
+      --variant-name-input-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 86%, black 14%);
+      --variant-name-input-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 76%, white 24%);
+      --variant-name-input-border-color: color-mix(in srgb, white 18%, transparent);
       --baseline-chip-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 68%, white 32%);
       --baseline-indicator-border: color-mix(in srgb, white 72%, var(--figma-color-bg-secondary, #2c2c30) 28%);
       --baseline-indicator-fill: color-mix(in srgb, white 84%, var(--figma-color-bg-secondary, #2c2c30) 16%);
@@ -2233,14 +2249,14 @@
 
     /* Experiment events (with variants) get purple background */
     .event-row.event-row--has-variants .event-step-badge {
-      background: var(--color-electric-violet-500);
-      border: 0px solid var(--color-electric-violet-500);
-      color: var(--color-white-100);
+      background: var(--event-variants-step-bg);
+      border: 0px solid var(--event-variants-step-bg);
+      color: var(--event-variants-step-text);
     }
 
     /* Experiment events (with variants) get purple background */
     .event-row.event-row--has-variants {
-      background: var(--color-royal-blue-alpha-50);
+      background: var(--event-variants-row-bg);
        border-radius: var(--radius-md);
        gap: var(--space-0);
     }
@@ -2501,8 +2517,7 @@
       padding: var(--space-12);
       background: var(--variant-card-bg);
       border-radius: var(--radius-md);
-      border: var(--variant-card-border);
-      box-shadow: var(--variant-card-shadow);
+      /* border: var(--variant-card-border); */
       min-width: 0;
       width: 100%;
       cursor: default;
@@ -2983,9 +2998,9 @@
     }
 
     .variant-passive-chip--rolledout {
-      background: #FFF420;
+      background: var(--rolledout-chip-bg);
       border-color: transparent;
-      color: var(--text-primary);
+      color: var(--rolledout-chip-text);
     }
 
     /* Variant subtree toggle button */
@@ -3070,14 +3085,34 @@
     }
 
     .variant-name-field .InputField__wrapper {
-      background: var(--color-white-alpha-700);
-      border: 1px solid var(--color-azure-light-alpha-100);
+      background: var(--color-transparent);
+      border: 1px solid var(--color-transparent);
       border-radius: var(--radius-sm);
       padding: var(--space-4) var(--space-8);
       transition: background 0.15s, border-color 0.15s;
     }
 
+    .variant-name-field .InputField__wrapper:hover {
+      background: var(--color-transparent);
+      border-color: var(--input-field-hover-border);
+    }
+
+    .variant-name-field .InputField__wrapper:focus-within {
+      border-color: var(--input-field-focus-border);
+      box-shadow: var(--input-field-focus-shadow);
+    }
+
     .variant-name-field .InputField__input.variant-name-input {
+      cursor: text;
+      user-select: text;
+    }
+
+    .variant-name-field .InputField__input.variant-name-input[readonly] {
+      cursor: default;
+      user-select: none;
+    }
+
+    .variant-name-field .InputField__input.variant-name-input:not([readonly]) {
       cursor: text;
       user-select: text;
     }
@@ -6225,9 +6260,58 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       });
 
       const variantNameInput = nameField.querySelector('.InputField__input');
+      const variantNameWrapper = nameField.querySelector('.InputField__wrapper');
       if (variantNameInput) {
         variantNameInput.classList.add('variant-name-input');
-        variantNameInput.title = 'Variant name';
+        variantNameInput.title = 'Double-click to edit variant name';
+
+        const lockVariantNameEditing = () => {
+          variantNameInput.readOnly = true;
+          variantNameInput.setAttribute('aria-readonly', 'true');
+          card.classList.remove('is-editing-name');
+        };
+
+        const unlockVariantNameEditing = () => {
+          variantNameInput.readOnly = false;
+          variantNameInput.removeAttribute('aria-readonly');
+          card.classList.add('is-editing-name');
+          variantNameInput.focus();
+          const cursorPos = variantNameInput.value.length;
+          if (typeof variantNameInput.setSelectionRange === 'function') {
+            variantNameInput.setSelectionRange(cursorPos, cursorPos);
+          }
+        };
+
+        const handleVariantDoubleClickEdit = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          unlockVariantNameEditing();
+        };
+
+        lockVariantNameEditing();
+
+        if (variantNameWrapper) {
+          variantNameWrapper.addEventListener('dblclick', handleVariantDoubleClickEdit);
+        }
+        variantNameInput.addEventListener('dblclick', handleVariantDoubleClickEdit);
+
+        variantNameInput.addEventListener('mousedown', (e) => {
+          if (variantNameInput.readOnly) {
+            e.preventDefault();
+          }
+        });
+
+        variantNameInput.addEventListener('keydown', (e) => {
+          if (!variantNameInput.readOnly) return;
+          if (e.key === 'Enter' || e.key === 'F2') {
+            e.preventDefault();
+            unlockVariantNameEditing();
+          }
+        });
+
+        variantNameInput.addEventListener('blur', () => {
+          lockVariantNameEditing();
+        });
       }
 
       const formatMetricValue = (rawMetricValue) => {
@@ -6612,13 +6696,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       // Assemble card
       card.appendChild(content);
-
-      // Click highlight (non-drag behavior)
-      card.addEventListener('click', (e) => {
-        document.querySelectorAll('.variant-card.newly-added').forEach(c => c.classList.remove('newly-added'));
-        card.classList.add('newly-added');
-        highlightedVariantId = variant.id;
-      });
 
       // Data for drag ordering
       card.dataset.eventIndex = eventIndex;
