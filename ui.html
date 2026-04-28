@@ -1554,9 +1554,9 @@
       margin-bottom: var(--space-8);
     }
 
-    /* Hide the nested "add variant" inline row (variants are added via kebab menu) */
+    /* Show the nested "add variant" inline row inside the variants list */
     .event-variants-container .inline-add-row {
-      display: none;
+      display: flex;
     }
 
     /* ============================================
@@ -2400,40 +2400,57 @@
       flex: 1;
       min-width: 0;
       width: 100%;
-      gap: var(--space-4);
-      padding-bottom: var(--space-8);
+      gap: var(--space-12);
+      padding: var(--space-4) 0 var(--space-8);
       overflow: visible;
     }
 
     /* Variant Card - States: Default, Entered, onHover, onDrag */
     .variant-card {
+      --variant-accent-color: var(--brand);
       display: flex;
       align-items: flex-start;
       flex-direction: column;
       gap: var(--space-8);
-      padding: var(--space-4) var(--space-4) var(--space-4) var(--space-4);
-      background: var(--color-transparent);
-      border: 1px solid var(--color-transparent);
-      border-radius: var(--radius-sm);
+      padding: var(--space-12);
+      background: var(--color-white-100);
+      border-radius: var(--radius-md);
+      /* border: var(--variant-card-border);
+      box-shadow: var(--variant-card-shadow); */
       min-width: 0;
       width: 100%;
       cursor: default;
       user-select: none;
       position: relative;
-      transition: opacity 0.15s ease;
+      overflow: visible;
+      transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
     }
 
-    /* Hover state */
     .variant-card:hover {
-      background: var(--color-royal-blue-alpha-50);
-      border: 1px solid var(--color-transparent);
+       /* background: var(--variant-card-hover-bg);*/
+      border-color: var(--color-royal-blue-alpha-200);
+      box-shadow: 0 6px 18px rgba(40, 60, 90, 0.1);
+      transform: translateY(-1px);
     }
+
+     /* .variant-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--variant-accent-color);
+      opacity: 0.9;
+      pointer-events: none;
+    }*/
 
     /* Dragging state - keep visual feedback without drag cursor */
     .variant-card.dragging {
       opacity: 1;
       cursor: default;
       background: var(--color-white-100);
+      transform: scale(0.995);
     }
 
     /* Drag reorder states */
@@ -2474,14 +2491,15 @@
     /* Active/pressed state */
     .variant-card:active {
       background: var(--color-white-alpha-900);
-      border: 1px solid var(--color-transparent);
+      border-color: var(--color-royal-blue-alpha-200);
       cursor: default;
     }
 
     /* Newly added variant - blue bg until click outside */
     .variant-card.newly-added {
-      background: var(--color-white-alpha-900);
-      border: 1px solid var(--color-transparent);
+      background: var(--color-white-100);
+      border-color: var(--brand);
+      box-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);
     }
 
     /* Interactive elements within card should have default cursor */
@@ -2829,21 +2847,23 @@
       box-shadow: 0 0 0 1px var(--background-surface), 0 0 0 2px var(--color-option-color);
     }
 
-    /* Variant content area */
+    /* Variant content area 
     .variant-content {
       display: flex;
       flex-direction: column;
-     gap: var(--space-0);
+      gap: var(--space-10);
       flex: 1;
       min-width: 0;
       width: 100%;
-    }
+    }*/
 
     .variant-row {
       display: flex;
       gap: var(--space-8);
       align-items: center;
       width: 100%;
+      /* padding-bottom: var(--space-10);
+      border-bottom: 1px solid var(--color-azure-light-alpha-100); */
     }
 
     .variant-baseline-slot {
@@ -2901,10 +2921,10 @@
       display: flex;
       flex-direction: column;
       gap: var(--space-12);
-      padding-left: 20px; /* Indent to align with content after toggle */
-      padding-top: var(--space-12);
-      padding-bottom: var(--space-8);
-      padding-right: 32px;
+      padding-left: 24px; /* Indent to align with content after toggle */
+      padding-top: var(--space-16);
+      padding-bottom: 0;
+      padding-right: 0;
       overflow: hidden;
       transition: max-height 0.2s ease, opacity 0.15s ease;
       max-height: 500px; /* Arbitrary large value for animation */
@@ -2913,9 +2933,8 @@
       box-sizing: border-box;
     }
 
-    /* Hide variant description for now (keep data model intact) */
     .variant-description {
-      display: none !important;
+      width: 100%;
     }
 
     .variant-figma-link {
@@ -2941,8 +2960,8 @@
     }
 
     .variant-name-field .InputField__wrapper {
-      background: var(--color-transparent);
-      border: 1px solid var(--color-transparent);
+      /*.background: var(--color-white-alpha-700);*/
+      border: 1px solid var(--color-azure-light-alpha-100);
       border-radius: var(--radius-sm);
       padding: var(--space-4) var(--space-8);
       transition: background 0.15s, border-color 0.15s;
@@ -5988,6 +6007,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         // Get default color based on index if not set
         const defaultColor = colorPalette[variantIndex % colorPalette.length].hex;
         const currentColor = variant.color || defaultColor;
+        card.style.setProperty('--variant-accent-color', currentColor);
 
 
         // Variant name field (InputField with color indicator as prefix) - TOP OF CARD
@@ -6001,6 +6021,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         const colorPopover = createColorPopover(currentColor, (newColor) => {
           colorIndicator.style.backgroundColor = newColor;
           variant.color = newColor;
+          card.style.setProperty('--variant-accent-color', newColor);
           colorIndicator.classList.remove('active');
         });
         colorIndicator.appendChild(colorPopover);
@@ -6972,14 +6993,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         if (typeof addVariantRow.onclick === 'function') addVariantRow.onclick();
         actionsDropdown.classList.remove('open');
       });
-      variantsList.appendChild(addVariantRow);
 
-      initVariantDragReorder(variantsList, eventIndex);
-
-      variantsContainer.appendChild(variantsStep);
-      variantsContainer.appendChild(variantsList);
-      // Hide variants list if no variants are attached
       if (hasVariants) {
+        variantsList.appendChild(addVariantRow);
+
+        initVariantDragReorder(variantsList, eventIndex);
+
+        variantsContainer.appendChild(variantsStep);
+        variantsContainer.appendChild(variantsList);
         row.appendChild(variantsContainer);
       }
 
