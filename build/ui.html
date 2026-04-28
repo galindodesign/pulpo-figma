@@ -2210,7 +2210,7 @@
       transition: background 0.15s, border-color 0.15s, color 0.15s;
     }
 
-    .event-row:not(.system):not(.add-step-row):not(:has(.event-variants-badge)):hover .event-step-badge {
+    .event-row:not(.system):not(.add-step-row):not(.event-row--has-variants):hover .event-step-badge {
       background: var(--button-secondary-hover-bg);
       border-color: transparent;
       color: var(--text-primary);
@@ -2232,16 +2232,17 @@
     }
 
     /* Experiment events (with variants) get purple background */
-    .event-row:has(.event-variants-badge) .event-step-badge {
+    .event-row.event-row--has-variants .event-step-badge {
       background: var(--color-electric-violet-500);
       border: 0px solid var(--color-electric-violet-500);
       color: var(--color-white-100);
     }
 
     /* Experiment events (with variants) get purple background */
-    .event-row:has(.event-variants-badge){
+    .event-row.event-row--has-variants {
       background: var(--color-royal-blue-alpha-50);
        border-radius: var(--radius-md);
+       gap: var(--space-0);
     }
 
     .event-flow-line {
@@ -2951,7 +2952,7 @@
     }
 
     .variant-baseline-slot {
-      display: flex;
+      display: none;
       align-items: center;
       flex-shrink: 0;
     }
@@ -3031,7 +3032,7 @@
       flex-direction: column;
       gap: var(--space-12);
       padding-left: 24px; /* Indent to align with content after toggle */
-      padding-top: var(--space-16);
+      padding-top: var(--space-12);
       padding-bottom: 0;
       padding-right: 0;
       overflow: hidden;
@@ -6792,6 +6793,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       row.className = 'event-row';
       row.id = event.id;
       row.dataset.eventId = event.id;
+      const variantCount = Array.isArray(event.variants) ? event.variants.length : 0;
+      if (variantCount > 0) {
+        row.classList.add('event-row--has-variants');
+      }
       if (event.id && selectedEventId === event.id) {
         row.classList.add('is-selected');
       }
@@ -6846,21 +6851,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         variant: 'horizontal'
       });
       inputContainer.appendChild(eventInput);
-
-      // Badge: show when touchpoint has design variants (count only, non-clickable)
-      const variantCount = Array.isArray(event.variants) ? event.variants.length : 0;
-      const variantsBadge = document.createElement('span');
-      variantsBadge.className = 'event-variants-badge';
-      variantsBadge.setAttribute('data-tooltip', 'Variants run on one touchpoint per experiment.');
-      variantsBadge.setAttribute('data-tooltip-position', 'top');
-      variantsBadge.setAttribute('data-tooltip-multiline', '');
-      variantsBadge.setAttribute('data-tooltip-cursor', 'default');
-      
-      // Dynamic badge text based on variant count
-      if (Array.isArray(event.variants) && event.variants.length > 0) {
-        const badgeText = `${variantCount} variant${variantCount !== 1 ? 's' : ''}`;
-        variantsBadge.innerHTML = `<span class="event-variants-badge__text">${badgeText}</span>`;
-      }
 
       // Actions (kebab menu)
       const actionsDiv = document.createElement('div');
@@ -6939,9 +6929,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       mainRow.appendChild(stepDiv);
       mainRow.appendChild(inputContainer);
-      if (Array.isArray(event.variants) && event.variants.length > 0) {
-        mainRow.appendChild(variantsBadge);
-      }
       mainRow.appendChild(actionsDiv);
       row.appendChild(mainRow);
 
@@ -6976,8 +6963,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       if (hasVariants) {
         const variantsLabel = document.createElement('div');
         variantsLabel.className = 'variant-section-heading';
-        variantsLabel.style.marginTop = '0';
-        variantsLabel.textContent = 'Design variants';
+        variantsLabel.textContent = `Design variants (${variantCount})`;
         variantsList.appendChild(variantsLabel);
       }
 
