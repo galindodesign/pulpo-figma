@@ -2954,16 +2954,37 @@
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      width: 80px;
     }
 
-    /* Control toggle always visible */
-    .variant-control-toggle {
-      opacity: 1;
+    /* Control selector */
+    .Button.Button--toggle.variant-control-toggle {
+      border-radius: var(--radius-xs);
+      flex-shrink: 0;
     }
 
-    .variant-control-toggle:hover {
-      background: var(--button-secondary-hover-bg);
+    .variant-passive-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      font-size: var(--tooltip-font-size-sm);
+      font-weight: 500;
+      font-family: inherit;
+      line-height: 1;
+      letter-spacing: .0125rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .variant-passive-chip--rolledout {
+      background: #FFF420;
+      border-color: transparent;
+      color: var(--text-primary);
     }
 
     /* Variant subtree toggle button */
@@ -3773,18 +3794,26 @@
     }
 
     .Button.secondary.Button--toggle:hover {
-      background: var(--button-secondary-hover-bg);
+      background: var(--dropdown-hover-bg);
       border-color: var(--color-transparent);
       color: var(--text-link);
     }
 
     .Button.secondary.Button--toggle[aria-pressed="true"] {
-      background: var(--color-royal-blue-alpha-100); /* subtle selected tint */
+      background: var(--dropdown-selected-bg);
       border-color: var(--color-transparent);
-      color: var(--text-link); /* selected state uses link color (text + icon) */
+      color: var(--text-link);
     }
 
     .Button.secondary.Button--toggle[aria-pressed="true"]:hover {
+      background: var(--dropdown-selected-bg);
+      color: var(--text-link);
+    }
+
+    .Button.secondary.Button--toggle:active,
+    .Button.secondary.Button--toggle[aria-pressed="true"]:active {
+      background: var(--dropdown-selected-bg);
+      border-color: var(--color-transparent);
       color: var(--text-link);
     }
 
@@ -3798,72 +3827,6 @@
     .Button__icon svg {
       width: 14px;
       height: 14px;
-    }
-
-    /* ============================================
-     * UNIFIED RADIO SELECTION (Primary metric / Control variant)
-     * 16px circle indicator, contextual label
-     * Unselected: outline gray #D1D5DB, label #6B7280, weight 500
-     * Selected: solid blue #3B82F6, 6px white dot, label #3B82F6, weight 600
-     * ============================================ */
-    .radio-selection {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 6px;
-      border-radius: 6px;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      font-size: var(--body-md-size);
-      font-family: inherit;
-      transition: background 0.2s ease, color 0.2s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .radio-selection:hover {
-      background: var(--baseline-chip-hover-bg);
-    }
-    .radio-selection.variant-control-toggle:hover {
-      background: var(--button-secondary-hover-bg);
-    }
-    .radio-selection__indicator {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-      border-radius: 50%;
-      border: 2px solid var(--baseline-indicator-border);
-      background: transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: border-color 0.2s ease, background 0.2s ease;
-    }
-    .radio-selection__indicator::after {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--baseline-indicator-dot);
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-    .radio-selection[aria-pressed="true"] .radio-selection__indicator {
-      border-color: var(--baseline-indicator-fill);
-      background: var(--baseline-indicator-fill);
-    }
-    .radio-selection[aria-pressed="true"] .radio-selection__indicator::after {
-      opacity: 1;
-    }
-    .radio-selection__label {
-      color: var(--baseline-label-color);
-      transition: color 0.2s ease, font-weight 0.2s ease;
-      /*font-size: var(--body-sm-size);
-      font-weight: var(--body-sm-weight);*/
-      
-    }
-    .radio-selection[aria-pressed="true"] .radio-selection__label {
-      color: var(--baseline-label-active-color);
-      font-weight: 500;
     }
 
     /* ============================================
@@ -5046,6 +5009,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       'star-filled': '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="currentColor"/>',
       // https://lucide.dev/icons/circle-star
       'circle-star': '<path d="M11.051 7.616a1 1 0 0 1 1.909.024l.737 1.452a1 1 0 0 0 .737.535l1.634.256a1 1 0 0 1 .588 1.806l-1.172 1.168a1 1 0 0 0-.282.866l.259 1.613a1 1 0 0 1-1.541 1.134l-1.465-.75a1 1 0 0 0-.912 0l-1.465.75a1 1 0 0 1-1.539-1.133l.258-1.613a1 1 0 0 0-.282-.867l-1.156-1.152a1 1 0 0 1 .572-1.822l1.633-.256a1 1 0 0 0 .737-.535z" /><circle cx="12" cy="12" r="10" />',
+      // https://lucide.dev/icons/circle-check-big
+      'circle-check-big': '<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>',
       // https://lucide.dev/icons/circle
       'circle': '<circle cx="12" cy="12" r="10" />',
       // https://lucide.dev/icons/maximize-2
@@ -6286,14 +6251,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       const controlChip = document.createElement('button');
       controlChip.type = 'button';
-      controlChip.className = 'radio-selection variant-control-toggle';
+      controlChip.className = 'Button secondary Button--toggle variant-control-toggle';
       controlChip.id = `variant-control-${eventIndex}-${variantIndex}`;
       controlChip.setAttribute('data-tooltip-position', 'bottom');
       controlChip.setAttribute('data-tooltip-cursor', 'pointer');
-      controlChip.innerHTML = `
-        <span class="radio-selection__indicator" aria-hidden="true"></span>
-        <span class="radio-selection__label">Control</span>
-      `;
 
       // Enforce AT MOST one control per event.
       // If multiple are true (bad state), keep the first and clear the rest.
@@ -6305,6 +6266,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       variant.isControl = variant.isControl === true;
 
       const renderControlChip = (btn, isPressed) => {
+        btn.innerHTML = `<span class="Button__icon" aria-hidden="true">${getIcon(isPressed ? 'circle-check-big' : 'circle', { size: 14, strokeWidth: 2 })}</span><span>Control</span>`;
         btn.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
         btn.setAttribute('data-tooltip', isPressed ? 'Control variant' : 'Set as control variant');
         btn.setAttribute('aria-label', isPressed ? 'Control variant' : 'Set as control variant');
@@ -6338,6 +6300,18 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           renderControlChip(el, events[eventIndex].variants[idx].isControl === true);
         });
       });
+
+      const statusInput = document.getElementById('experimentStatus');
+      const rolledoutInput = document.getElementById('rolledoutVariant');
+      const isRolledOutVariant = statusInput?.value === 'completed' && rolledoutInput?.value === variant.id;
+
+      if (isRolledOutVariant) {
+        const rolledoutChip = document.createElement('span');
+        rolledoutChip.className = 'variant-passive-chip variant-passive-chip--rolledout';
+        rolledoutChip.textContent = 'Rolled out';
+        rolledoutChip.setAttribute('aria-label', 'Rolled out variant');
+        row1.appendChild(rolledoutChip);
+      }
 
       controlSlot.appendChild(controlChip);
       row1.appendChild(controlSlot);
@@ -8627,6 +8601,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       menu.querySelectorAll('.CustomDropdown__option').forEach(opt => {
         opt.classList.toggle('selected', opt.dataset.value === id);
       });
+
+      renderEvents(events);
     }
 
     /**
@@ -8773,6 +8749,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         statusArrow.classList.add('hidden');
         rolledoutField.classList.add('hidden');
       }
+
+      renderEvents(events);
     }
 
     // Global click handler for closing dropdowns
