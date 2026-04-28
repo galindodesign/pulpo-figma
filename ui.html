@@ -298,9 +298,6 @@
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
       --variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);
       --variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);
-      --variant-traffic-bg: color-mix(in srgb, var(--color-malachite-600) 12%, var(--background-surface));
-      --variant-traffic-border: color-mix(in srgb, var(--color-malachite-600) 24%, var(--border));
-      --variant-traffic-color: var(--figma-color-text-success, #126930);
       --event-variants-badge-bg: color-mix(in srgb, var(--brand) 12%, var(--background-surface));
       --event-variants-badge-border: color-mix(in srgb, var(--brand) 16%, transparent);
       --event-variants-badge-color: color-mix(in srgb, var(--brand) 78%, var(--text-primary));
@@ -3051,35 +3048,16 @@
     }
 
     .variant-name-field .InputField__wrapper {
-      /*.background: var(--color-white-alpha-700);*/
+      background: var(--color-white-alpha-700);
       border: 1px solid var(--color-azure-light-alpha-100);
       border-radius: var(--radius-sm);
       padding: var(--space-4) var(--space-8);
       transition: background 0.15s, border-color 0.15s;
     }
 
-    .variant-name-field .InputField__input.variant-name-input[readonly] {
-      cursor: default;
-      user-select: none;
-    }
-
-    .variant-name-field .InputField__input.variant-name-input:not([readonly]) {
+    .variant-name-field .InputField__input.variant-name-input {
       cursor: text;
       user-select: text;
-    }
-
-    .variant-traffic-field {
-      display: none !important;
-      width: 66px !important;
-      flex-shrink: 0;
-    }
-
-    /* .variant-content .InputField__wrapper {
-      background: var(--background-transparent) !important;
-    }*/
-
-    .variant-traffic-field .InputField__input {
-      text-align: left;
     }
 
     /* Variant metrics section with label */
@@ -3090,7 +3068,8 @@
       width: 100%;
     }
 
-    .variant-metrics-label {
+    .variant-metrics-label,
+    .variant-section-heading {
       font-size: 9px;
       font-weight: 500;
       line-height: 100%;
@@ -3098,7 +3077,14 @@
       color: var(--input-field-text-color);
       padding: 3px 0;
       margin-top: 3px;
+    }
+
+    .variant-metrics-label {
       display: none;
+    }
+
+    .variant-section-heading {
+      display: block;
     }
 
     /* Variant metrics row - 3-column grid */
@@ -3161,7 +3147,7 @@
       align-self: stretch;
     }
 
-    /* Variant baseline checkbox (0 or 1 selected) */
+    /* Variant control selector (0 or 1 selected) */
     .variant-significance-row {
       display: flex;
       align-items: center;
@@ -3824,7 +3810,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 4px 10px;
+      padding: 4px 6px;
       border-radius: 6px;
       cursor: pointer;
       border: none;
@@ -6200,7 +6186,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
      * Creates a variant card with unified color indicator + name, description, and metrics
      */
     function createVariantCard(variant, variantIndex, eventIndex) {
-        // Row 1: Tree toggle + Name + Traffic split
+        // Row 1: Tree toggle + Name + Control
         const row1 = document.createElement('div');
         row1.className = 'variant-row';
 
@@ -6273,116 +6259,40 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       });
 
       const variantNameInput = nameField.querySelector('.InputField__input');
-      const variantNameWrapper = nameField.querySelector('.InputField__wrapper');
       if (variantNameInput) {
-        const lockVariantNameEditing = () => {
-          variantNameInput.readOnly = true;
-          variantNameInput.setAttribute('aria-readonly', 'true');
-          card.classList.remove('is-editing-name');
-        };
-
-        const unlockVariantNameEditing = () => {
-          variantNameInput.readOnly = false;
-          variantNameInput.removeAttribute('aria-readonly');
-          card.classList.add('is-editing-name');
-          variantNameInput.focus();
-          const cursorPos = variantNameInput.value.length;
-          if (typeof variantNameInput.setSelectionRange === 'function') {
-            variantNameInput.setSelectionRange(cursorPos, cursorPos);
-          }
-        };
-
         variantNameInput.classList.add('variant-name-input');
-        variantNameInput.title = 'Double-click to edit variant name';
-        lockVariantNameEditing();
-
-        const handleVariantNameDblClick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          unlockVariantNameEditing();
-        };
-
-        if (variantNameWrapper) {
-          variantNameWrapper.addEventListener('dblclick', handleVariantNameDblClick);
-        }
-        variantNameInput.addEventListener('dblclick', handleVariantNameDblClick);
-
-        variantNameInput.addEventListener('mousedown', (e) => {
-          if (variantNameInput.readOnly) {
-            e.preventDefault();
-          }
-        });
-
-        variantNameInput.addEventListener('keydown', (e) => {
-          if (!variantNameInput.readOnly) return;
-          if (e.key === 'Enter' || e.key === 'F2') {
-            e.preventDefault();
-            unlockVariantNameEditing();
-          }
-        });
-
-        variantNameInput.addEventListener('blur', () => {
-          lockVariantNameEditing();
-        });
+        variantNameInput.title = 'Variant name';
       }
+
+      const formatMetricValue = (rawMetricValue) => {
+        const num = typeof rawMetricValue === 'number' ? rawMetricValue : parseFloat(String(rawMetricValue));
+        if (!Number.isFinite(num)) return '';
+        const pct = (num >= 0 && num <= 1) ? (num * 100) : num;
+        const fixed = pct.toFixed(2);
+        return fixed.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+      };
 
       nameFieldDiv.appendChild(nameField);
       // Content area
       const content = document.createElement('div');
       content.className = 'variant-content';
 
-      // Traffic field (percentage format: value displayed as "50%")
-      const trafficFieldDiv = document.createElement('div');
-      trafficFieldDiv.className = 'variant-traffic-field';
-      const trafficField = createInputField({
-        id: `variant-traffic-${eventIndex}-${variantIndex}`,
-        label: 'Traffic',
-        showLabel: false,
-        showRText: false,
-        showLIcon: true,
-        leftIcon: 'users',
-        suffix: '',
-        help: '50%',
-        text: variant.traffic !== undefined ? `${variant.traffic}%` : '',
-        variant: 'vertical',
-        onChange: (value) => {
-          // Parse number from value (strip % if present)
-          variant.traffic = parseFloat(value.replace('%', '')) || 0;
-        }
-      });
-      // Add tooltip and blur handler to traffic input
-      const trafficInput = trafficField.querySelector('.InputField__input');
-      if (trafficInput) {
-        trafficInput.setAttribute('data-tooltip', 'Traffic allocation for this variant');
-        trafficInput.setAttribute('data-tooltip-position', 'bottom');
-        trafficInput.setAttribute('data-tooltip-cursor', 'pointer');
-        trafficInput.addEventListener('blur', () => {
-          const numValue = parseFloat(trafficInput.value.replace('%', '')) || 0;
-          if (trafficInput.value.trim() !== '') {
-            trafficInput.value = `${numValue}%`;
-            variant.traffic = numValue;
-          }
-        });
-      }
-      trafficFieldDiv.appendChild(trafficField);
-
       row1.appendChild(treeToggle);
       row1.appendChild(nameFieldDiv);
-      row1.appendChild(trafficFieldDiv);
 
       // Control toggle (move to top row; optional; at most one per event)
-      const baselineSlot = document.createElement('div');
-      baselineSlot.className = 'variant-baseline-slot';
+      const controlSlot = document.createElement('div');
+      controlSlot.className = 'variant-baseline-slot';
 
-      const baselineChip = document.createElement('button');
-      baselineChip.type = 'button';
-      baselineChip.className = 'radio-selection variant-control-toggle';
-      baselineChip.id = `variant-control-${eventIndex}-${variantIndex}`;
-      baselineChip.setAttribute('data-tooltip-position', 'bottom');
-      baselineChip.setAttribute('data-tooltip-cursor', 'pointer');
-      baselineChip.innerHTML = `
+      const controlChip = document.createElement('button');
+      controlChip.type = 'button';
+      controlChip.className = 'radio-selection variant-control-toggle';
+      controlChip.id = `variant-control-${eventIndex}-${variantIndex}`;
+      controlChip.setAttribute('data-tooltip-position', 'bottom');
+      controlChip.setAttribute('data-tooltip-cursor', 'pointer');
+      controlChip.innerHTML = `
         <span class="radio-selection__indicator" aria-hidden="true"></span>
-        <span class="radio-selection__label">Baseline</span>
+        <span class="radio-selection__label">Control</span>
       `;
 
       // Enforce AT MOST one control per event.
@@ -6394,43 +6304,43 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       // Explicitly store boolean (never undefined)
       variant.isControl = variant.isControl === true;
 
-      const renderBaselineChip = (btn, isPressed) => {
+      const renderControlChip = (btn, isPressed) => {
         btn.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
-        btn.setAttribute('data-tooltip', isPressed ? 'Baseline variant' : 'Set as baseline variant');
-        btn.setAttribute('aria-label', isPressed ? 'Baseline variant' : 'Set as baseline variant');
+        btn.setAttribute('data-tooltip', isPressed ? 'Control variant' : 'Set as control variant');
+        btn.setAttribute('aria-label', isPressed ? 'Control variant' : 'Set as control variant');
       };
 
-      renderBaselineChip(baselineChip, variant.isControl === true);
+      renderControlChip(controlChip, variant.isControl === true);
 
-      baselineChip.addEventListener('click', (e) => {
+      controlChip.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
 
         if (variant.isControl === true) {
-          // Allow no baseline
+          // Allow no control variant
           variant.isControl = false;
         } else {
-          // Clear any existing baseline and set this one
+          // Clear any existing control variant and set this one
           events[eventIndex].variants.forEach((v, i) => {
             v.isControl = i === variantIndex;
           });
         }
 
         // Sync UI so selecting one control updates the others immediately
-        const baselineBtns = document.querySelectorAll(`button[id^="variant-control-${eventIndex}-"]`);
-        baselineBtns.forEach((el) => {
+        const controlBtns = document.querySelectorAll(`button[id^="variant-control-${eventIndex}-"]`);
+        controlBtns.forEach((el) => {
           if (!el || typeof el.id !== 'string') return;
           const match = el.id.match(new RegExp(`^variant-control-${eventIndex}-(\\d+)$`));
           if (!match) return;
           const idx = parseInt(match[1], 10);
           if (Number.isNaN(idx)) return;
           if (!events[eventIndex]?.variants?.[idx]) return;
-          renderBaselineChip(el, events[eventIndex].variants[idx].isControl === true);
+          renderControlChip(el, events[eventIndex].variants[idx].isControl === true);
         });
       });
 
-      baselineSlot.appendChild(baselineChip);
-      row1.appendChild(baselineSlot);
+      controlSlot.appendChild(controlChip);
+      row1.appendChild(controlSlot);
 
       // Actions (remove variant)
       const actionsDiv = document.createElement('div');
@@ -6455,7 +6365,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       actionsDiv.appendChild(removeBtnEl);
       row1.appendChild(actionsDiv);
 
-      // Subtree container for collapsible content (description + metrics)
+      // Subtree container for collapsible content (metrics + figma link)
       const subtree = document.createElement('div');
       subtree.className = 'variant-subtree';
 
@@ -6481,23 +6391,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       });
       updateTreeToggleTooltip();
 
-      // Row 2: Description field (inside subtree)
-      const row2 = document.createElement('div');
-      row2.className = 'variant-description';
-      const descriptionField = createInputField({
-        id: `variant-description-${eventIndex}-${variantIndex}`,
-        label: 'Description',
-        showLabel: false,
-        help: 'Variant description',
-        text: variant.description || '',
-        variant: 'vertical',
-        onChange: (value) => {
-          variant.description = value;
-        }
-      });
-      row2.appendChild(descriptionField);
-
-      // Row 3: Metrics section with label and inputs (inside subtree)
+      // Metrics section with label and inputs (inside subtree)
       const metricsSection = document.createElement('div');
       metricsSection.className = 'variant-metrics-section';
 
@@ -6517,13 +6411,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         
         const metricKey = (metric.abbreviation || metric.name.replace(/\s+/g, '_')).toLowerCase();
         const rawMetricValue = variant.metrics?.[metricKey];
-        const displayMetricValue = (() => {
-          const num = typeof rawMetricValue === 'number' ? rawMetricValue : parseFloat(String(rawMetricValue));
-          if (!Number.isFinite(num)) return '';
-          const pct = (num >= 0 && num <= 1) ? (num * 100) : num; // auto-migrate 0..1 → 0..100
-          const fixed = pct.toFixed(2);
-          return fixed.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-        })();
+        const displayMetricValue = formatMetricValue(rawMetricValue);
 
         const metricFieldDiv = document.createElement('div');
         metricFieldDiv.className = 'variant-metric-field';
@@ -6739,10 +6627,9 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       renderFigmaLink();
 
-      // Add description, metrics, and figma link to subtree
-      subtree.appendChild(row2);
-      subtree.appendChild(metricsSection);
+      // Add figma link and metrics to subtree
       subtree.appendChild(figmaLinkDiv);
+      subtree.appendChild(metricsSection);
 
       // Insert row1 (with name field) at the top of the content area
       content.appendChild(row1);
@@ -7136,7 +7023,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       // Label the experiment branch area
       if (hasVariants) {
         const variantsLabel = document.createElement('div');
-        variantsLabel.className = 'variant-metrics-label';
+        variantsLabel.className = 'variant-section-heading';
         variantsLabel.style.marginTop = '0';
         variantsLabel.textContent = 'Design variants';
         variantsList.appendChild(variantsLabel);
@@ -7178,7 +7065,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           id: `var-${eventIndex}-${variantIndex}`,
           name: '',
           label: String.fromCharCode(65 + variantIndex),
-          trafficPercent: 50,
           color: defaultColor,
           // First variant is control by default; user can toggle to another variant
           isControl: variantIndex === 0,
