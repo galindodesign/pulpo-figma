@@ -2,61 +2,12 @@
 import { TOKENS } from "./design-tokens";
 import { hexToRgb, getFontStyle, createBadge } from "./layout-utils";
 import { loadFonts } from "./load-fonts";
+import {
+  EXPERIMENT_STATUS_STYLES,
+  formatDateForDisplay,
+  getExperimentTypeLabel,
+} from "./experiment-card-shared";
 import type { MetricDefinition } from "./types";
-
-// Baseline label constant - only used when variant is explicitly marked as control
-const BASELINE_LABEL = "(Baseline)";
-
-// Lucide star-filled icon SVG markup (complete SVG for figma.createNodeFromSvg)
-const LUCIDE_STAR_FILLED_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="currentColor"/>
-</svg>`;
-
-/**
- * Create lucide-star-filled icon as a Figma frame from SVG
- * @param size - Icon size in pixels (default 12)
- * @param color - RGB color for the icon (default azure700)
- * @returns FrameNode containing the vector icon
- */
-function createLucideStarFilledIcon(size: number = 12, color: RGB = hexToRgb(TOKENS.azure700)): FrameNode {
-  try {
-    // Create node from SVG - this returns a FrameNode with vectors inside
-    const svgNode = figma.createNodeFromSvg(LUCIDE_STAR_FILLED_SVG);
-    svgNode.name = 'Star Icon';
-    
-    // Update fill color to match the desired color
-    function updateFillColors(node: SceneNode) {
-      if (node.type === 'VECTOR' || node.type === 'ELLIPSE' || node.type === 'POLYGON' || node.type === 'STAR' || node.type === 'RECTANGLE') {
-        const fills = (node as any).fills;
-        if (Array.isArray(fills) && fills.length > 0) {
-          (node as any).fills = [{ type: 'SOLID', color }];
-        }
-      } else if ('children' in node) {
-        for (const child of node.children) {
-          updateFillColors(child);
-        }
-      }
-    }
-    updateFillColors(svgNode);
-    
-    // Scale to target size (SVG viewBox is 24x24)
-    svgNode.resize(size, size);
-    
-    // Flatten to clean up the structure
-    svgNode.fills = [];
-    
-    return svgNode;
-  } catch (e) {
-    console.error('Failed to create star icon:', e);
-    
-    // Fallback: create empty frame
-    const fallback = figma.createFrame();
-    fallback.name = 'Star Icon (fallback)';
-    fallback.resize(size, size);
-    fallback.fills = [];
-    return fallback;
-  }
-}
 
 /**
  * Experiment Metrics Card
@@ -99,95 +50,36 @@ export interface ExperimentOutcomeData {
   dateCreated?: string; // Date when experiment was created (ISO format, auto-populated if not provided)
 }
 
-// Format date for display (e.g., "Jan 15, 2024")
-function formatDateForDisplay(dateString?: string): string {
-  if (!dateString) {
-    // Use current date if not provided
-    dateString = new Date().toISOString().split('T')[0];
-  }
-  try {
-    const date = new Date(dateString);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = months[date.getMonth()];
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${month} ${day}, ${year}`;
-  } catch {
-    return dateString; // Return original string if parsing fails
-  }
-}
-
-// Outcome status configuration
-interface OutcomeStatusConfig {
-  label: string;
-  bgColor: string;
-  textColor: string;
-}
-
-// Experiment status styles - consistent with Info Card and Plugin UI
-const EXPERIMENT_STATUS_STYLES: Record<string, OutcomeStatusConfig> = {
-  draft: {
-    label: 'Draft',
-    bgColor: TOKENS.azure50,
-    textColor: TOKENS.azure500,
-  },
-  running: {
-    label: 'Running',
-    bgColor: TOKENS.azure100,
-    textColor: TOKENS.azure700,
-  },
-  paused: {
-    label: 'Paused',
-    bgColor: TOKENS.azure100,
-    textColor: TOKENS.azure700,
-  },
-  completed: {
-    label: 'Concluded',
-    bgColor: TOKENS.azure100,
-    textColor: TOKENS.azure700,
-  },
-  rolled_out: {
-    label: 'Rolled out',
-    bgColor: '#FFF420',
-    textColor: TOKENS.textPrimary,
-  },
-};
-
-// Variant outcome styles (for table rows, not header)
-const VARIANT_OUTCOME_STYLES: Record<string, OutcomeStatusConfig> = {
-  control: {
-    label: 'Baseline',
-    bgColor: TOKENS.azure100,
-    textColor: TOKENS.azure700,
-  },
-  rolledOut: {
-    label: 'Rolled Out',
-    bgColor: '#FFF420',
-    textColor: TOKENS.textPrimary,
-  },
-};
-
-// Experiment type labels
-function getExperimentTypeLabel(type: string): string {
-  const labels: { [key: string]: string } = {
-    'ab_test': 'A/B Test',
-    'multivariate': 'Multivariate',
-    'feature_flag': 'Feature Flag',
-    'holdout': 'Holdout',
-    'rollout': 'Rollout',
-  };
-  return labels[type] || type;
-}
-
 /**
  * Format metric value with appropriate precision (always decimal)
  */
-function formatMetricValue(value: number | undefined): string {
+function isPercentageMetric(metric?: MetricDefinition): boolean {
+  if (!metric) return false;
+  if (typeof metric.thresholdPct === "number") return true;
+  const abbr = (metric.abbreviation || "").toLowerCase();
+  if (abbr === "ctr" || abbr === "cr" || abbr === "cvr") return true;
+  const metricName = metric.name.toLowerCase();
+  return metricName.includes("rate") || metricName.includes("percent") || metricName.includes("%");
+}
+
+function normalizeMetricValueForComparison(metric: MetricDefinition | undefined, value: number): number {
+  if (!metric || !isPercentageMetric(metric)) return value;
+  if (value >= 0 && value <= 1) return value * 100;
+  return value;
+}
+
+function formatMetricValue(value: number | undefined, metric?: MetricDefinition): string {
   if (value === undefined || value === null) return '--';
+
+  if (isPercentageMetric(metric)) {
+    const percentValue = (value >= 0 && value <= 1) ? value * 100 : value;
+    return `${percentValue.toFixed(2)}%`;
+  }
+
   if (Math.abs(value) >= 1000) {
     return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
   }
-  // Always show as decimal with 2 decimal places
+
   return value.toFixed(2);
 }
 
@@ -198,6 +90,82 @@ function formatUplift(uplift: number | undefined): string {
   if (uplift === undefined || uplift === null) return '--';
   const sign = uplift >= 0 ? '+' : '';
   return `${sign}${uplift.toFixed(2)}%`;
+}
+
+function formatDelta(uplift: number | undefined): string {
+  if (uplift === undefined || uplift === null) return "--";
+  const arrow = uplift > 0 ? "↑" : uplift < 0 ? "↓" : "→";
+  const sign = uplift >= 0 ? "+" : "";
+  return `${arrow} ${sign}${uplift.toFixed(2)}%`;
+}
+
+function getGoalPerformance(metric: MetricDefinition | undefined, value: number | undefined): boolean | undefined {
+  if (!metric || value === undefined || value === null) return undefined;
+  if (typeof metric.thresholdPct !== "number" || !Number.isFinite(metric.thresholdPct)) return undefined;
+  if (metric.direction === "decrease") return value <= metric.thresholdPct;
+  return value >= metric.thresholdPct;
+}
+
+type OutcomeState = "winning" | "losing" | "inconclusive" | "running" | "paused" | "rolled_out";
+
+function classifyOutcomeState(data: ExperimentOutcomeData): { state: OutcomeState; headline: string; detail: string } {
+  const primaryMetricDef = data.metrics.find(m => getMetricKey(m) === data.primaryMetric || m.isPrimary);
+  const primaryMetricKey = data.primaryMetric || (primaryMetricDef ? getMetricKey(primaryMetricDef) : undefined);
+  const metricLabel = primaryMetricDef?.abbreviation || primaryMetricDef?.name || "primary metric";
+  const bestVariant = data.variants
+    .filter(v => !v.isControl)
+    .map(v => ({ variant: v, uplift: primaryMetricKey ? v.metrics[primaryMetricKey]?.uplift : undefined }))
+    .filter(v => v.uplift !== undefined)
+    .sort((a, b) => (b.uplift! - a.uplift!))[0];
+
+  if (data.status === "running") {
+    return {
+      state: "inconclusive",
+      headline: "Inconclusive",
+      detail: `Primary metric (${metricLabel}) has not reached significance yet. Keep running and collect more data.`,
+    };
+  }
+
+  if (data.status === "paused") {
+    return {
+      state: "paused",
+      headline: "Paused",
+      detail: "Experiment is paused. Resume to collect more evidence, or close with current learnings.",
+    };
+  }
+
+  if (data.status === "rolled_out") {
+    const rolledOutVariant = data.variants.find(v => v.isRolledOut);
+    const uplift = primaryMetricKey && rolledOutVariant ? rolledOutVariant.metrics[primaryMetricKey]?.uplift : undefined;
+    const upliftText = uplift !== undefined ? ` (${formatUplift(uplift)})` : "";
+    return {
+      state: "rolled_out",
+      headline: "Winning",
+      detail: `${rolledOutVariant?.name || "Winning variant"} is live${upliftText}. Monitor for regressions post-rollout.`,
+    };
+  }
+
+  if (!bestVariant || bestVariant.uplift === undefined) {
+    return {
+      state: "inconclusive",
+      headline: "Inconclusive",
+      detail: "No clear winner yet. Extend the test or refine the hypothesis before deciding.",
+    };
+  }
+
+  if (bestVariant.uplift > 0) {
+    return {
+      state: "winning",
+      headline: "Winning",
+      detail: `${bestVariant.variant.name} is outperforming Control by ${formatUplift(bestVariant.uplift)} on ${metricLabel}.`,
+    };
+  }
+
+  return {
+    state: "losing",
+    headline: "Losing",
+    detail: `Variants are underperforming Control (${formatUplift(bestVariant.uplift)} on ${metricLabel}). Consider iterating before rollout.`,
+  };
 }
 
 /**
@@ -264,19 +232,28 @@ export async function createExperimentOutcomeCard(
   card.minWidth = 792;
   card.minHeight = 612;
 
-  // Header section
-  const headerSection = await createHeaderSection(data);
-  card.appendChild(headerSection);
-
-  // Metrics table
-  const metricsTable = await createMetricsTable(data);
-  card.appendChild(metricsTable);
-
-  // Summary section (recommendation)
-  const summarySection = await createSummarySection(data);
-  card.appendChild(summarySection);
+  const sections = await createOutcomeCardSections(data);
+  if (sections.headerSection) {
+    card.appendChild(sections.headerSection);
+  }
+  card.appendChild(sections.metricsTable);
+  card.appendChild(sections.summarySection);
 
   return card;
+}
+
+export async function createOutcomeCardSections(
+  data: ExperimentOutcomeData,
+  options?: { includeHeader?: boolean }
+): Promise<{ headerSection?: FrameNode; metricsTable: FrameNode; summarySection: FrameNode }> {
+  await loadFonts();
+
+  const includeHeader = options?.includeHeader !== false;
+  const headerSection = includeHeader ? await createHeaderSection(data) : undefined;
+  const metricsTable = await createMetricsTable(data);
+  const summarySection = await createSummarySection(data);
+
+  return { headerSection, metricsTable, summarySection };
 }
 
 /**
@@ -403,7 +380,7 @@ async function createTableHeaderRow(data: ExperimentOutcomeData, variantCount: n
   row.counterAxisAlignItems = "CENTER";
   row.minHeight = 40;
   row.resize(row.width, 40);
-  row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.azure50) }];
+  row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
   row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
   row.strokeWeight = 1;
   row.strokeTopWeight = 0;
@@ -412,7 +389,7 @@ async function createTableHeaderRow(data: ExperimentOutcomeData, variantCount: n
   row.name = "Header Row";
 
   // First column: Metric label (fixed width)
-  const metricHeader = createTableCell('Metric', 140, true, false);
+  const metricHeader = createTableCell('Key Metric', 140, true, false);
   metricHeader.layoutGrow = 0; // Don't grow
   metricHeader.minWidth = 200;
   row.appendChild(metricHeader);
@@ -475,16 +452,6 @@ function createVariantHeaderCell(variant: VariantOutcome): FrameNode {
   nameText.textAutoResize = "WIDTH_AND_HEIGHT";
   nameText.characters = variantName;
   cell.appendChild(nameText);
-
-  if (isExplicitlyControl) {
-    const controlBadge = createBadge('Baseline', 'micro', TOKENS.azure100, TOKENS.azure700);
-    cell.appendChild(controlBadge);
-  }
-
-  if (variant.isRolledOut) {
-    const rolledOutBadge = createBadge('Rolled Out', 'micro', '#FFF420', TOKENS.textPrimary);
-    cell.appendChild(rolledOutBadge);
-  }
 
   return cell;
 }
@@ -594,7 +561,7 @@ async function createMetricRow(
   row.counterAxisAlignItems = "CENTER";
   row.minHeight = 48;
   row.resize(row.width, 48);
-  row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
+  row.fills = [];
   
   if (!isLast) {
     row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
@@ -661,7 +628,7 @@ function createMetricNameCell(metric: MetricDefinition, isPrimary: boolean): Fra
   cell.fills = [];
   cell.name = `Metric Cell`;
 
-  // Metric name with optional primary indicator
+  // Metric name
   const nameRow = figma.createFrame();
   nameRow.layoutMode = "HORIZONTAL";
   nameRow.counterAxisSizingMode = "AUTO";
@@ -672,18 +639,12 @@ function createMetricNameCell(metric: MetricDefinition, isPrimary: boolean): Fra
   nameRow.name = "Name Row";
 
   const nameText = figma.createText();
-  nameText.fontName = getFontStyle(isPrimary ? "Bold" : "Regular");
+  nameText.fontName = getFontStyle(isPrimary ? "Medium" : "Regular");
   nameText.fontSize = TOKENS.fontSizeBodySm;
   nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   nameText.textAutoResize = "WIDTH_AND_HEIGHT";
   nameText.characters = metric.name;
   nameRow.appendChild(nameText);
-
-  if (isPrimary) {
-    // Match info-card behavior: star icon only (no "Primary" pill badge)
-    const starIcon = createLucideStarFilledIcon(12, hexToRgb(TOKENS.azure700));
-    nameRow.appendChild(starIcon);
-  }
 
   cell.appendChild(nameRow);
 
@@ -724,10 +685,15 @@ function createMetricValueCell(
   cell.itemSpacing = 2;
   cell.paddingLeft = cell.paddingRight = 8;
   
-  // Add light background color based on uplift direction (only for non-control)
+  const value = metricData?.value;
+  const controlPerformance = isControl ? getGoalPerformance(metric, value) : undefined;
+
+  // Add light background color based on variant uplift or control goal performance.
   if (!isControl && metricData?.uplift !== undefined) {
     const isPositive = metricData.uplift >= 0;
     cell.fills = [{ type: "SOLID", color: hexToRgb(isPositive ? TOKENS.malachite50 : TOKENS.coralRed50) }];
+  } else if (isControl && controlPerformance !== undefined) {
+    cell.fills = [{ type: "SOLID", color: hexToRgb(controlPerformance ? TOKENS.malachite50 : TOKENS.coralRed50) }];
   } else {
     cell.fills = [];
   }
@@ -740,13 +706,14 @@ function createMetricValueCell(
   valueText.textAutoResize = "WIDTH_AND_HEIGHT";
   valueText.textAlignHorizontal = "CENTER";
   
-  const value = metricData?.value;
-  valueText.characters = formatMetricValue(value);
+  valueText.characters = formatMetricValue(value, metric);
   valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   cell.appendChild(valueText);
 
-  // Uplift row (only for non-control variants)
-  if (!isControl && metricData?.uplift !== undefined) {
+  // Delta row (variants: uplift; control: baseline delta styling)
+  const showControlDelta = isControl && value !== undefined;
+  const showVariantDelta = !isControl && metricData?.uplift !== undefined;
+  if (showControlDelta || showVariantDelta) {
     const upliftRow = figma.createFrame();
     upliftRow.layoutMode = "HORIZONTAL";
     upliftRow.counterAxisSizingMode = "AUTO";
@@ -757,16 +724,21 @@ function createMetricValueCell(
     upliftRow.name = "Uplift Row";
 
     // Uplift value with color based on direction
-    const uplift = metricData.uplift;
-    const isPositive = uplift >= 0;
-    const upliftColor = isPositive ? TOKENS.malachite600 : TOKENS.coralRed500;
+    const uplift = showVariantDelta ? metricData!.uplift : 0;
+    let upliftColor = TOKENS.textTertiary;
+    if (showVariantDelta) {
+      const isPositive = uplift! >= 0;
+      upliftColor = isPositive ? TOKENS.malachite600 : TOKENS.coralRed500;
+    } else if (controlPerformance !== undefined) {
+      upliftColor = controlPerformance ? TOKENS.malachite600 : TOKENS.coralRed500;
+    }
     
     const upliftText = figma.createText();
     upliftText.fontName = getFontStyle("Medium");
     upliftText.fontSize = TOKENS.fontSizeLabel;
     upliftText.fills = [{ type: "SOLID", color: hexToRgb(upliftColor) }];
     upliftText.textAutoResize = "WIDTH_AND_HEIGHT";
-    upliftText.characters = formatUplift(uplift);
+    upliftText.characters = formatDelta(uplift);
     upliftRow.appendChild(upliftText);
 
     cell.appendChild(upliftRow);
@@ -820,13 +792,16 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   section.paddingTop = section.paddingBottom = 12;
   section.paddingLeft = section.paddingRight = 12;
   section.cornerRadius = 8;
-  section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.azure50) }];
-  section.name = "Summary Section";
+  section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
+  section.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+  section.strokeWeight = 1;
+  section.name = "Outcome Section";
   section.layoutAlign = "STRETCH";
 
-  const primaryMetricDef = data.metrics.find(m => 
-    getMetricKey(m) === data.primaryMetric || m.isPrimary
-  );
+  const outcome = classifyOutcomeState(data);
+  const primaryMetricDef = data.metrics.find(m => getMetricKey(m) === data.primaryMetric || m.isPrimary);
+  const primaryMetricKey = data.primaryMetric || (primaryMetricDef ? getMetricKey(primaryMetricDef) : undefined);
+  const primaryMetricLabel = primaryMetricDef?.abbreviation || primaryMetricDef?.name || "primary metric";
 
   // Header (styled same as section labels)
   const headerText = figma.createText();
@@ -835,56 +810,30 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   headerText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   headerText.opacity = 0.5;
   headerText.textAutoResize = "WIDTH_AND_HEIGHT";
-  headerText.characters = "Next Steps";
+  headerText.characters = "Outcome";
   section.appendChild(headerText);
 
-  // Recommendation text
-  const recommendationText = figma.createText();
-  recommendationText.fontName = getFontStyle("Regular");
-  recommendationText.fontSize = TOKENS.fontSizeBodyMd;
-  recommendationText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  recommendationText.textAutoResize = "WIDTH_AND_HEIGHT";
+  const outcomeDetail = figma.createText();
+  outcomeDetail.fontName = getFontStyle("Medium");
+  outcomeDetail.fontSize = TOKENS.fontSizeBodyMd;
+  outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  outcomeDetail.textAutoResize = "WIDTH_AND_HEIGHT";
+  outcomeDetail.characters = outcome.detail;
+  section.appendChild(outcomeDetail);
 
-  // Find the best performing variant (highest uplift on primary metric)
-  const primaryMetricKey = data.primaryMetric || (primaryMetricDef ? getMetricKey(primaryMetricDef) : null);
-  let bestVariant: typeof data.variants[0] | undefined;
-  let bestUplift = -Infinity;
-  
-  for (const v of data.variants) {
-    if (v.isControl) continue;
-    const metricData = primaryMetricKey ? v.metrics[primaryMetricKey] : undefined;
-    if (metricData?.uplift !== undefined && metricData.uplift > bestUplift) {
-      bestUplift = metricData.uplift;
-      bestVariant = v;
-    }
-  }
+  const rolledOutVariant = data.variants.find(v => v.isRolledOut);
+  if (rolledOutVariant) {
+    const rolledOutMetric = primaryMetricKey ? rolledOutVariant.metrics[primaryMetricKey] : undefined;
+    const upliftText = rolledOutMetric?.uplift !== undefined ? formatUplift(rolledOutMetric.uplift) : "--";
 
-  if (data.status === 'running') {
-    recommendationText.characters = "Experiment is running. Continue collecting data before making decisions.";
-  } else if (data.status === 'paused') {
-    recommendationText.characters = "Experiment is paused. Resume to collect more data, or analyze current results.";
-  } else if (data.status === 'rolled_out') {
-    // Find the rolled out variant
-    const rolledOutVariant = data.variants.find(v => v.isRolledOut);
-    if (rolledOutVariant) {
-      const metricName = primaryMetricDef?.name || 'primary metric';
-      const rolledOutMetric = primaryMetricKey ? rolledOutVariant.metrics[primaryMetricKey] : undefined;
-      const upliftText = rolledOutMetric?.uplift ? ` with ${formatUplift(rolledOutMetric.uplift)} on ${metricName}` : '';
-      recommendationText.characters = `"${rolledOutVariant.name}" is now live for all users${upliftText}. Monitor for regressions.`;
-    } else {
-      recommendationText.characters = "A variant is now live for all users. Monitor for regressions.";
-    }
-  } else if (bestVariant) {
-    // Has a best performer (concluded/completed status)
-    const metricName = primaryMetricDef?.name || 'primary metric';
-    const bestMetric = primaryMetricKey ? bestVariant.metrics[primaryMetricKey] : undefined;
-    const upliftText = bestMetric?.uplift ? formatUplift(bestMetric.uplift) : '';
-    recommendationText.characters = `"${bestVariant.name}" shows ${upliftText} on ${metricName}. Consider rolling out this variant.`;
-  } else {
-    recommendationText.characters = "No clear winner yet. Consider extending the experiment or revising the hypothesis.";
+    const rolledOutLine = figma.createText();
+    rolledOutLine.fontName = getFontStyle("Medium");
+    rolledOutLine.fontSize = TOKENS.fontSizeBodyMd;
+    rolledOutLine.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+    rolledOutLine.textAutoResize = "WIDTH_AND_HEIGHT";
+    rolledOutLine.characters = `Rolled out: ${rolledOutVariant.name} (${upliftText} ${primaryMetricLabel})`;
+    section.appendChild(rolledOutLine);
   }
-  
-  section.appendChild(recommendationText);
 
   return section;
 }
@@ -942,6 +891,35 @@ export async function createOutcomeCardFromExperimentData(
     dateCreated?: string;
   }
 ): Promise<FrameNode> {
+  const data = mapExperimentDataToOutcomeData(experimentName, metrics, variants, options);
+  return createExperimentOutcomeCard(data);
+}
+
+export function mapExperimentDataToOutcomeData(
+  experimentName: string,
+  metrics: MetricDefinition[],
+  variants: Array<{
+    id?: string;
+    key: string;
+    name: string;
+    isControl?: boolean;
+    traffic: number;
+    status?: string;
+    metrics?: { [key: string]: number };
+    isRolledOut?: boolean;
+  }>,
+  options?: {
+    hypothesis?: string;
+    experimentType?: string;
+    startDate?: string;
+    endDate?: string;
+    audience?: string;
+    totalSampleSize?: number;
+    status?: 'running' | 'completed' | 'paused' | 'draft' | 'rolled_out';
+    primaryMetric?: string;
+    dateCreated?: string;
+  }
+): ExperimentOutcomeData {
   // Find control variant (only if explicitly marked as control, otherwise use first variant for comparison)
   const trueControlVariant = variants.find(v => v.isControl === true);
   const controlVariant = trueControlVariant || variants[0];
@@ -955,8 +933,10 @@ export async function createOutcomeCardFromExperimentData(
 
     for (const metric of metrics) {
       const metricKey = getMetricKey(metric);
-      const value = v.metrics?.[metricKey] ?? 0;
-      const controlValue = controlVariant?.metrics?.[metricKey] ?? 0;
+      const rawValue = v.metrics?.[metricKey] ?? 0;
+      const rawControlValue = controlVariant?.metrics?.[metricKey] ?? 0;
+      const value = normalizeMetricValueForComparison(metric, rawValue);
+      const controlValue = normalizeMetricValueForComparison(metric, rawControlValue);
       
       // Calculate uplift vs control
       let uplift: number | undefined;
@@ -981,7 +961,7 @@ export async function createOutcomeCardFromExperimentData(
     };
   });
 
-  const data: ExperimentOutcomeData = {
+  return {
     experimentName,
     experimentType: options?.experimentType,
     hypothesis: options?.hypothesis,
@@ -995,6 +975,4 @@ export async function createOutcomeCardFromExperimentData(
     variants: variantOutcomes,
     dateCreated: options?.dateCreated,
   };
-
-  return createExperimentOutcomeCard(data);
 }

@@ -1,8 +1,18 @@
 /// <reference types="@figma/plugin-typings" />
 import { TOKENS } from "./design-tokens";
-import { hexToRgb, createBadge } from "./layout-utils";
+import { hexToRgb, createBadge, getFontStyle } from "./layout-utils";
 import { loadFonts, getLoadedFigtreeSemibold } from "./load-fonts";
-import { createOutcomeCardFromExperimentData, type VariantOutcome } from "./experiment-outcome-card";
+import {
+  createOutcomeCardSections,
+  mapExperimentDataToOutcomeData,
+} from "./experiment-outcome-card";
+import {
+  EXPERIMENT_STATUS_STYLES,
+  formatDateForDisplay,
+  getExperimentTypeLabel,
+  type ExperimentStatus,
+  type ExperimentStatusConfig,
+} from "./experiment-card-shared";
 import type { MetricDefinition } from "./types";
 
 // Brand icon SVG markup (complete SVGs for figma.createNodeFromSvg)
@@ -224,62 +234,12 @@ function createBrandIconVector(brand: string, size: number = 14): FrameNode {
   }
 }
 
-// Lucide star-filled icon SVG markup (complete SVG for figma.createNodeFromSvg)
-const LUCIDE_STAR_FILLED_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="currentColor"/>
-</svg>`;
-
-/**
- * Create lucide-star-filled icon as a Figma frame from SVG
- * @param size - Icon size in pixels (default 12)
- * @param color - RGB color for the icon (default azure700)
- * @returns FrameNode containing the vector icon
- */
-function createLucideStarFilledIcon(size: number = 12, color: RGB = hexToRgb(TOKENS.azure700)): FrameNode {
-  try {
-    // Create node from SVG - this returns a FrameNode with vectors inside
-    const svgNode = figma.createNodeFromSvg(LUCIDE_STAR_FILLED_SVG);
-    svgNode.name = 'Star Icon';
-    
-    // Update fill color to match the desired color
-    function updateFillColors(node: SceneNode) {
-      if (node.type === 'VECTOR' || node.type === 'ELLIPSE' || node.type === 'POLYGON' || node.type === 'STAR' || node.type === 'RECTANGLE') {
-        const fills = (node as any).fills;
-        if (Array.isArray(fills) && fills.length > 0) {
-          (node as any).fills = [{ type: 'SOLID', color }];
-        }
-      } else if ('children' in node) {
-        for (const child of node.children) {
-          updateFillColors(child);
-        }
-      }
-    }
-    updateFillColors(svgNode);
-    
-    // Scale to target size (SVG viewBox is 24x24)
-    svgNode.resize(size, size);
-    
-    // Flatten to clean up the structure
-    svgNode.fills = [];
-    
-    return svgNode;
-  } catch (e) {
-    console.error('Failed to create star icon:', e);
-    
-    // Fallback: create empty frame
-    const fallback = figma.createFrame();
-    fallback.name = 'Star Icon (fallback)';
-    fallback.resize(size, size);
-    fallback.fills = [];
-    return fallback;
-  }
-}
-
 export interface VariantData {
   id?: string;
   key: string;
   name: string;
   description?: string;
+  figmaLink?: string;
   color?: string;
   isControl?: boolean;
   traffic: number;
@@ -288,72 +248,6 @@ export interface VariantData {
   isRolledOut?: boolean;
 }
 
-// Status configuration matching the plugin UI dropdown
-export type ExperimentStatus = 'draft' | 'running' | 'paused' | 'completed' | 'rolled_out';
-
-// Format date for display (e.g., "Jan 15, 2024")
-function formatDateForDisplay(dateString?: string): string {
-  if (!dateString) {
-    // Use current date if not provided
-    dateString = new Date().toISOString().split('T')[0];
-  }
-  try {
-    const date = new Date(dateString);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = months[date.getMonth()];
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${month} ${day}, ${year}`;
-  } catch {
-    return dateString; // Return original string if parsing fails
-  }
-}
-
-interface StatusConfig {
-  label: string;
-  bgColor: string;
-  textColor: string;
-}
-
-const STATUS_STYLES: Record<ExperimentStatus, StatusConfig> = {
-  draft: {
-    label: 'Draft',
-    bgColor: TOKENS.azure50,
-    textColor: TOKENS.azure500,
-  },
-  running: {
-    label: 'Running',
-    bgColor: TOKENS.azure100,
-    textColor: TOKENS.azure700,
-  },
-  paused: {
-    label: 'Paused',
-    bgColor: TOKENS.azure100,
-    textColor: TOKENS.azure700,
-  },
-  completed: {
-    label: 'Concluded',
-    bgColor: TOKENS.azure100,
-    textColor: TOKENS.azure700,
-  },
-  rolled_out: {
-    label: 'Rolled out',
-    bgColor: '#FFF420',
-    textColor: TOKENS.textPrimary,
-  },
-};
-
-// Experiment type labels
-function getExperimentTypeLabel(type: string): string {
-  const labels: { [key: string]: string } = {
-    'ab_test': 'A/B Test',
-    'multivariate': 'Multivariate',
-    'feature_flag': 'Feature Flag',
-    'holdout': 'Holdout',
-    'rollout': 'Rollout',
-  };
-  return labels[type] || type;
-}
 
 export interface ExperimentCardOptions {
   // Outcome card options
@@ -448,7 +342,7 @@ export async function createExperimentInfoCard(
   await loadFonts();
   // Container
   const card = figma.createFrame();
-  card.name = `Experiment Overview — ${experimentName}`;
+  card.name = `Experiment Overview`;
   card.layoutMode = "VERTICAL";
   card.counterAxisSizingMode = "AUTO";
   card.primaryAxisSizingMode = "AUTO";
@@ -463,48 +357,36 @@ export async function createExperimentInfoCard(
   card.minWidth = 792;
   card.minHeight = 612;
 
-  const statusConfig = STATUS_STYLES[status] || STATUS_STYLES.running;
+  const CONTENT_MIN_WIDTH = 728;
+  const CONTENT_MAX_WIDTH = 1400;
+  const CARD_MAX_WIDTH = 1800;
+
+  const statusConfig = EXPERIMENT_STATUS_STYLES[status] || EXPERIMENT_STATUS_STYLES.running;
 
   // === SECTION 1: HEADER (Badge row + Name + Description) ===
   const headerSection = await createStoryHeaderWithBadges(experimentName, description || "", statusConfig, options);
   card.appendChild(headerSection);
 
-  // === TWO-PANEL LAYOUT (Below Header) ===
-  // Create horizontal container for left (content) and right (resources) panels
-  const twoPanelContainer = figma.createFrame();
-  twoPanelContainer.name = "Content Panels";
-  twoPanelContainer.layoutMode = "HORIZONTAL";
-  twoPanelContainer.counterAxisSizingMode = "AUTO"; // Auto height
-  twoPanelContainer.primaryAxisSizingMode = "FIXED"; // Fixed width
-  twoPanelContainer.resize(728, 100); // Set fixed width of 728px
-  twoPanelContainer.itemSpacing = 24; // Gap between panels
-  twoPanelContainer.paddingLeft = twoPanelContainer.paddingRight = 0;
-  twoPanelContainer.paddingTop = twoPanelContainer.paddingBottom = 0;
-  twoPanelContainer.fills = [];
-  twoPanelContainer.strokes = [];
-  twoPanelContainer.layoutAlign = 'STRETCH'; // Stretch to fill parent width
-  twoPanelContainer.minWidth = 728; // Ensure minimum width
-
-  // Deterministic panel widths (avoid relying on Figma layout timing)
-  const panelsGap = twoPanelContainer.itemSpacing || 0; // 24
-  const panelsAvailableWidth = 728 - panelsGap;
-  const leftPanelWidth = Math.round(panelsAvailableWidth * 0.4);
-  const rightPanelWidth = panelsAvailableWidth - leftPanelWidth;
-
-  // === LEFT PANEL: Overview + Resources - 40% width ===
-  const leftPanel = figma.createFrame();
-  leftPanel.name = "Left Panel";
-  leftPanel.layoutMode = "VERTICAL";
-  leftPanel.counterAxisSizingMode = "FIXED";
-  leftPanel.primaryAxisSizingMode = "AUTO";
-  leftPanel.minWidth = leftPanelWidth;
-  leftPanel.maxWidth = leftPanelWidth;
-  leftPanel.layoutGrow = 0; // Fixed width, don't grow (40%)
-  leftPanel.paddingLeft = leftPanel.paddingRight = 0;
-  leftPanel.paddingTop = leftPanel.paddingBottom = 0;
-  leftPanel.itemSpacing = 24;
-  leftPanel.fills = [];
-  leftPanel.strokes = [];
+  // === SINGLE-COLUMN CONTENT FLOW ===
+  const contentStack = figma.createFrame();
+  contentStack.name = "Content Flow";
+  contentStack.layoutMode = "VERTICAL";
+  contentStack.counterAxisSizingMode = "FIXED";
+  contentStack.primaryAxisSizingMode = "AUTO";
+  contentStack.layoutAlign = "STRETCH";
+  contentStack.itemSpacing = 24;
+  contentStack.fills = [];
+  contentStack.strokes = [];
+  contentStack.minWidth = CONTENT_MIN_WIDTH;
+  const summaryHost = figma.createFrame();
+  summaryHost.name = "Summary Host";
+  summaryHost.layoutMode = "VERTICAL";
+  summaryHost.counterAxisSizingMode = "FIXED";
+  summaryHost.primaryAxisSizingMode = "AUTO";
+  summaryHost.layoutAlign = "STRETCH";
+  summaryHost.fills = [];
+  summaryHost.strokes = [];
+  summaryHost.minWidth = CONTENT_MIN_WIDTH;
 
   // === OVERVIEW SECTION ===
   const overviewData: Array<{ label: string; value: string; valueColor?: string; valueDot?: string }> = [];
@@ -551,29 +433,41 @@ export async function createExperimentInfoCard(
   
 
   // Dates - always show
-  // Use the same date formatting as the UI (ISO yyyy-mm-dd or formatted for display)
-  // Show start and end dates in the same format as the UI, not as a timeline
-  // Match UI: show dates as 'Apr 7' (no year) for picker label, but use year if both dates are not in the same year
+  // Parse YYYY-MM-DD as local date to avoid timezone day shifts.
+  function parseDateLocal(dateString?: string): Date | null {
+    if (!dateString) return null;
+    const isoDateOnly = /^(\d{4})-(\d{2})-(\d{2})$/;
+    const match = dateString.match(isoDateOnly);
+    if (match) {
+      const year = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      const day = Number(match[3]);
+      return new Date(year, month, day);
+    }
+    const parsed = new Date(dateString);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   function formatUIDate(dateString?: string): string {
-    if (!dateString) return '';
-    const date = new Date(dateString);
+    const date = parseDateLocal(dateString);
+    if (!date) return '';
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
   let dateValue = '—';
   if (options?.startDate && options?.endDate) {
-    const start = new Date(options.startDate);
-    const end = new Date(options.endDate);
-    if (start.getFullYear() === end.getFullYear()) {
-      dateValue = `${formatUIDate(options.startDate)} – ${formatUIDate(options.endDate)}, ${start.getFullYear()}`;
+    const start = parseDateLocal(options.startDate);
+    const end = parseDateLocal(options.endDate);
+    if (start && end) {
+      dateValue = `${formatUIDate(options.startDate)} → ${formatUIDate(options.endDate)}`;
     } else {
-      dateValue = `${formatUIDate(options.startDate)}, ${start.getFullYear()} – ${formatUIDate(options.endDate)}, ${end.getFullYear()}`;
+      dateValue = `${options.startDate} – ${options.endDate}`;
     }
   } else if (options?.startDate) {
-    const start = new Date(options.startDate);
-    dateValue = `${formatUIDate(options.startDate)}, ${start.getFullYear()}`;
+    const start = parseDateLocal(options.startDate);
+    dateValue = start ? formatUIDate(options.startDate) : options.startDate;
   } else if (options?.endDate) {
-    const end = new Date(options.endDate);
-    dateValue = `${formatUIDate(options.endDate)}, ${end.getFullYear()}`;
+    const end = parseDateLocal(options.endDate);
+    dateValue = end ? formatUIDate(options.endDate) : options.endDate;
   }
   overviewData.push({
     label: 'Dates',
@@ -590,7 +484,7 @@ export async function createExperimentInfoCard(
   
   // Create Overview section
   try {
-    await appendDetailsSection(leftPanel, 'Overview', overviewData);
+    await appendDetailsSection(summaryHost, 'Summary', overviewData);
   } catch (e) {
     console.error('Error creating overview section:', e);
   }
@@ -613,90 +507,112 @@ export async function createExperimentInfoCard(
     ClickupLink,
     genericLinks
   );
-  leftPanel.appendChild(linksSection);
-
-  // === RIGHT PANEL: Targeting + Metrics + Variants - 60% width ===
-  const rightPanel = figma.createFrame();
-  rightPanel.name = "Right Panel";
-  rightPanel.layoutMode = "VERTICAL";
-  rightPanel.counterAxisSizingMode = "FIXED";
-  rightPanel.primaryAxisSizingMode = "AUTO";
-  rightPanel.minWidth = rightPanelWidth;
-  rightPanel.maxWidth = rightPanelWidth;
-  rightPanel.layoutGrow = 0; // Fixed width; container is fixed width anyway
-  rightPanel.paddingLeft = rightPanel.paddingRight = 0;
-  rightPanel.paddingTop = rightPanel.paddingBottom = 0;
-  rightPanel.itemSpacing = 24;
-  rightPanel.fills = [];
-  rightPanel.strokes = [];
-
-  // IMPORTANT: append panels to the container BEFORE populating them.
-  // Width allocation (and thus child "STRETCH"/wrapping) only resolves once nodes are in the auto-layout tree.
-  twoPanelContainer.appendChild(leftPanel);
-  twoPanelContainer.appendChild(rightPanel);
-  card.appendChild(twoPanelContainer);
+  card.appendChild(contentStack);
+  summaryHost.layoutAlign = "STRETCH";
+  contentStack.appendChild(summaryHost);
 
   // (Targeting section removed)
 
-  // === METRICS SECTION ===
-  if (metrics && metrics.length > 0) {
+  const shouldShowInlineOutcome =
+    options?.showOutcomeCard === true &&
+    !!options?.variants &&
+    options.variants.length > 0 &&
+    !!metrics &&
+    metrics.length > 0;
+
+  if (shouldShowInlineOutcome) {
     try {
-      await appendMetricsSection(rightPanel, metrics);
+      const outcomeData = mapExperimentDataToOutcomeData(
+        experimentName,
+        metrics!,
+        options!.variants!,
+        {
+          hypothesis: options?.hypothesis,
+          experimentType: options?.experimentType,
+          startDate: options?.startDate,
+          endDate: options?.endDate,
+          audience: options?.audience,
+          totalSampleSize: options?.totalSampleSize,
+          dateCreated: options?.dateCreated,
+          status,
+          primaryMetric: options?.primaryMetric,
+        }
+      );
+
+      const outcomeSections = await createOutcomeCardSections(outcomeData, { includeHeader: false });
+      outcomeSections.summarySection.layoutAlign = "STRETCH";
+      outcomeSections.metricsTable.layoutAlign = "STRETCH";
+      const summarySection = summaryHost.children[0] as FrameNode | undefined;
+      if (summarySection) {
+        summarySection.appendChild(outcomeSections.summarySection);
+      }
+
+      const metricsSection = figma.createFrame();
+      metricsSection.name = "Section: Key Metrics";
+      metricsSection.layoutMode = "VERTICAL";
+      metricsSection.counterAxisSizingMode = "AUTO";
+      metricsSection.primaryAxisSizingMode = "AUTO";
+      metricsSection.layoutAlign = "STRETCH";
+      metricsSection.itemSpacing = 8;
+      metricsSection.fills = [];
+
+      const metricsLabel = figma.createText();
+      metricsLabel.fontName = { family: "Figtree", style: "Bold" };
+      metricsLabel.fontSize = TOKENS.fontSizeLabel;
+      metricsLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+      metricsLabel.textAutoResize = "WIDTH_AND_HEIGHT";
+      metricsLabel.characters = "Goals";
+      metricsSection.appendChild(metricsLabel);
+      metricsSection.appendChild(outcomeSections.metricsTable);
+      contentStack.appendChild(metricsSection);
+
+      // Optional variants block in single-column mode: only show when variants include descriptive context
+      const variantsWithDescriptions = options?.variants?.filter(v => !!v.description && v.description.trim().length > 0) || [];
+      if (variantsWithDescriptions.length > 0) {
+        await appendVariantsSection(contentStack, options!.variants!);
+      }
     } catch (e) {
-      console.error('Error creating metrics section:', e);
+      console.error('Error creating inline outcome sections:', e);
+    }
+  } else {
+    // No outcome block available: still keep key metrics central and full-width.
+    // === METRICS SECTION ===
+    if (metrics && metrics.length > 0) {
+      try {
+        await appendMetricsSection(contentStack, metrics);
+      } catch (e) {
+        console.error('Error creating metrics section:', e);
+      }
+    }
+
+    // === VARIANTS SECTION ===
+    if (options?.variants && options.variants.length > 0) {
+      try {
+        await appendVariantsSection(contentStack, options.variants);
+      } catch (e) {
+        console.error('Error creating variants section:', e);
+      }
     }
   }
 
-  // === VARIANTS SECTION ===
-  if (options?.variants && options.variants.length > 0) {
-    try {
-      await appendVariantsSection(rightPanel, options.variants);
-    } catch (e) {
-      console.error('Error creating variants section:', e);
-    }
-  }
+  // Move links section from metadata context to final supporting context.
+  linksSection.layoutAlign = "STRETCH";
+  contentStack.appendChild(linksSection);
+
+  const contentTargetWidth = Math.min(CONTENT_MAX_WIDTH, Math.max(CONTENT_MIN_WIDTH, contentStack.width));
+  contentStack.minWidth = contentTargetWidth;
+  contentStack.maxWidth = contentTargetWidth;
+
+  const cardContentWidth = contentTargetWidth + card.paddingLeft + card.paddingRight;
+  const cardTargetWidth = Math.min(CARD_MAX_WIDTH, Math.max(card.minWidth, cardContentWidth));
+  card.counterAxisSizingMode = "FIXED";
+  card.minWidth = cardTargetWidth;
+  card.maxWidth = cardTargetWidth;
   
   // Ensure card has valid dimensions
   if (card.width === 0 || card.height === 0) {
     console.warn('Card has zero dimensions, forcing layout recalculation');
     card.resize(Math.max(card.width, 792), Math.max(card.height, 612));
-  }
-
-  // If outcome card is requested and we have variants, create a container with both cards
-  if (options?.showOutcomeCard && options?.variants && options.variants.length > 0 && metrics && metrics.length > 0) {
-    // Create container frame for both cards
-    const container = figma.createFrame();
-    container.name = `Experiment Overview — ${experimentName}`;
-    container.layoutMode = "VERTICAL";
-    container.counterAxisSizingMode = "AUTO";
-    container.primaryAxisSizingMode = "AUTO";
-    container.itemSpacing = 24;
-    container.fills = [];
-    container.strokes = [];
-
-    // Add info card to container
-    container.appendChild(card);
-
-    // Create outcome card
-    const outcomeCard = await createOutcomeCardFromExperimentData(
-      experimentName,
-      metrics,
-      options.variants,
-      {
-        hypothesis: options.hypothesis,
-        experimentType: options.experimentType,
-        startDate: options.startDate,
-        endDate: options.endDate,
-        audience: options.audience,
-        totalSampleSize: options.totalSampleSize,
-        dateCreated: options.dateCreated,
-        status: status,
-        primaryMetric: options.primaryMetric,
-      }
-    );
-    container.appendChild(outcomeCard);
-
-    return container;
   }
 
   return card;
@@ -820,43 +736,6 @@ export async function createExperimentCanvasLayout(
   // Add panels to canvas
   canvas.appendChild(leftPanel);
   canvas.appendChild(rightPanel);
-
-  // Handle outcome card if requested
-  if (options?.showOutcomeCard && options?.variants && options.variants.length > 0 && metrics && metrics.length > 0) {
-    // Create container frame for canvas + outcome card
-    const container = figma.createFrame();
-    container.name = `Experiment Overview — ${experimentName}`;
-    container.layoutMode = "VERTICAL";
-    container.counterAxisSizingMode = "AUTO";
-    container.primaryAxisSizingMode = "AUTO";
-    container.itemSpacing = 24;
-    container.fills = [];
-    container.strokes = [];
-
-    // Add canvas to container
-    container.appendChild(canvas);
-
-    // Create outcome card
-    const outcomeCard = await createOutcomeCardFromExperimentData(
-      experimentName,
-      metrics,
-      options.variants,
-      {
-        hypothesis: options.hypothesis,
-        experimentType: options.experimentType,
-        startDate: options.startDate,
-        endDate: options.endDate,
-        audience: options.audience,
-        totalSampleSize: options.totalSampleSize,
-        dateCreated: options.dateCreated,
-        status: status,
-        primaryMetric: options.primaryMetric,
-      }
-    );
-    container.appendChild(outcomeCard);
-
-    return container;
-  }
 
   return canvas;
 }
@@ -1082,7 +961,7 @@ async function appendMetricsSection(
 }
 
 /**
- * Create Variants section with table format (Name | Description)
+ * Create Variants section with table format (Name | Figma link)
  */
 async function appendVariantsSection(
   parent: FrameNode,
@@ -1151,15 +1030,15 @@ async function appendVariantsSection(
   nameHeader.layoutGrow = 1;
   headerRow.appendChild(nameHeader);
   
-  // Description header
-  const descHeader = figma.createText();
-  descHeader.fontName = { family: "Figtree", style: "Medium" };
-  descHeader.fontSize = TOKENS.fontSizeBodySm;
-  descHeader.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-  descHeader.textAutoResize = "WIDTH_AND_HEIGHT";
-  descHeader.characters = "Description";
-  descHeader.layoutGrow = 1;
-  headerRow.appendChild(descHeader);
+  // Figma Link header
+  const linkHeader = figma.createText();
+  linkHeader.fontName = { family: "Figtree", style: "Medium" };
+  linkHeader.fontSize = TOKENS.fontSizeBodySm;
+  linkHeader.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+  linkHeader.textAutoResize = "WIDTH_AND_HEIGHT";
+  linkHeader.characters = "Figma Link";
+  linkHeader.layoutGrow = 1;
+  headerRow.appendChild(linkHeader);
   
   tableContainer.appendChild(headerRow);
   
@@ -1170,10 +1049,10 @@ async function appendVariantsSection(
     
     const row = figma.createFrame();
     row.layoutMode = "HORIZONTAL";
-    row.counterAxisSizingMode = "FIXED";
+    row.counterAxisSizingMode = "AUTO";
     row.primaryAxisSizingMode = "FIXED";
-    row.resize(100, 40);
-    row.minHeight = 40;
+    row.resize(100, 48);
+    row.minHeight = 48;
     row.layoutAlign = 'STRETCH';
     row.counterAxisAlignItems = "CENTER";
     row.paddingLeft = row.paddingRight = 16;
@@ -1215,31 +1094,41 @@ async function appendVariantsSection(
     nameText.characters = variant.name || `Variant ${variant.key}`;
     nameCell.appendChild(nameText);
     
-    // Baseline badge if control
-    if (variant.isControl === true) {
-      const baselineBadge = createBadge('Baseline', 'micro', TOKENS.azure100, TOKENS.azure700);
-      nameCell.appendChild(baselineBadge);
+    if (variant.isRolledOut) {
+      const rolledOutBadge = createBadge('Rolled Out', 'micro', '#FFF420', TOKENS.textPrimary);
+      nameCell.appendChild(rolledOutBadge);
     }
     
     row.appendChild(nameCell);
     
-    // Description cell
-    const descCell = figma.createFrame();
-    descCell.layoutMode = "HORIZONTAL";
-    descCell.counterAxisSizingMode = "AUTO";
-    descCell.primaryAxisSizingMode = "AUTO";
-    descCell.layoutGrow = 1;
-    descCell.fills = [];
-    
-    const descText = figma.createText();
-    descText.fontName = { family: "Figtree", style: "Regular" };
-    descText.fontSize = TOKENS.fontSizeBodySm;
-    descText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-    descText.textAutoResize = "WIDTH_AND_HEIGHT";
-    descText.characters = variant.description || '—';
-    descCell.appendChild(descText);
-    
-    row.appendChild(descCell);
+    // Figma link cell
+    const linkCell = figma.createFrame();
+    linkCell.layoutMode = "HORIZONTAL";
+    linkCell.counterAxisSizingMode = "AUTO";
+    linkCell.primaryAxisSizingMode = "AUTO";
+    linkCell.layoutGrow = 1;
+    linkCell.fills = [];
+
+    if (variant.figmaLink) {
+      const figmaLinkText = figma.createText();
+      figmaLinkText.fontName = getFontStyle("Medium");
+      figmaLinkText.fontSize = TOKENS.fontSizeBodySm;
+      figmaLinkText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.royalBlue600) }];
+      figmaLinkText.textAutoResize = "WIDTH_AND_HEIGHT";
+      figmaLinkText.characters = "Open in Figma";
+      figmaLinkText.hyperlink = { type: "URL", value: variant.figmaLink.trim() };
+      linkCell.appendChild(figmaLinkText);
+    } else {
+      const placeholder = figma.createText();
+      placeholder.fontName = { family: "Figtree", style: "Regular" };
+      placeholder.fontSize = TOKENS.fontSizeBodySm;
+      placeholder.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+      placeholder.textAutoResize = "WIDTH_AND_HEIGHT";
+      placeholder.characters = "—";
+      linkCell.appendChild(placeholder);
+    }
+
+    row.appendChild(linkCell);
     tableContainer.appendChild(row);
   }
   
@@ -1295,8 +1184,9 @@ async function appendDetailsSection(
   detailsContainer.paddingLeft = detailsContainer.paddingRight = 16;
   detailsContainer.paddingTop = detailsContainer.paddingBottom = 16;
   detailsContainer.cornerRadius = 8;
-  detailsContainer.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsBackground) }];
+  detailsContainer.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
   detailsContainer.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+  detailsContainer.opacity = 0.85;
   detailsContainer.name = "Details Container";
   section.appendChild(detailsContainer);
 
@@ -1372,7 +1262,7 @@ async function appendDetailsSection(
 }
 
 // SECTION 1: Header with badge row (card type + status) + title + description
-async function createStoryHeaderWithBadges(experimentName: string, description: string, statusConfig: StatusConfig, options?: ExperimentCardOptions): Promise<FrameNode> {
+async function createStoryHeaderWithBadges(experimentName: string, description: string, statusConfig: ExperimentStatusConfig, options?: ExperimentCardOptions): Promise<FrameNode> {
   await loadFonts();
   const section = figma.createFrame();
   section.layoutMode = "VERTICAL";
@@ -1381,22 +1271,22 @@ async function createStoryHeaderWithBadges(experimentName: string, description: 
   section.primaryAxisAlignItems = "MIN";
   section.counterAxisAlignItems = "MIN";
   section.layoutAlign = 'STRETCH';
-  section.itemSpacing = 12;
+  section.itemSpacing = 10;
   section.fills = [];
   section.strokes = [];
   section.name = "Header Section";
 
-  // Date created label - auto-populated (above badge row)
+  // Status + date row
   const dateCreated = options?.dateCreated || new Date().toISOString().split('T')[0];
   const dateFormatted = formatDateForDisplay(dateCreated);
-  const dateLabel = figma.createText();
-  dateLabel.fontName = { family: "Figtree", style: "Regular" };
-  dateLabel.fontSize = TOKENS.fontSizeLabel;
-  dateLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary), opacity: 0.5 }];
-  dateLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-  dateLabel.characters = dateFormatted;
-  dateLabel.name = "Date Created Label";
-  section.appendChild(dateLabel);
+  const statusRow = figma.createFrame();
+  statusRow.layoutMode = "HORIZONTAL";
+  statusRow.counterAxisSizingMode = "AUTO";
+  statusRow.primaryAxisSizingMode = "AUTO";
+  statusRow.counterAxisAlignItems = "CENTER";
+  statusRow.itemSpacing = 8;
+  statusRow.fills = [];
+  statusRow.name = "Status Row";
 
   // Status badge - filled for rolled_out, outlined for others
   const statusBadge = figma.createFrame();
@@ -1429,7 +1319,17 @@ async function createStoryHeaderWithBadges(experimentName: string, description: 
   statusText.textAutoResize = "WIDTH_AND_HEIGHT";
   statusText.characters = statusConfig.label;
   statusBadge.appendChild(statusText);
-  section.appendChild(statusBadge);
+  statusRow.appendChild(statusBadge);
+
+  const dateLabel = figma.createText();
+  dateLabel.fontName = { family: "Figtree", style: "Regular" };
+  dateLabel.fontSize = TOKENS.fontSizeLabel;
+  dateLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary), opacity: 0.5 }];
+  dateLabel.textAutoResize = "WIDTH_AND_HEIGHT";
+  dateLabel.characters = dateFormatted;
+  dateLabel.name = "Date Created Label";
+  statusRow.appendChild(dateLabel);
+  section.appendChild(statusRow);
 
   // Title (Bold, 24px)
   const titleText = figma.createText();
@@ -1499,7 +1399,7 @@ async function createStoryHypothesis(hypothesis: string): Promise<FrameNode> {
 // ============================================
 
 // Card header with badges, title, and description
-async function createCardHeader(experimentName: string, description: string, statusConfig: StatusConfig, options?: ExperimentCardOptions): Promise<FrameNode> {
+async function createCardHeader(experimentName: string, description: string, statusConfig: ExperimentStatusConfig, options?: ExperimentCardOptions): Promise<FrameNode> {
   await loadFonts();
   const section = figma.createFrame();
   section.layoutMode = "VERTICAL";
@@ -1731,7 +1631,7 @@ async function createTargetRow(audience?: string, sampleSize?: number): Promise<
 }
 
 // Outcome row: Status + Rolled out variant (only shown when rolled out)
-async function createOutcomeRow(statusConfig: StatusConfig, variantName: string, variantColor?: string): Promise<FrameNode> {
+async function createOutcomeRow(statusConfig: ExperimentStatusConfig, variantName: string, variantColor?: string): Promise<FrameNode> {
   await loadFonts();
   const row = figma.createFrame();
   row.layoutMode = "HORIZONTAL";

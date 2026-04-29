@@ -2599,6 +2599,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
       key: string;
       name: string;
       description?: string;
+      figmaLink?: string;
       isControl?: boolean;
       traffic: number;
       status?: string;
@@ -2621,6 +2622,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
             key: variant.key,
             name: variant.name || `Variant ${variant.key}`, // Fallback if no name provided
             description: variant.description,
+            figmaLink: safeGetString(variant, 'figmaLink'),
             // Control baseline flag: determines which variant is the control in outcome card
             isControl: finalIsControl,
             traffic: variant.traffic,
