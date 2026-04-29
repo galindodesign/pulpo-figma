@@ -2251,11 +2251,18 @@
       color: var(--event-variants-step-text);
     }
 
+      /* Force same violet for badge in dark mode */
+      :root[data-figma-theme="dark"] .event-row.event-row--has-variants .event-step-badge {
+        background: var(--color-electric-violet-500) !important;
+        border: 0px solid var(--color-electric-violet-500) !important;
+        color: var(--color-white-100) !important;
+      }
+
     /* Experiment events (with variants) get purple background */
     .event-row.event-row--has-variants {
-      background: var(--event-variants-row-bg);
-       border-radius: var(--radius-md);
-       gap: var(--space-0);
+        background: var(--figma-color-bg-selected-secondary, var(--color-royal-blue-50));
+        border-radius: var(--radius-md);
+        gap: var(--space-0);
     }
 
     .event-flow-line {
