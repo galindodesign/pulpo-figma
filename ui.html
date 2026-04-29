@@ -2951,21 +2951,26 @@
       box-shadow: 0 0 0 1px var(--background-surface), 0 0 0 2px var(--color-option-color);
     }
 
-    /* Variant content area 
+    /* Variant content area */
     .variant-content {
       display: flex;
       flex-direction: column;
-      gap: var(--space-10);
+      gap: var(--space-0);
       flex: 1;
       min-width: 0;
       width: 100%;
-    }*/
+      max-width: 100%;
+      box-sizing: border-box;
+    }
 
     .variant-row {
       display: flex;
       gap: var(--space-8);
       align-items: center;
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
       /* padding-bottom: var(--space-10);
       border-bottom: 1px solid var(--color-azure-light-alpha-100); */
     }
@@ -3062,12 +3067,21 @@
       box-sizing: border-box;
     }
 
+    .variant-subtree > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
     .variant-description {
       width: 100%;
     }
 
     .variant-figma-link {
       width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
     }
 
     /*.variant-figma-link .InputField__wrapper {
@@ -4176,16 +4190,25 @@
       display: flex;
       flex-direction: column;
       gap: var(--space-4);
+      min-width: 0;
     }
 
     .link-input-row {
       display: flex;
       align-items: center;
       gap: var(--space-8);
+      min-width: 0;
+      width: 100%;
     }
 
     .link-input-row .InputField {
       flex: 1;
+      min-width: 0;
+    }
+
+    .link-input-row .InputField__wrapper {
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .link-input-error {
@@ -4210,6 +4233,11 @@
       display: flex;
       align-items: center;
       gap: var(--space-8);
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
       padding: 0 var(--input-field-padding-x);
       background: var(--button-secondary-bg);
       border: 1px solid var(--border);
@@ -4262,6 +4290,8 @@
     }
 
     .link-row__name {
+      display: block;
+      max-width: 100%;
       font-size: var(--body-sm-size);
       font-weight: 400;
       color: var(--text-primary);
@@ -4332,6 +4362,7 @@
     .link-row__edit-form {
       display: none;
       flex: 1;
+      min-width: 0;
       gap: var(--space-4);
     }
 
@@ -4342,6 +4373,9 @@
 
     .link-row__edit-input {
       flex: 1;
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
       padding: var(--space-4) var(--space-8);
       border: 1px solid var(--border-dark);
       border-radius: var(--radius-xs);
@@ -4360,6 +4394,7 @@
     .link-row__edit-actions {
       display: flex;
       gap: var(--space-2);
+      flex-shrink: 0;
     }
 
     .link-row__edit-btn {
@@ -6516,6 +6551,19 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       function renderFigmaLink() {
         figmaLinkDiv.innerHTML = '';
 
+        function saveVariantFigmaLink(rawValue) {
+          const { valid, url } = normalizeUrl(rawValue);
+          if (!valid) return false;
+          variant.figmaLink = url;
+          renderFigmaLink();
+          return true;
+        }
+
+        if (variant.figmaLink) {
+          const { valid, url } = normalizeUrl(variant.figmaLink);
+          if (valid) variant.figmaLink = url;
+        }
+
         if (variant.figmaLink) {
           // Show as a link-row chip (same as resource link entered state)
           const row = document.createElement('div');
@@ -6576,9 +6624,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           editInput.addEventListener('keydown', (ev) => {
             if (ev.key === 'Enter') {
               ev.preventDefault();
-              const val = editInput.value.trim();
-              if (val) { variant.figmaLink = val; }
-              renderFigmaLink();
+              saveVariantFigmaLink(editInput.value);
             } else if (ev.key === 'Escape') {
               ev.preventDefault();
               renderFigmaLink();
@@ -6595,9 +6641,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           saveBtn.title = 'Save';
           saveBtn.onclick = (e) => {
             e.stopPropagation();
-            const val = editInput.value.trim();
-            if (val) { variant.figmaLink = val; }
-            renderFigmaLink();
+            saveVariantFigmaLink(editInput.value);
           };
 
           const cancelBtn = document.createElement('button');
@@ -6654,11 +6698,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           input.addEventListener('keydown', (ev) => {
             if (ev.key === 'Enter') {
               ev.preventDefault();
-              const val = input.value.trim();
-              if (val) {
-                variant.figmaLink = val;
-                renderFigmaLink();
-              }
+              saveVariantFigmaLink(input.value);
             }
           });
 
@@ -6666,8 +6706,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
             setTimeout(() => {
               const val = input.value.trim();
               if (val && val.includes('.')) {
-                variant.figmaLink = val;
-                renderFigmaLink();
+                saveVariantFigmaLink(val);
               }
             }, 0);
           });
