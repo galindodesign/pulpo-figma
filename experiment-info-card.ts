@@ -750,7 +750,7 @@ export async function createExperimentCanvasLayout(
   leftPanel.layoutMode = "VERTICAL";
   leftPanel.counterAxisSizingMode = "FIXED";
   leftPanel.primaryAxisSizingMode = "AUTO";
-  leftPanel.minWidth = 500; // Minimum width
+  leftPanel.minWidth = 400; // Minimum width
   leftPanel.layoutGrow = 1; // Flexible to fill space
   leftPanel.paddingLeft = leftPanel.paddingRight = 0;
   leftPanel.paddingTop = leftPanel.paddingBottom = 0;
@@ -790,7 +790,7 @@ export async function createExperimentCanvasLayout(
   rightPanel.counterAxisSizingMode = "FIXED";
   rightPanel.primaryAxisSizingMode = "AUTO";
   rightPanel.minWidth = 350; // Minimum width (per plan spec)
-  rightPanel.maxWidth = 500; // Maximum width
+  rightPanel.maxWidth = 600; // Maximum width
   rightPanel.layoutGrow = 0; // Fixed width, don't grow
   rightPanel.paddingLeft = rightPanel.paddingRight = 24;
   rightPanel.paddingTop = rightPanel.paddingBottom = 24;
