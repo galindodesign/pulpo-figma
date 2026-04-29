@@ -291,8 +291,8 @@ export function createEventCard(eventName: string, variantCount?: number, eventI
 
   const count = variantCount ?? 0;
   if (count > 0) {
-    const variantsBadgeText = `${count} variant${count !== 1 ? 's' : ''}`;
-    const variantsBadge = createBadge(variantsBadgeText, 'micro', TOKENS.electricViolet100, TOKENS.electricViolet800);
+    const variantsBadgeText = `${count} design variant${count !== 1 ? 's' : ''}`;
+    const variantsBadge = createBadge(variantsBadgeText, 'micro', TOKENS.azure100, TOKENS.azure700);
     variantsBadge.name = 'Number of Variants Badge';
     eventDetailsContainer.appendChild(variantsBadge);
   }
@@ -472,7 +472,7 @@ export async function createVariantCard(
   // Baseline badge - shown when this variant is the control/baseline
   const isControl = Boolean((variant as Record<string, unknown>).isControl);
   if (isControl) {
-    const baselineBadge = createBadge('Baseline', 'micro', TOKENS.azure100, TOKENS.azure700);
+    const baselineBadge = createBadge('Control', 'micro', TOKENS.azure100, TOKENS.azure700);
     nameBadges.appendChild(baselineBadge);
   }
 
@@ -511,7 +511,6 @@ export async function createVariantCard(
   metricsSection.fills = [];
   metricsSection.strokes = [];
   metricsSection.name = 'Metrics Section';
-  metricsSection.paddingBottom = 8;
   metricsSection.paddingTop = 0;
   metricsSection.layoutAlign = 'STRETCH';
 

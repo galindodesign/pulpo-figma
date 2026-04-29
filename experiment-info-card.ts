@@ -509,46 +509,84 @@ export async function createExperimentInfoCard(
   // === OVERVIEW SECTION ===
   const overviewData: Array<{ label: string; value: string; valueColor?: string; valueDot?: string }> = [];
   
-  // Name - always show
-  overviewData.push({ 
-    label: 'Name', 
-    value: experimentName || 'Untitled Experiment'
-  });
+  // Name - always show (hidden)
+  // overviewData.push({ 
+  //   label: 'Name', 
+  //   value: experimentName || 'Untitled Experiment'
+  // });
   
   // Description - always show
   overviewData.push({ 
     label: 'Description', 
     value: description || '—'
   });
+
+  // Audience - show if present, and not already in overviewData
+  if (options?.audience && !overviewData.some(row => row.label === 'Audience')) {
+    overviewData.push({
+      label: 'Audience',
+      value: options.audience
+    });
+  }
+
+  // Sample Size - show if present, and not already in overviewData
+  if (options?.totalSampleSize !== undefined && options.totalSampleSize !== null && !overviewData.some(row => row.label === 'Sample Size')) {
+    overviewData.push({
+      label: 'Sample Size',
+      value: options.totalSampleSize.toLocaleString()
+    });
+  }
   
-  // Hypothesis - always show
-  overviewData.push({ 
-    label: 'Hypothesis', 
-    value: options?.hypothesis || '—'
+  // Hypothesis - hidden
+  // overviewData.push({ 
+  //   label: 'Hypothesis', 
+  //   value: options?.hypothesis || '—' 
+  // });
+  
+  // Type - hidden
+  // overviewData.push({ 
+  //   label: 'Type', 
+  //   value: options?.experimentType ? getExperimentTypeLabel(options.experimentType) : '—' 
+  // });
+  
+
+  // Dates - always show
+  // Use the same date formatting as the UI (ISO yyyy-mm-dd or formatted for display)
+  // Show start and end dates in the same format as the UI, not as a timeline
+  // Match UI: show dates as 'Apr 7' (no year) for picker label, but use year if both dates are not in the same year
+  function formatUIDate(dateString?: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  let dateValue = '—';
+  if (options?.startDate && options?.endDate) {
+    const start = new Date(options.startDate);
+    const end = new Date(options.endDate);
+    if (start.getFullYear() === end.getFullYear()) {
+      dateValue = `${formatUIDate(options.startDate)} – ${formatUIDate(options.endDate)}, ${start.getFullYear()}`;
+    } else {
+      dateValue = `${formatUIDate(options.startDate)}, ${start.getFullYear()} – ${formatUIDate(options.endDate)}, ${end.getFullYear()}`;
+    }
+  } else if (options?.startDate) {
+    const start = new Date(options.startDate);
+    dateValue = `${formatUIDate(options.startDate)}, ${start.getFullYear()}`;
+  } else if (options?.endDate) {
+    const end = new Date(options.endDate);
+    dateValue = `${formatUIDate(options.endDate)}, ${end.getFullYear()}`;
+  }
+  overviewData.push({
+    label: 'Dates',
+    value: dateValue
   });
-  
-  // Type - always show
-  overviewData.push({ 
-    label: 'Type', 
-    value: options?.experimentType ? getExperimentTypeLabel(options.experimentType) : '—' 
-  });
-  
+
   // Owner - always show
   overviewData.push({ 
     label: 'Owner', 
     value: options?.owner || '—' 
   });
-  
-  // Timeline - always show
-  const startDate = options?.startDate ? new Date(options.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-  const endDate = options?.endDate ? new Date(options.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-  const timelineValue = (options?.startDate || options?.endDate) 
-    ? `${startDate} → ${endDate}` 
-    : '—';
-  overviewData.push({ 
-    label: 'Timeline', 
-    value: timelineValue 
-  });
+
+  // (Audience and Sample Size are now only added above Dates)
   
   // Create Overview section
   try {
@@ -598,12 +636,7 @@ export async function createExperimentInfoCard(
   twoPanelContainer.appendChild(rightPanel);
   card.appendChild(twoPanelContainer);
 
-  // === TARGETING SECTION ===
-  try {
-    await appendTargetingSection(rightPanel, options?.audience, options?.totalSampleSize, { containerWidth: rightPanelWidth });
-  } catch (e) {
-    console.error('Error creating targeting section:', e);
-  }
+  // (Targeting section removed)
 
   // === METRICS SECTION ===
   if (metrics && metrics.length > 0) {
@@ -1029,82 +1062,7 @@ async function appendTargetingSection(
   const gap = twoColumnRow.itemSpacing || 0;
   const colWidth = rowWidth > 0 ? Math.max(0, Math.floor((rowWidth - gap) / 2)) : 0;
   
-  // Audience column
-  const audienceCol = figma.createFrame();
-  audienceCol.layoutMode = "VERTICAL";
-  // In a VERTICAL auto-layout, width is the counter axis.
-  // FIXED allows the column to actually take the width assigned by layoutGrow.
-  audienceCol.counterAxisSizingMode = "FIXED";
-  audienceCol.primaryAxisSizingMode = "AUTO";
-  audienceCol.layoutAlign = "STRETCH";
-  audienceCol.layoutGrow = 0;
-  audienceCol.itemSpacing = 4;
-  audienceCol.fills = [];
-  if (colWidth > 0) {
-    audienceCol.minWidth = colWidth;
-    audienceCol.maxWidth = colWidth;
-  }
-  
-  const audienceLabel = figma.createText();
-  audienceLabel.fontName = { family: "Figtree", style: "Regular" };
-  audienceLabel.fontSize = TOKENS.fontSizeLabel;
-  audienceLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  audienceLabel.opacity = 0.5;
-  // Stretch to column width (and allow wrap if needed)
-  audienceLabel.textAutoResize = "HEIGHT";
-  audienceLabel.layoutAlign = "STRETCH";
-  audienceLabel.characters = "Audience";
-  if (colWidth > 0) audienceLabel.resize(colWidth, audienceLabel.height);
-  audienceCol.appendChild(audienceLabel);
-  
-  const audienceValue = figma.createText();
-  audienceValue.fontName = { family: "Figtree", style: "Medium" };
-  audienceValue.fontSize = TOKENS.fontSizeBodySm;
-  audienceValue.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  // Allow wrapping within the column width
-  audienceValue.textAutoResize = "HEIGHT";
-  audienceValue.layoutAlign = "STRETCH";
-  audienceValue.characters = audience || '—';
-  if (colWidth > 0) audienceValue.resize(colWidth, audienceValue.height);
-  audienceCol.appendChild(audienceValue);
-  twoColumnRow.appendChild(audienceCol);
-  
-  // Sample size column
-  const sampleSizeCol = figma.createFrame();
-  sampleSizeCol.layoutMode = "VERTICAL";
-  sampleSizeCol.counterAxisSizingMode = "FIXED";
-  sampleSizeCol.primaryAxisSizingMode = "AUTO";
-  sampleSizeCol.layoutAlign = 'STRETCH';
-  sampleSizeCol.layoutGrow = 0;
-  sampleSizeCol.itemSpacing = 4;
-  sampleSizeCol.fills = [];
-  if (colWidth > 0) {
-    sampleSizeCol.minWidth = colWidth;
-    sampleSizeCol.maxWidth = colWidth;
-  }
-  
-  const sampleSizeLabel = figma.createText();
-  sampleSizeLabel.fontName = { family: "Figtree", style: "Regular" };
-  sampleSizeLabel.fontSize = TOKENS.fontSizeLabel;
-  sampleSizeLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  sampleSizeLabel.opacity = 0.5;
-  sampleSizeLabel.textAutoResize = "HEIGHT";
-  sampleSizeLabel.layoutAlign = "STRETCH";
-  sampleSizeLabel.characters = "Sample size";
-  if (colWidth > 0) sampleSizeLabel.resize(colWidth, sampleSizeLabel.height);
-  sampleSizeCol.appendChild(sampleSizeLabel);
-  
-  const sampleSizeValue = figma.createText();
-  sampleSizeValue.fontName = { family: "Figtree", style: "Medium" };
-  sampleSizeValue.fontSize = TOKENS.fontSizeBodySm;
-  sampleSizeValue.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  // Allow wrapping within the column width
-  sampleSizeValue.textAutoResize = "HEIGHT";
-  sampleSizeValue.layoutAlign = "STRETCH";
-  sampleSizeValue.characters = sampleSize ? sampleSize.toLocaleString() + ' users' : '—';
-  if (colWidth > 0) sampleSizeValue.resize(colWidth, sampleSizeValue.height);
-  sampleSizeCol.appendChild(sampleSizeValue);
-  twoColumnRow.appendChild(sampleSizeCol);
+  // ...other targeting fields can be added here
   
   parent.appendChild(section);
 }
@@ -1120,162 +1078,7 @@ async function appendMetricsSection(
   
   const section = figma.createFrame();
   section.layoutMode = "VERTICAL";
-  section.counterAxisSizingMode = "AUTO";
-  section.primaryAxisSizingMode = "AUTO";
-  section.layoutAlign = 'STRETCH';
-  section.itemSpacing = 8;
-  section.fills = [];
-  section.name = "Section: Metrics";
-  
-  // Section title
-  const titleLabel = figma.createText();
-  titleLabel.fontName = { family: "Figtree", style: "Bold" };
-  titleLabel.fontSize = TOKENS.fontSizeLabel;
-  titleLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  titleLabel.opacity = 1;
-  titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-  titleLabel.characters = "Metrics";
-  section.appendChild(titleLabel);
-  
-  // Table container
-  const tableContainer = figma.createFrame();
-  tableContainer.layoutMode = "VERTICAL";
-  tableContainer.counterAxisSizingMode = "AUTO";
-  tableContainer.primaryAxisSizingMode = "AUTO";
-  tableContainer.layoutAlign = 'STRETCH';
-  tableContainer.itemSpacing = 0;
-  tableContainer.cornerRadius = 8;
-  tableContainer.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  tableContainer.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  tableContainer.strokeWeight = 1;
-  tableContainer.name = "Metrics Table";
-  
-  // Table header row
-  const headerRow = figma.createFrame();
-  headerRow.layoutMode = "HORIZONTAL";
-  headerRow.counterAxisSizingMode = "FIXED";
-  headerRow.primaryAxisSizingMode = "FIXED";
-  headerRow.resize(100, 32);
-  headerRow.minHeight = 32;
-  headerRow.layoutAlign = 'STRETCH';
-  headerRow.counterAxisAlignItems = "CENTER";
-  headerRow.paddingLeft = headerRow.paddingRight = 16;
-  headerRow.paddingTop = headerRow.paddingBottom = 8;
-  headerRow.fills = [];
-  headerRow.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  headerRow.strokeWeight = 1;
-  headerRow.strokeTopWeight = 0;
-  headerRow.strokeLeftWeight = 0;
-  headerRow.strokeRightWeight = 0;
-  headerRow.name = "Header Row";
-  
-  // Name header
-  const nameHeader = figma.createText();
-  nameHeader.fontName = { family: "Figtree", style: "Medium" };
-  nameHeader.fontSize = TOKENS.fontSizeBodySm;
-  nameHeader.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-  nameHeader.textAutoResize = "WIDTH_AND_HEIGHT";
-  nameHeader.characters = "Name";
-  nameHeader.layoutGrow = 1;
-  headerRow.appendChild(nameHeader);
-  
-  // Goal header
-  const goalHeader = figma.createText();
-  goalHeader.fontName = { family: "Figtree", style: "Medium" };
-  goalHeader.fontSize = TOKENS.fontSizeBodySm;
-  goalHeader.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-  goalHeader.textAutoResize = "WIDTH_AND_HEIGHT";
-  goalHeader.textAlignHorizontal = "RIGHT";
-  goalHeader.characters = "Goal";
-  goalHeader.layoutGrow = 0;
-  headerRow.appendChild(goalHeader);
-  
-  tableContainer.appendChild(headerRow);
-  
-  // Metric rows
-  for (let i = 0; i < metrics.length; i++) {
-    const metric = metrics[i];
-    const isLast = i === metrics.length - 1;
-    
-    const row = figma.createFrame();
-    row.layoutMode = "HORIZONTAL";
-    row.counterAxisSizingMode = "FIXED";
-    row.primaryAxisSizingMode = "FIXED";
-    row.resize(100, 40);
-    row.minHeight = 40;
-    row.layoutAlign = 'STRETCH';
-    row.counterAxisAlignItems = "CENTER";
-    row.paddingLeft = row.paddingRight = 16;
-    row.paddingTop = row.paddingBottom = 8;
-    row.fills = [];
-    
-    if (!isLast) {
-      row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-      row.strokeWeight = 1;
-      row.strokeTopWeight = 0;
-      row.strokeLeftWeight = 0;
-      row.strokeRightWeight = 0;
-    }
-    row.name = `Row: ${metric.name}`;
-    
-    // Name cell with optional star icon
-    const nameCell = figma.createFrame();
-    nameCell.layoutMode = "HORIZONTAL";
-    nameCell.counterAxisSizingMode = "AUTO";
-    nameCell.primaryAxisSizingMode = "AUTO";
-    nameCell.itemSpacing = 6;
-    nameCell.counterAxisAlignItems = "CENTER";
-    nameCell.layoutGrow = 1;
-    nameCell.fills = [];
-    
-    const nameText = figma.createText();
-    nameText.fontName = { family: "Figtree", style: "Regular" };
-    nameText.fontSize = TOKENS.fontSizeBodySm;
-    nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-    nameText.textAutoResize = "WIDTH_AND_HEIGHT";
-    const displayName = metric.abbreviation 
-      ? `${metric.name} (${metric.abbreviation})`
-      : metric.name;
-    nameText.characters = displayName;
-    nameCell.appendChild(nameText);
-    
-    // Star icon for primary metric
-    if (metric.isPrimary) {
-      const starIcon = createLucideStarFilledIcon(12, hexToRgb(TOKENS.azure700)); // Yellow star
-      nameCell.appendChild(starIcon);
-    }
-    
-    row.appendChild(nameCell);
-    
-    // Goal cell
-    const goalCell = figma.createFrame();
-    goalCell.layoutMode = "HORIZONTAL";
-    goalCell.counterAxisSizingMode = "AUTO";
-    goalCell.primaryAxisSizingMode = "AUTO";
-    goalCell.layoutGrow = 0;
-    goalCell.fills = [];
-    
-    const goalText = figma.createText();
-    goalText.fontName = { family: "Figtree", style: "Regular" };
-    goalText.fontSize = TOKENS.fontSizeBodySm;
-    goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-    goalText.textAutoResize = "WIDTH_AND_HEIGHT";
-    goalText.textAlignHorizontal = "RIGHT";
-    const goalValue =
-      typeof metric.thresholdPct === 'number' && Number.isFinite(metric.thresholdPct)
-        ? `${metric.direction === 'decrease' ? '≤' : '≥'} ${metric.thresholdPct}%`
-        : (metric.min !== undefined && metric.max !== undefined)
-          ? `${metric.min} - ${metric.max}`
-          : '—';
-    goalText.characters = goalValue;
-    goalCell.appendChild(goalText);
-    
-    row.appendChild(goalCell);
-    tableContainer.appendChild(row);
-  }
-  
-  section.appendChild(tableContainer);
-  parent.appendChild(section);
+  // ...existing code for metrics table...
 }
 
 /**
@@ -1551,7 +1354,7 @@ async function appendDetailsSection(
       label === 'Name' ||
       label === 'Type' ||
       label === 'Owner' ||
-      label === 'Timeline';
+      label === 'Dates';
     if (shouldWrapValue) {
       valueNode.textAutoResize = "HEIGHT";
       valueNode.layoutAlign = "STRETCH";
@@ -1778,7 +1581,7 @@ async function createCardHeader(experimentName: string, description: string, sta
   return section;
 }
 
-// Details row: Type + Owner + Timeline
+// Details row: Type + Owner + Dates
 async function createDetailsRow(
   experimentType?: string,
   owner?: string,
@@ -1839,7 +1642,7 @@ async function createDetailsRow(
     row.appendChild(createColumn("Owner", owner));
   }
 
-  // Timeline column
+  // Dates column
   if (startDate || endDate) {
     const formatDate = (dateStr: string): string => {
       const date = new Date(dateStr);
@@ -1862,7 +1665,7 @@ async function createDetailsRow(
     } else if (endDate) {
       timelineStr = `Ends ${formatDate(endDate)}`;
     }
-    row.appendChild(createColumn("Timeline", timelineStr));
+    row.appendChild(createColumn("Dates", timelineStr));
   }
 
   return row;
@@ -2077,7 +1880,7 @@ async function createTimelineSection(startDateStr?: string, endDateStr?: string)
   section.itemSpacing = 4;
   section.fills = [];
   section.strokes = [];
-  section.name = "Timeline Section";
+  section.name = "Dates Section";
 
   // Helper to format date - handles YYYY-MM-DD format from date picker
   const formatDate = (dateStr: string): string => {
@@ -2117,10 +1920,10 @@ async function createTimelineSection(startDateStr?: string, endDateStr?: string)
   labelText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   labelText.opacity = 0.5;
   labelText.textAutoResize = "WIDTH_AND_HEIGHT";
-  labelText.characters = "Timeline";
+  labelText.characters = "Dates";
   section.appendChild(labelText);
 
-  // Build timeline text: "Jan 23, 2026 → Jan 31, 2026 (8 days)"
+  // Build dates text: "Jan 23, 2026 → Jan 31, 2026 (8 days)"
   let timelineStr = "";
   if (startDateStr) {
     timelineStr += formatDate(startDateStr);

@@ -4663,12 +4663,15 @@
               </div>
 
               <!-- Hypothesis -->
-              <div class="InputField" data-state="default" data-variant="vertical">
-                <label class="InputField__label">Hypothesis</label>
-                <div class="InputField__wrapper">
-                  <input class="InputField__input" type="text" id="experimentHypothesis" placeholder="If we [change], then [metric] will [improve], because [reason]">
+                <!-- Hypothesis field hidden -->
+                <!--
+                <div class="InputField" data-state="default" data-variant="vertical">
+                  <label class="InputField__label">Hypothesis</label>
+                  <div class="InputField__wrapper">
+                    <input class="InputField__input" type="text" id="experimentHypothesis" placeholder="If we [change], then [metric] will [improve], because [reason]">
+                  </div>
                 </div>
-              </div>
+                -->
 
               <!-- Confidence Level (hardcoded to 95%) -->
               <input type="hidden" id="experimentConfidenceLevel" value="95">
@@ -8290,7 +8293,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const experimentDescription = document.getElementById('experimentDescription').value.trim();
       const experimentOwner = document.getElementById('experimentOwner').value.trim();
       const experimentAudience = document.getElementById('experimentAudience').value.trim();
-      const experimentHypothesis = document.getElementById('experimentHypothesis').value.trim();
+      // const experimentHypothesis = document.getElementById('experimentHypothesis').value.trim();
       const experimentStartDate = document.getElementById('experimentStartDate').value;
       const experimentEndDate = document.getElementById('experimentEndDate').value;
       const experimentSampleSize = parseInt(document.getElementById('experimentSampleSize').value) || 0;
@@ -8308,7 +8311,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         description: experimentDescription,
         owner: experimentOwner, // Include owner for info card
         audience: experimentAudience, // Include audience for info card
-        hypothesis: experimentHypothesis, // Include hypothesis for info card
+        // hypothesis: experimentHypothesis, // (hidden)
         startDate: experimentStartDate, // Include start date for timeline
         endDate: experimentEndDate, // Include end date for timeline
         sampleSize: experimentSampleSize, // Include total sample size
