@@ -2042,16 +2042,16 @@ function getConnectorStyle(
       case 'BRANCH_LINE':
       case 'MERGE_LINE':
         return {
-          strokeWeight: 2,  // Medium thickness (between normal and winner)
+          strokeWeight: 3,  // Medium thickness (between normal and winner)
           color: hexToRgb(TOKENS.electricViolet600), // Purple for rollout
-          dashPattern: [6, 3], // Different dash pattern than winner (solid) and normal (dashed)
+          dashPattern: undefined, // Solid line for winner
           arrowhead: true,
         };
       default:
         return {
-          strokeWeight: 2,
+          strokeWeight: 3,
           color: hexToRgb(TOKENS.electricViolet600),
-          dashPattern: [6, 3],
+          dashPattern: undefined, // Solid line for winner
           arrowhead: true,
         };
     }
@@ -2062,14 +2062,14 @@ function getConnectorStyle(
     switch (type) {
       case 'PRIMARY_FLOW_LINE':
         return {
-          strokeWeight: 5,  // Thicker for winner
+          strokeWeight: 3,  // Thicker for winner
           color: hexToRgb(TOKENS.malachite600), // Green for winner
           dashPattern: undefined, // Solid line for winner
           arrowhead: true,
         };
       case 'BRANCH_LINE':
         return {
-          strokeWeight: 4,
+          strokeWeight: 3,
           color: hexToRgb(TOKENS.malachite600),
           dashPattern: undefined,
           arrowhead: true,
