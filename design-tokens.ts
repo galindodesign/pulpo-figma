@@ -166,7 +166,7 @@ export const TOKENS = {
   accentWarning: '#dd7602',  // --accent-warning (yellow-600)
   accentInfo: '#2563eb',     // --accent-info (royal-blue-600)
   accentHighlight: '#01cbb7', // --accent-highlight (lochinvar-500)
-  accentPrimary: '#3f4c5f',  // --accent-primary (azure-700)
+  accentPrimary: '#7F7F7F',  
   accentPrimaryDark: '#22272f', // --accent-primary-dark (azure-950)
 
   // Status Variant Colors (from indicators)

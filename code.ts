@@ -1706,73 +1706,53 @@ function createConnectorV2(
     } else {
       // For BRANCH_LINE: entry/exit points are always straight, curve only at midpoint if offset
       if (type === 'BRANCH_LINE') {
-        // BRANCH_LINE connects event bottom center to variant top center
-        // Entry point: straight vertical (90 degrees) from event bottom
-        // Exit point: straight vertical (90 degrees) to variant top
-        // Midpoint: curve only if nodes are offset horizontally
-        const pathStartX = flowFrame ? start.x : startAbs.x;
-        const pathStartY = flowFrame ? start.y : startAbs.y;
-        const pathEndX = flowFrame ? end.x : endAbs.x;
-        const pathEndY = flowFrame ? end.y : endAbs.y;
-        
+        // Always offset endpoints for BRANCH_LINE (both straight and curved)
+        const verticalDirection = Math.sign((flowFrame ? end.y : endAbs.y) - (flowFrame ? start.y : startAbs.y)) || 1;
+        const branchStartAbs = getPrimaryFlowEndpointPosition(startAbs, { x: 0, y: verticalDirection }, 'start');
+        const branchEndAbs = getPrimaryFlowEndpointPosition(endAbs, { x: 0, y: verticalDirection }, 'end');
+        const branchStart = toPathCoordinates(branchStartAbs);
+        const branchEnd = toPathCoordinates(branchEndAbs);
+        const pathStartX = branchStart.x;
+        const pathStartY = branchStart.y;
+        const pathEndX = branchEnd.x;
+        const pathEndY = branchEnd.y;
         const dx = pathEndX - pathStartX;
         const dy = pathEndY - pathStartY;
         const absDx = Math.abs(dx);
-        
         // Magnet behavior: if nodes are horizontally aligned (X centers match), use straight vertical line
         if (absDx < 2) {
           // Horizontally aligned - straight vertical line (90 degrees at entry and exit)
           pathData = `M ${pathStartX} ${pathStartY} L ${pathEndX} ${pathEndY}`;
+          actualPathStart = branchStartAbs;
+          actualPathEnd = branchEndAbs;
           pathEndDirection = { x: 0, y: Math.sign(dy) }; // Straight vertical
         } else {
           // Not aligned - use midpoint curve with straight entry/exit segments
-          // Calculate midpoint Y
           const midY = (pathStartY + pathEndY) / 2;
           const absDy = Math.abs(dy);
-          
-          // Corner radius scales with distance, max 20px
           const cornerRadius = Math.min(20, Math.min(absDx, absDy) * 0.4);
-          
-          // Path structure: 
-          // 1. Straight vertical from entry (startY to midY - radius) - 90 degrees
-          // 2. Curve from vertical to horizontal at midpoint
-          // 3. Straight horizontal segment
-          // 4. Curve from horizontal to vertical at midpoint  
-          // 5. Straight vertical to exit (midY + radius to endY) - 90 degrees
-          
           pathData = `M ${pathStartX} ${pathStartY}`;
-          
           // Straight vertical segment from entry (90 degrees)
           const verticalEndY = midY - cornerRadius;
           pathData += ` L ${pathStartX} ${verticalEndY}`;
-          
           // Curve from vertical to horizontal (at midpoint)
-          // Control point creates smooth transition
           const horizontalStartX = dx > 0 
             ? pathStartX + cornerRadius  // Going right
             : pathStartX - cornerRadius; // Going left
-          
-          // Quadratic bezier: from (startX, midY - radius) via (startX, midY) to (startX ± radius, midY)
           pathData += ` Q ${pathStartX} ${midY} ${horizontalStartX} ${midY}`;
-          
           // Straight horizontal segment
           const horizontalEndX = dx > 0
             ? pathEndX - cornerRadius  // Going right
             : pathEndX + cornerRadius; // Going left
           pathData += ` L ${horizontalEndX} ${midY}`;
-          
           // Curve from horizontal to vertical (at midpoint)
-          // Quadratic bezier: from (endX ± radius, midY) via (endX, midY) to (endX, midY + radius)
           pathData += ` Q ${pathEndX} ${midY} ${pathEndX} ${midY + cornerRadius}`;
-          
           // Straight vertical segment to exit (90 degrees)
           pathData += ` L ${pathEndX} ${pathEndY}`;
-          
+          actualPathStart = branchStartAbs;
+          actualPathEnd = branchEndAbs;
           pathEndDirection = { x: 0, y: Math.sign(dy) }; // Exit is straight vertical
         }
-        
-        // actualPathEnd is the exact card edge position
-        actualPathEnd = { x: endAbs.x, y: endAbs.y };
       } else if (type === 'MERGE_LINE') {
         // MERGE_LINE uses straight direct line from card edge to card edge
         const pathStartX = flowFrame ? start.x : startAbs.x;
@@ -2116,7 +2096,7 @@ function getConnectorStyle(
     case 'PRIMARY_FLOW_LINE':
       return {
         strokeWeight: 3,
-        color: hexToRgb(TOKENS.accentSuccessLight),
+        color: hexToRgb(TOKENS.accentPrimary),
         dashPattern: undefined, // Solid line
         arrowhead: true,
       };
@@ -2124,21 +2104,21 @@ function getConnectorStyle(
       return {
         strokeWeight: 3,
         color: hexToRgb(TOKENS.accentBrand),
-        dashPattern: [6, 8], // Dashed pattern
+        dashPattern: undefined, // Solid line
         arrowhead: true,
       };
     case 'MERGE_LINE':
       return {
         strokeWeight: 3,
         color: hexToRgb(TOKENS.accentBrand),
-        dashPattern: [6, 8], // Dashed pattern
+        dashPattern: undefined, // Solid line
         arrowhead: true,
       };
     default:
       return {
         strokeWeight: 4,
         color: hexToRgb(TOKENS.textPrimary),
-       dashPattern: [6, 3],
+       dashPattern: undefined, // Solid line
         arrowhead: true,
       };
   }
