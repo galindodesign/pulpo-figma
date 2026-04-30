@@ -5777,6 +5777,16 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     ];
 
     /**
+     * Formats percent-style metric values with two decimal places for display.
+     */
+    function formatPercentValue(rawValue) {
+      if (rawValue === undefined || rawValue === null || rawValue === '') return '';
+      const num = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue));
+      if (!Number.isFinite(num)) return '';
+      return num.toFixed(2);
+    }
+
+    /**
      * Creates a goal row.
      * Header is a compact inline editor: "<Metric> will <increase/Decrease> by <X>%"
      *
@@ -5882,8 +5892,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         showRText: true,
         suffix: '%',
         showNumberStepper: false,
-        help: '2',
-        text: metric.thresholdPct !== undefined ? String(metric.thresholdPct) : '',
+        help: '2.00',
+        text: formatPercentValue(metric.thresholdPct),
         variant: 'horizontal',
         inputType: 'number',
         prefixElement: directionBadge,
@@ -5902,7 +5912,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         // Ensure no native number spinners (no up/down controls)
         thresholdInlineInput.classList.add('no-native-spinner');
         thresholdInlineInput.min = '0';
-        thresholdInlineInput.step = '0.1';
+        thresholdInlineInput.step = '0.01';
       }
 
       titleEditor.appendChild(metricInline);
@@ -5956,10 +5966,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           if (thresholdSuffix) thresholdSuffix.classList.add('hidden');
         } else {
           thresholdInlineInput.disabled = false;
-          thresholdInlineInput.placeholder = '2';
+          thresholdInlineInput.placeholder = '2.00';
           if (thresholdSuffix) thresholdSuffix.classList.remove('hidden');
           if (document.activeElement !== thresholdInlineInput) {
-            thresholdInlineInput.value = pct === '' ? '' : String(pct);
+            thresholdInlineInput.value = formatPercentValue(pct);
           }
         }
       };
@@ -6412,8 +6422,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         const num = typeof rawMetricValue === 'number' ? rawMetricValue : parseFloat(String(rawMetricValue));
         if (!Number.isFinite(num)) return '';
         const pct = (num >= 0 && num <= 1) ? (num * 100) : num;
-        const fixed = pct.toFixed(2);
-        return fixed.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+        return pct.toFixed(2);
       };
 
       nameFieldDiv.appendChild(nameField);
@@ -6570,7 +6579,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         if (metricInput) {
           metricInput.classList.add('no-native-spinner');
           metricInput.setAttribute('inputmode', 'decimal');
-          metricInput.step = '0.1';
+          metricInput.step = '0.01';
           metricInput.min = '0';
         }
         metricFieldDiv.appendChild(metricField);

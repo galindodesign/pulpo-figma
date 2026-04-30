@@ -561,7 +561,7 @@ export async function createExperimentInfoCard(
       metricsLabel.fontSize = TOKENS.fontSizeLabel;
       metricsLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
       metricsLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-      metricsLabel.characters = "Goals";
+      metricsLabel.characters = "Goals and Variants";
       metricsSection.appendChild(metricsLabel);
       metricsSection.appendChild(outcomeSections.metricsTable);
       contentStack.appendChild(metricsSection);
