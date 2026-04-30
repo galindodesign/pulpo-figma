@@ -976,7 +976,7 @@ async function appendVariantsSection(
   section.layoutAlign = 'STRETCH';
   section.itemSpacing = 8;
   section.fills = [];
-  section.name = "Section: Variants";
+  section.name = "Section: Goals and Variants";
   
   // Section title
   const titleLabel = figma.createText();
@@ -985,7 +985,7 @@ async function appendVariantsSection(
   titleLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   titleLabel.opacity = 1;
   titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-  titleLabel.characters = "Variants";
+  titleLabel.characters = "Goals and Variants";
   section.appendChild(titleLabel);
   
   // Table container
