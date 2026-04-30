@@ -66,6 +66,8 @@ function getGoalPerformance(metric, value) {
         return undefined;
     if (typeof metric.thresholdPct !== "number" || !Number.isFinite(metric.thresholdPct))
         return undefined;
+    if (metric.direction === "neutral")
+        return undefined;
     if (metric.direction === "decrease")
         return value <= metric.thresholdPct;
     return value >= metric.thresholdPct;
@@ -198,7 +200,7 @@ export function createOutcomeCardSections(data, options) {
         yield loadFonts();
         const includeHeader = (options === null || options === void 0 ? void 0 : options.includeHeader) !== false;
         const headerSection = includeHeader ? yield createHeaderSection(data) : undefined;
-        const metricsTable = yield createMetricsTable(data);
+        const metricsTable = yield createMetricsTablesSection(data);
         const summarySection = yield createSummarySection(data);
         return { headerSection, metricsTable, summarySection };
     });
@@ -277,6 +279,23 @@ function createHeaderSection(data) {
 /**
  * Create the metrics comparison table
  */
+function createMetricsTablesSection(data) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const section = figma.createFrame();
+        section.layoutMode = "VERTICAL";
+        section.counterAxisSizingMode = "FIXED";
+        section.primaryAxisSizingMode = "AUTO";
+        section.layoutAlign = "STRETCH";
+        section.itemSpacing = 16;
+        section.fills = [];
+        section.name = "Metrics Tables";
+        const metricsTable = yield createMetricsTable(data);
+        const flippedMetricsTable = yield createFlippedMetricsTable(data);
+        section.appendChild(metricsTable);
+        section.appendChild(flippedMetricsTable);
+        return section;
+    });
+}
 function createMetricsTable(data) {
     return __awaiter(this, void 0, void 0, function* () {
         const table = figma.createFrame();
@@ -299,6 +318,37 @@ function createMetricsTable(data) {
             const isLast = i === data.metrics.length - 1;
             const metricRow = yield createMetricRow(metric, data.variants, data.primaryMetric, isLast);
             table.appendChild(metricRow);
+        }
+        return table;
+    });
+}
+function createFlippedMetricsTable(data) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const table = figma.createFrame();
+        table.layoutMode = "VERTICAL";
+        table.counterAxisSizingMode = "FIXED";
+        table.primaryAxisSizingMode = "AUTO";
+        table.layoutAlign = "STRETCH";
+        table.itemSpacing = 0;
+        table.fills = [];
+        table.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        table.strokeWeight = 1;
+        table.cornerRadius = 8;
+        table.name = "Metrics Table — Variants as Rows";
+        const headerRow = yield createFlippedTableHeaderRow(data.metrics);
+        table.appendChild(headerRow);
+        if (data.variants.length > 0) {
+            const comparisonVariant = data.variants.find(v => v.isControl === true) || data.variants[0];
+            for (let i = 0; i < data.variants.length; i++) {
+                const variant = data.variants[i];
+                const isLast = i === data.variants.length - 1;
+                const variantRow = yield createVariantMetricRow(variant, data.metrics, comparisonVariant, data.primaryMetric, isLast);
+                table.appendChild(variantRow);
+            }
+        }
+        else {
+            const emptyRow = yield createEmptyVariantMetricRow(data.metrics);
+            table.appendChild(emptyRow);
         }
         return table;
     });
@@ -353,6 +403,41 @@ function createTableHeaderRow(data, variantCount) {
         return row;
     });
 }
+function createFlippedTableHeaderRow(metrics) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const row = figma.createFrame();
+        row.layoutMode = "HORIZONTAL";
+        row.counterAxisSizingMode = "FIXED";
+        row.primaryAxisSizingMode = "FIXED";
+        row.layoutAlign = "STRETCH";
+        row.counterAxisAlignItems = "CENTER";
+        row.minHeight = 48;
+        row.resize(row.width, 48);
+        row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
+        row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        row.strokeWeight = 1;
+        row.strokeTopWeight = 0;
+        row.strokeLeftWeight = 0;
+        row.strokeRightWeight = 0;
+        row.name = "Flipped Header Row";
+        const variantHeader = createTableCell('Variant', 200, true, false);
+        variantHeader.layoutGrow = 0;
+        row.appendChild(variantHeader);
+        if (metrics.length > 0) {
+            for (const metric of metrics) {
+                const metricHeader = createFlippedMetricHeaderCell(metric);
+                metricHeader.layoutGrow = 1;
+                row.appendChild(metricHeader);
+            }
+        }
+        else {
+            const metricHeader = createTableCell('Metric', 120, true, true);
+            metricHeader.layoutGrow = 1;
+            row.appendChild(metricHeader);
+        }
+        return row;
+    });
+}
 /**
  * Create a variant header cell with name and optional badges
  */
@@ -385,6 +470,58 @@ function createVariantHeaderCell(variant) {
     cell.appendChild(nameText);
     return cell;
 }
+function createFlippedMetricHeaderCell(metric) {
+    const cell = figma.createFrame();
+    cell.layoutMode = "VERTICAL";
+    cell.counterAxisSizingMode = "FIXED";
+    cell.primaryAxisSizingMode = "FIXED";
+    cell.layoutAlign = "STRETCH";
+    cell.minWidth = 120;
+    cell.resize(120, 48);
+    cell.counterAxisAlignItems = "CENTER";
+    cell.primaryAxisAlignItems = "CENTER";
+    cell.itemSpacing = 2;
+    cell.paddingLeft = cell.paddingRight = 8;
+    cell.fills = [];
+    cell.name = `Metric Header: ${metric.name}`;
+    const metricLabel = metric.abbreviation || metric.name;
+    const metricText = figma.createText();
+    metricText.fontName = getFontStyle("Medium");
+    metricText.fontSize = TOKENS.fontSizeBodySm;
+    metricText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+    metricText.textAutoResize = "WIDTH_AND_HEIGHT";
+    metricText.textAlignHorizontal = "CENTER";
+    metricText.characters = metricLabel;
+    cell.appendChild(metricText);
+    const goalLabel = getGoalLabel(metric);
+    if (goalLabel !== '--') {
+        const goalText = figma.createText();
+        goalText.fontName = getFontStyle("Regular");
+        goalText.fontSize = TOKENS.fontSizeLabel;
+        goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+        goalText.textAutoResize = "WIDTH_AND_HEIGHT";
+        goalText.textAlignHorizontal = "CENTER";
+        goalText.characters = goalLabel;
+        cell.appendChild(goalText);
+    }
+    return cell;
+}
+function getGoalLabel(metric) {
+    if (typeof metric.thresholdPct === 'number' && Number.isFinite(metric.thresholdPct)) {
+        return `${getGoalDirectionArrow(metric)} ${metric.thresholdPct}%`;
+    }
+    if (metric.min !== undefined && metric.max !== undefined) {
+        return `${metric.min} - ${metric.max}`;
+    }
+    return '--';
+}
+function getGoalDirectionArrow(metric) {
+    if (metric.direction === 'decrease')
+        return '↓';
+    if (metric.direction === 'neutral')
+        return '→';
+    return '↑';
+}
 /**
  * Create a goal cell showing the target percent (preferred) or legacy range (min-max)
  */
@@ -409,7 +546,7 @@ function createGoalCell(metric, isPrimary = false) {
         goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
         goalText.textAutoResize = "WIDTH_AND_HEIGHT";
         goalText.textAlignHorizontal = "CENTER";
-        goalText.characters = `${metric.direction === 'decrease' ? '≤' : '≥'} ${metric.thresholdPct}%`;
+        goalText.characters = `${getGoalDirectionArrow(metric)} ${metric.thresholdPct}%`;
         cell.appendChild(goalText);
     }
     else if (metric.min !== undefined && metric.max !== undefined) {
@@ -517,6 +654,128 @@ function createMetricRow(metric_1, variants_1, primaryMetric_1) {
         }
         return row;
     });
+}
+function createVariantMetricRow(variant_1, metrics_1, comparisonVariant_1, primaryMetric_1) {
+    return __awaiter(this, arguments, void 0, function* (variant, metrics, comparisonVariant, primaryMetric, isLast = false) {
+        const row = figma.createFrame();
+        row.layoutMode = "HORIZONTAL";
+        row.counterAxisSizingMode = "FIXED";
+        row.primaryAxisSizingMode = "FIXED";
+        row.layoutAlign = "STRETCH";
+        row.counterAxisAlignItems = "CENTER";
+        row.minHeight = 48;
+        row.resize(row.width, 48);
+        row.fills = [];
+        if (!isLast) {
+            row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+            row.strokeWeight = 1;
+            row.strokeTopWeight = 0;
+            row.strokeLeftWeight = 0;
+            row.strokeRightWeight = 0;
+        }
+        row.name = `Variant Row: ${variant.name || variant.key}`;
+        const variantCell = createVariantNameCell(variant);
+        variantCell.layoutGrow = 0;
+        row.appendChild(variantCell);
+        if (metrics.length > 0) {
+            for (const metric of metrics) {
+                const metricKey = getMetricKey(metric);
+                const metricData = variant.metrics[metricKey];
+                const isComparison = !!comparisonVariant && variant.id === comparisonVariant.id;
+                const isPrimary = primaryMetric === metricKey || metric.isPrimary === true;
+                const valueCell = createMetricValueCell(metricData, isComparison, isPrimary, metric);
+                valueCell.layoutGrow = 1;
+                row.appendChild(valueCell);
+            }
+        }
+        else {
+            const emptyValueCell = createMetricValueCell(undefined, true, false);
+            emptyValueCell.layoutGrow = 1;
+            row.appendChild(emptyValueCell);
+        }
+        return row;
+    });
+}
+function createEmptyVariantMetricRow(metrics) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const row = figma.createFrame();
+        row.layoutMode = "HORIZONTAL";
+        row.counterAxisSizingMode = "FIXED";
+        row.primaryAxisSizingMode = "FIXED";
+        row.layoutAlign = "STRETCH";
+        row.counterAxisAlignItems = "CENTER";
+        row.minHeight = 48;
+        row.resize(row.width, 48);
+        row.fills = [];
+        row.name = "Variant Row: Empty";
+        const variantCell = createTableCell('--', 200, false, false);
+        variantCell.layoutGrow = 0;
+        row.appendChild(variantCell);
+        const columnCount = Math.max(metrics.length, 1);
+        for (let i = 0; i < columnCount; i++) {
+            const emptyValueCell = createMetricValueCell(undefined, true, false, metrics[i]);
+            emptyValueCell.layoutGrow = 1;
+            row.appendChild(emptyValueCell);
+        }
+        return row;
+    });
+}
+function createVariantNameCell(variant) {
+    const cell = figma.createFrame();
+    cell.layoutMode = "VERTICAL";
+    cell.counterAxisSizingMode = "FIXED";
+    cell.primaryAxisSizingMode = "FIXED";
+    cell.layoutAlign = "STRETCH";
+    cell.minWidth = 200;
+    cell.resize(200, 48);
+    cell.counterAxisAlignItems = "MIN";
+    cell.primaryAxisAlignItems = "CENTER";
+    cell.itemSpacing = 2;
+    cell.paddingLeft = 12;
+    cell.paddingRight = 8;
+    cell.fills = [];
+    cell.name = "Variant Cell";
+    const nameRow = figma.createFrame();
+    nameRow.layoutMode = "HORIZONTAL";
+    nameRow.counterAxisSizingMode = "AUTO";
+    nameRow.primaryAxisSizingMode = "AUTO";
+    nameRow.itemSpacing = 8;
+    nameRow.counterAxisAlignItems = "CENTER";
+    nameRow.fills = [];
+    nameRow.name = "Variant Name Row";
+    const colorDot = figma.createEllipse();
+    colorDot.resize(8, 8);
+    const variantColor = variant.color || TOKENS.royalBlue600;
+    colorDot.fills = [{ type: "SOLID", color: hexToRgb(variantColor) }];
+    nameRow.appendChild(colorDot);
+    const variantName = variant.name || `Variant ${variant.key}`;
+    const nameText = figma.createText();
+    nameText.fontName = { family: "Figtree", style: "Regular" };
+    nameText.fontSize = TOKENS.fontSizeBodySm;
+    nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+    nameText.textAutoResize = "WIDTH_AND_HEIGHT";
+    nameText.characters = variantName;
+    nameRow.appendChild(nameText);
+    if (variant.isControl) {
+        const controlBadge = createBadge('Control', 'micro', TOKENS.royalBlue100, TOKENS.royalBlue700);
+        nameRow.appendChild(controlBadge);
+    }
+    if (variant.isRolledOut) {
+        const rolledOutBadge = createBadge('Rolled Out', 'micro', '#FFF420', TOKENS.textPrimary);
+        nameRow.appendChild(rolledOutBadge);
+    }
+    cell.appendChild(nameRow);
+    if (variant.figmaLink) {
+        const linkText = figma.createText();
+        linkText.fontName = getFontStyle("Medium");
+        linkText.fontSize = TOKENS.fontSizeLabel;
+        linkText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.royalBlue600) }];
+        linkText.textAutoResize = "WIDTH_AND_HEIGHT";
+        linkText.characters = "Open in Figma";
+        linkText.hyperlink = { type: "URL", value: variant.figmaLink.trim() };
+        cell.appendChild(linkText);
+    }
+    return cell;
 }
 /**
  * Create the metric name cell
@@ -779,6 +1038,8 @@ export function mapExperimentDataToOutcomeData(experimentName, metrics, variants
             id: v.id || `variant-${index}`,
             key: v.key,
             name: v.name || `Variant ${v.key}`,
+            color: v.color,
+            figmaLink: v.figmaLink,
             isControl,
             traffic: v.traffic,
             metrics: outcomeMetrics,

@@ -46,7 +46,7 @@ export interface MetricDefinition {
   id: string;
   name: string;
   abbreviation?: string;
-  direction?: "increase" | "decrease";
+  direction?: "increase" | "decrease" | "neutral";
   thresholdPct?: number;
   min?: number;
   max?: number;
