@@ -2535,6 +2535,11 @@
       border-color: var(--color-royal-blue-alpha-200);
       box-shadow: 0 6px 18px rgba(40, 60, 90, 0.1);
       transform: translateY(-1px);
+      z-index: 20;
+    }
+
+    .variant-card:focus-within {
+      z-index: 20;
     }
 
      /* .variant-card::after {
@@ -2976,15 +2981,39 @@
     }
 
     .variant-baseline-slot {
-      display: none;
+      display: inline-flex;
       align-items: center;
       flex-shrink: 0;
     }
 
     /* Control selector */
     .Button.Button--toggle.variant-control-toggle {
-      border-radius: var(--radius-xs);
+      height: 20px;
+      padding: 0 6px;
+      gap: 4px;
+      border-radius: var(--radius-sm);
+      font-size: var(--tooltip-font-size-sm);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: .0125rem;
       flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .Button.Button--toggle.variant-control-toggle .Button__icon svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .variant-control-toggle--action {
+      opacity: 0.7;
+      pointer-events: auto;
+      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+    }
+
+    .variant-control-toggle--action:hover,
+    .variant-control-toggle--action:focus-visible {
+      opacity: 1;
     }
 
     .variant-passive-chip {
@@ -3010,6 +3039,17 @@
       background: var(--rolledout-chip-bg);
       border-color: transparent;
       color: var(--rolledout-chip-text);
+    }
+
+    .variant-passive-chip--control {
+      gap: 4px;
+      background: var(--dropdown-selected-bg);
+      color: var(--text-link);
+    }
+
+    .variant-section-heading__control {
+      color: var(--text-secondary);
+      font-weight: 400;
     }
 
     /* Variant subtree toggle button */
@@ -6224,6 +6264,25 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     /**
      * Creates a variant card with unified color indicator + name, description, and metrics
      */
+    function getVariantDisplayName(variant, variantIndex) {
+      const displayName = variant?.name || '';
+      if (!displayName || (/^[A-Z]$/i).test(displayName)) {
+        return `Variant ${variantIndex + 1}`;
+      }
+      return displayName;
+    }
+
+    function updateControlHeadingLabel(eventIndex) {
+      const controlLabel = document.querySelector(`[data-control-label-event-index="${eventIndex}"]`);
+      const event = events?.[eventIndex];
+      if (!controlLabel || !event || !Array.isArray(event.variants)) return;
+
+      const controlIndex = event.variants.findIndex(v => v.isControl === true);
+      const resolvedControlIndex = controlIndex >= 0 ? controlIndex : 0;
+      const controlVariant = event.variants[resolvedControlIndex];
+      controlLabel.textContent = `· Control: ${getVariantDisplayName(controlVariant, resolvedControlIndex)}`;
+    }
+
     function createVariantCard(variant, variantIndex, eventIndex) {
         // Row 1: Tree toggle + Name + Control
         const row1 = document.createElement('div');
@@ -6273,10 +6332,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           }
         });
       // Unified fallback: if name is empty or a single letter, use 'Variant <index+1>'
-      let displayName = variant.name;
-      if (!displayName || (/^[A-Z]$/i).test(displayName)) {
-        displayName = `Variant ${variantIndex + 1}`;
-      }
+      const displayName = getVariantDisplayName(variant, variantIndex);
       const nameField = createInputField({
         id: `variant-name-${eventIndex}-${variantIndex}`,
         label: 'Variant name',
@@ -6287,6 +6343,9 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         prefixElement: colorIndicator,
         onChange: (value) => {
           variant.name = value;
+          if (variant.isControl === true) {
+            updateControlHeadingLabel(eventIndex);
+          }
           const statusInput = document.getElementById('experimentStatus');
           if (statusInput && statusInput.value === 'completed') {
             updateRolledoutOptions();
@@ -6369,13 +6428,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const controlSlot = document.createElement('div');
       controlSlot.className = 'variant-baseline-slot';
 
-      const controlChip = document.createElement('button');
-      controlChip.type = 'button';
-      controlChip.className = 'Button secondary Button--toggle variant-control-toggle';
-      controlChip.id = `variant-control-${eventIndex}-${variantIndex}`;
-      controlChip.setAttribute('data-tooltip-position', 'bottom');
-      controlChip.setAttribute('data-tooltip-cursor', 'pointer');
-
       // Enforce AT MOST one control per event.
       // If multiple are true (bad state), keep the first and clear the rest.
       const firstControlIndex = events[eventIndex].variants.findIndex(v => v.isControl === true);
@@ -6385,41 +6437,33 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       // Explicitly store boolean (never undefined)
       variant.isControl = variant.isControl === true;
 
-      const renderControlChip = (btn, isPressed) => {
-        btn.innerHTML = `<span class="Button__icon" aria-hidden="true">${getIcon(isPressed ? 'circle-check-big' : 'circle', { size: 14, strokeWidth: 2 })}</span><span>Control</span>`;
-        btn.setAttribute('aria-pressed', isPressed ? 'true' : 'false');
-        btn.setAttribute('data-tooltip', isPressed ? 'Control variant' : 'Set as control variant');
-        btn.setAttribute('aria-label', isPressed ? 'Control variant' : 'Set as control variant');
-      };
-
-      renderControlChip(controlChip, variant.isControl === true);
-
-      controlChip.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (variant.isControl === true) {
-          // Allow no control variant
-          variant.isControl = false;
-        } else {
-          // Clear any existing control variant and set this one
+      if (variant.isControl === true) {
+        const controlChip = document.createElement('span');
+        controlChip.className = 'variant-passive-chip variant-passive-chip--control';
+        controlChip.innerHTML = `<span aria-hidden="true">${getIcon('circle-check-big', { size: 12, strokeWidth: 2 })}</span><span>Control</span>`;
+        controlChip.setAttribute('aria-label', 'Control variant');
+        controlSlot.appendChild(controlChip);
+      } else {
+        const makeControlBtn = document.createElement('button');
+        makeControlBtn.type = 'button';
+        makeControlBtn.className = 'Button secondary Button--toggle variant-control-toggle variant-control-toggle--action';
+        makeControlBtn.id = `variant-control-${eventIndex}-${variantIndex}`;
+        makeControlBtn.innerHTML = `<span class="Button__icon" aria-hidden="true">${getIcon('circle', { size: 12, strokeWidth: 2 })}</span><span>Control</span>`;
+        makeControlBtn.setAttribute('aria-pressed', 'false');
+        makeControlBtn.setAttribute('data-tooltip', 'Set as control variant');
+        makeControlBtn.setAttribute('data-tooltip-position', 'bottom');
+        makeControlBtn.setAttribute('data-tooltip-cursor', 'pointer');
+        makeControlBtn.setAttribute('aria-label', 'Set as control variant');
+        makeControlBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           events[eventIndex].variants.forEach((v, i) => {
             v.isControl = i === variantIndex;
           });
-        }
-
-        // Sync UI so selecting one control updates the others immediately
-        const controlBtns = document.querySelectorAll(`button[id^="variant-control-${eventIndex}-"]`);
-        controlBtns.forEach((el) => {
-          if (!el || typeof el.id !== 'string') return;
-          const match = el.id.match(new RegExp(`^variant-control-${eventIndex}-(\\d+)$`));
-          if (!match) return;
-          const idx = parseInt(match[1], 10);
-          if (Number.isNaN(idx)) return;
-          if (!events[eventIndex]?.variants?.[idx]) return;
-          renderControlChip(el, events[eventIndex].variants[idx].isControl === true);
+          renderEvents(events);
         });
-      });
+        controlSlot.appendChild(makeControlBtn);
+      }
 
       const statusInput = document.getElementById('experimentStatus');
       const rolledoutInput = document.getElementById('rolledoutVariant');
@@ -6433,7 +6477,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         row1.appendChild(rolledoutChip);
       }
 
-      controlSlot.appendChild(controlChip);
       row1.appendChild(controlSlot);
 
       // Actions (remove variant)
@@ -7070,7 +7113,16 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       if (hasVariants) {
         const variantsLabel = document.createElement('div');
         variantsLabel.className = 'variant-section-heading';
-        variantsLabel.textContent = `Design variants (${variantCount})`;
+        const controlIndex = event.variants.findIndex(v => v.isControl === true);
+        const resolvedControlIndex = controlIndex >= 0 ? controlIndex : 0;
+        const controlVariant = event.variants[resolvedControlIndex];
+        const controlName = getVariantDisplayName(controlVariant, resolvedControlIndex);
+        variantsLabel.append(`Design variants (${variantCount}) `);
+        const controlLabel = document.createElement('span');
+        controlLabel.className = 'variant-section-heading__control';
+        controlLabel.dataset.controlLabelEventIndex = String(eventIndex);
+        controlLabel.textContent = `· Control: ${controlName}`;
+        variantsLabel.appendChild(controlLabel);
         variantsList.appendChild(variantsLabel);
       }
 
