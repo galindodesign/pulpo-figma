@@ -510,7 +510,7 @@ export async function createVariantCard(
   metricsSection.itemSpacing = TOKENS.space8;
   metricsSection.fills = [];
   metricsSection.strokes = [];
-  metricsSection.name = 'Metrics Section';
+  metricsSection.name = 'Goals Section';
   metricsSection.paddingTop = 0;
   metricsSection.layoutAlign = 'STRETCH';
 
@@ -521,8 +521,8 @@ export async function createVariantCard(
   metricsHeader.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
   metricsHeader.opacity = 0.5;
   metricsHeader.textAutoResize = 'WIDTH_AND_HEIGHT';
-  metricsHeader.characters = 'Metrics';
-  metricsHeader.name = 'Metrics Header';
+  metricsHeader.characters = 'Goals';
+  metricsHeader.name = 'Goals Header';
   metricsSection.appendChild(metricsHeader);
 
   // Format metrics as percentage values (matches UI input formatting).

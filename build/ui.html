@@ -1377,15 +1377,15 @@
     }
 
     .goal-title-field--threshold {
-      width: 80px;
+      width: 90px;
       flex-shrink: 0;
     }
 
     /* Override InputField horizontal wrapper flex:1 so it doesn't stretch */
     .goal-title-field--threshold.InputField {
       width: 100px;
-      max-width: 73px;
-      flex: 0 0 73px;
+      max-width: 90px;
+      flex: 0 0 90px;
     }
 
     .goal-title-field--threshold.InputField.horizontal .InputField__wrapper {
@@ -1393,22 +1393,21 @@
       width: 100%;
     }
 
-    /* Match old "Min. goal" threshold styling (tighter suffix/stepper spacing) */
+    /* Keep the threshold compact while leaving breathing room before the % suffix. */
     .goal-title-field--threshold .InputField__wrapper {
-      gap: 0;
-      /* Keep the whole control compact (50px container) */
+      gap: var(--space-4);
       padding-left: 2px;
       padding-right: 2px;
     }
 
-    /* Goal threshold: mimic variant metric number + % styling (scaled to fit 50px field) */
+    /* Goal threshold: mimic variant metric number + % styling. */
     .goal-title-field--threshold .InputField__input.no-native-spinner {
-      flex: 0 0 38px;
-    width: 38px;
-    min-width: 38px;
-    height: 100%;
-    align-self: stretch;
-    padding-left: 8px;
+      flex: 0 0 42px;
+      width: 42px;
+      min-width: 42px;
+      height: 100%;
+      align-self: stretch;
+      padding-left: 8px;
     }
 
     .goal-title-field--threshold .InputField__suffix {
@@ -1419,7 +1418,7 @@
       height: 100%;
       display: flex;
       align-items: center;
-      /*justify-content: flex-end;*/
+      justify-content: flex-end;
       align-content: center;
     }
 
@@ -4626,18 +4625,12 @@
             </div>
           </div>
 
-          <!-- Audience + Sample Size + Dates Row -->
-          <div class="audience-sample-fields" style="display: flex; gap: var(--space-12); align-items: flex-end;">
-            <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
+          <!-- Audience -->
+          <div class="audience-sample-fields" style="display: flex; flex-direction: column; gap: var(--space-12);">
+            <div class="InputField" data-state="default" data-variant="vertical">
               <label class="InputField__label">Audience</label>
               <div class="InputField__wrapper">
                 <input class="InputField__input" type="text" id="experimentAudience" placeholder="All users">
-              </div>
-            </div>
-            <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
-              <label class="InputField__label">Sample Size</label>
-              <div class="InputField__wrapper">
-                <input class="InputField__input" type="number" id="experimentSampleSize" placeholder="10000" min="0">
               </div>
             </div>
 
@@ -4645,29 +4638,39 @@
             <input type="hidden" id="experimentStartDate">
             <input type="hidden" id="experimentEndDate">
 
-            <!-- Dates picker -->
-            <div class="InputField date-range-field" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
-              <label class="InputField__label">Dates</label>
-              <div class="date-range-wrapper" id="dateRangeWrapper">
-                <button type="button" class="date-range-trigger" id="dateRangeTrigger" aria-haspopup="true" aria-expanded="false">
-                  <svg class="date-range-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
-                    <path d="M2 6.5h12" stroke="currentColor" stroke-width="1.25"/>
-                    <path d="M5.5 2v2M10.5 2v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-                  </svg>
-                  <span class="date-range-label placeholder" id="dateRangeLabel">Pick dates</span>
-                </button>
-                <div class="date-range-popover" id="dateRangePopover" role="dialog" aria-label="Date range picker">
-                  <div class="drp-header">
-                    <button type="button" class="drp-nav" id="drpPrev" aria-label="Previous month">‹</button>
-                    <span class="drp-month-label" id="drpMonthLabel"></span>
-                    <button type="button" class="drp-nav" id="drpNext" aria-label="Next month">›</button>
+            <!-- Sample Size + Dates -->
+            <div style="display: flex; gap: var(--space-12); align-items: flex-end;">
+              <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
+                <label class="InputField__label">Sample Size</label>
+                <div class="InputField__wrapper">
+                  <input class="InputField__input" type="number" id="experimentSampleSize" placeholder="10000" min="0">
+                </div>
+              </div>
+
+              <!-- Dates picker -->
+              <div class="InputField date-range-field" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
+                <label class="InputField__label">Dates</label>
+                <div class="date-range-wrapper" id="dateRangeWrapper">
+                  <button type="button" class="date-range-trigger" id="dateRangeTrigger" aria-haspopup="true" aria-expanded="false">
+                    <svg class="date-range-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+                      <path d="M2 6.5h12" stroke="currentColor" stroke-width="1.25"/>
+                      <path d="M5.5 2v2M10.5 2v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                    </svg>
+                    <span class="date-range-label placeholder" id="dateRangeLabel">Pick dates</span>
+                  </button>
+                  <div class="date-range-popover" id="dateRangePopover" role="dialog" aria-label="Date range picker">
+                    <div class="drp-header">
+                      <button type="button" class="drp-nav" id="drpPrev" aria-label="Previous month">‹</button>
+                      <span class="drp-month-label" id="drpMonthLabel"></span>
+                      <button type="button" class="drp-nav" id="drpNext" aria-label="Next month">›</button>
+                    </div>
+                    <div class="drp-weekdays">
+                      <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                    </div>
+                    <div class="drp-grid" id="drpGrid"></div>
+                    <div class="drp-hint" id="drpHint">Select start date</div>
                   </div>
-                  <div class="drp-weekdays">
-                    <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
-                  </div>
-                  <div class="drp-grid" id="drpGrid"></div>
-                  <div class="drp-hint" id="drpHint">Select start date</div>
                 </div>
               </div>
             </div>
@@ -5032,11 +5035,11 @@
 
         window.startExampleExperiment = function() {
           var vals = {
-            experimentName: 'Landing Page CTA Test',
-            experimentDescription: 'Testing a new primary button copy to increase click-through rate',
-            experimentHypothesis: 'If we change the CTA button text to action-oriented copy, then click-through rate will increase by 5%, because users will better understand the value proposition.',
-            experimentAudience: 'US users on desktop',
-            experimentSampleSize: '5000',
+            experimentName: 'Pricing Page Button Color Experiment',
+            experimentDescription: 'Test whether a red checkout CTA increases trial starts compared with the current blue button.',
+            experimentHypothesis: 'If the CTA uses a higher-contrast red treatment, more pricing-page visitors will notice it and start checkout.',
+            experimentAudience: 'New pricing-page visitors on self-serve plans',
+            experimentSampleSize: '18420',
             experimentOwner: 'Growth Team'
           };
           Object.keys(vals).forEach(function(id) {
@@ -5731,8 +5734,9 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
     // Sample data for goals (stored in metrics array for compatibility)
     const defaultMetrics = [
-      { id: 'metric-0', name: 'Click through rate', abbreviation: 'CTR', direction: 'increase', thresholdPct: 2, isPrimary: true },
-      { id: 'metric-1', name: 'Conversion rate', abbreviation: 'CR', direction: 'increase', thresholdPct: 2 },
+      { id: 'metric-0', name: 'Checkout conversion rate', abbreviation: 'CVR', direction: 'increase', thresholdPct: 48, isPrimary: true },
+      { id: 'metric-1', name: 'CTA click-through rate', abbreviation: 'CTR', direction: 'increase', thresholdPct: 72 },
+      { id: 'metric-2', name: 'Support contact rate', abbreviation: 'SCR', direction: 'decrease', thresholdPct: 6 },
     ];
 
     // Variant badge colors
@@ -5755,22 +5759,22 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     const defaultEvents = [
       {
         id: 'event-0',
-        name: 'Landing page',
+        name: 'Pricing page visit',
         hasVariants: false,
         variants: []
       },
       {
         id: 'event-1',
-        name: 'Conversion button',
+        name: 'Checkout CTA',
         hasVariants: true,
         variants: [
-          { id: 'var-0-0', name: 'Control', description: 'Original version without changes', color: '#3B8FF6', traffic: 50, isControl: true, metrics: { ctr: 69.5, cr: 42.5 } },
-          { id: 'var-0-1', name: 'Variation A', description: 'New CTA button design', color: '#0EAB43', traffic: 50, isControl: false, metrics: { ctr: 72.5, cr: 48.0 } },
+          { id: 'var-0-0', name: 'Blue button', description: 'Current blue "Start free trial" CTA with standard pricing copy.', color: '#3B8FF6', traffic: 50, isControl: true, metrics: { cvr: 42.1, ctr: 68.4, scr: 7.1 } },
+          { id: 'var-0-1', name: 'Red button', description: 'Red "Start free trial" CTA with the same pricing copy.', color: '#FF3838', traffic: 50, isControl: false, metrics: { cvr: 49.3, ctr: 74.2, scr: 5.2 } },
         ]
       },
       {
         id: 'event-2',
-        name: 'Checkout page',
+        name: 'Trial signup complete',
         hasVariants: false,
         variants: []
       },
@@ -9046,30 +9050,31 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       function loadExample() {
         metrics = [
-          { id: 'metric-0', name: 'Click-through rate', abbreviation: 'CTR', direction: 'increase', thresholdPct: 5, isPrimary: true },
-          { id: 'metric-1', name: 'Conversion rate', abbreviation: 'CR', direction: 'increase', thresholdPct: 3 }
+          { id: 'metric-0', name: 'Checkout conversion rate', abbreviation: 'CVR', direction: 'increase', thresholdPct: 48, isPrimary: true },
+          { id: 'metric-1', name: 'CTA click-through rate', abbreviation: 'CTR', direction: 'increase', thresholdPct: 72 },
+          { id: 'metric-2', name: 'Support contact rate', abbreviation: 'SCR', direction: 'decrease', thresholdPct: 6 }
         ];
         renderMetrics(metrics, true);
 
         events = [
-          { id: 'event-0', name: 'Landing page', hasVariants: false, variants: [] },
+          { id: 'event-0', name: 'Pricing page visit', hasVariants: false, variants: [] },
           {
-            id: 'event-1', name: 'Call-to-action', hasVariants: true,
+            id: 'event-1', name: 'Checkout CTA', hasVariants: true,
             variants: [
-              { id: 'var-0', name: 'Control', description: 'Original button text: "Learn More"', color: '#3B8FF6', traffic: 50, isControl: true, metrics: { ctr: 2.4, cr: 0.8 } },
-              { id: 'var-1', name: 'Variation A', description: 'New button text: "Start Your Free Trial"', color: '#0EAB43', traffic: 50, isControl: false, metrics: { ctr: 3.8, cr: 1.2 } }
+              { id: 'var-0', name: 'Blue button', description: 'Current blue "Start free trial" CTA with standard pricing copy.', color: '#3B8FF6', traffic: 50, isControl: true, metrics: { cvr: 42.1, ctr: 68.4, scr: 7.1 } },
+              { id: 'var-1', name: 'Red button', description: 'Red "Start free trial" CTA with the same pricing copy.', color: '#FF3838', traffic: 50, isControl: false, metrics: { cvr: 49.3, ctr: 74.2, scr: 5.2 } }
             ]
           },
-          { id: 'event-2', name: 'Checkout page', hasVariants: false, variants: [] }
+          { id: 'event-2', name: 'Trial signup complete', hasVariants: false, variants: [] }
         ];
         renderEvents(events);
 
         const vals = {
-          experimentName: 'Landing Page CTA Test',
-          experimentDescription: 'Testing a new primary button copy to increase click-through rate',
-          experimentHypothesis: 'If we change the CTA button text to action-oriented copy, then click-through rate will increase by 5%, because users will better understand the value proposition.',
-          experimentAudience: 'US users on desktop',
-          experimentSampleSize: '5000',
+          experimentName: 'Pricing Page Button Color Experiment',
+          experimentDescription: 'Test whether a red checkout CTA increases trial starts compared with the current blue button.',
+          experimentHypothesis: 'If the CTA uses a higher-contrast red treatment, more pricing-page visitors will notice it and start checkout.',
+          experimentAudience: 'New pricing-page visitors on self-serve plans',
+          experimentSampleSize: '18420',
           experimentOwner: 'Growth Team'
         };
         Object.keys(vals).forEach(id => { const el = document.getElementById(id); if (el) el.value = vals[id]; });
@@ -9083,9 +9088,11 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           } catch(_) {}
         }
 
-        try { selectStatus('running', '#506179', 'Running'); } catch(_) {}
-        const rolledoutInput = document.getElementById('rolledoutVariant');
-        if (rolledoutInput) rolledoutInput.value = '';
+        try { selectStatus('completed', '#0EAB43', 'Completed'); } catch(_) {}
+        try { selectRolledoutVariant('var-1', '#FF3838', 'Red button'); } catch(_) {
+          const rolledoutInput = document.getElementById('rolledoutVariant');
+          if (rolledoutInput) rolledoutInput.value = 'var-1';
+        }
         relatedLinks = [];
         renderLinks();
         const linkInputEl = document.getElementById('linkInput');

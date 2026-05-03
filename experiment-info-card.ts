@@ -306,8 +306,8 @@ export interface ExperimentCardOptions {
  * 
  * @example
  * const infoCard = await createExperimentInfoCard(
- *   'New CTA Button',
- *   'Testing if red button increases conversions',
+ *   'Pricing Page Button Color Experiment',
+ *   'Testing if a red button increases trial starts compared with the current blue button',
  *   'https://figma.com/...',
  *   'https://jira.com/...',
  *   // ... other links
@@ -548,7 +548,7 @@ export async function createExperimentInfoCard(
       }
 
       const metricsSection = figma.createFrame();
-      metricsSection.name = "Section: Key Metrics";
+      metricsSection.name = "Section: Goals and Variants";
       metricsSection.layoutMode = "VERTICAL";
       metricsSection.counterAxisSizingMode = "AUTO";
       metricsSection.primaryAxisSizingMode = "AUTO";
@@ -976,7 +976,8 @@ async function appendVariantsSection(
   section.layoutAlign = 'STRETCH';
   section.itemSpacing = 8;
   section.fills = [];
-  section.name = "Section: Goals and Variants";
+  section.visible = false;
+  section.name = "OLD Section: Goals and Variants";
   
   // Section title
   const titleLabel = figma.createText();

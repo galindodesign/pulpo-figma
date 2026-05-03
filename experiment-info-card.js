@@ -250,8 +250,8 @@ function createBrandIconVector(brand, size = 14) {
  *
  * @example
  * const infoCard = await createExperimentInfoCard(
- *   'New CTA Button',
- *   'Testing if red button increases conversions',
+ *   'Pricing Page Button Color Experiment',
+ *   'Testing if a red button increases trial starts compared with the current blue button',
  *   'https://figma.com/...',
  *   'https://jira.com/...',
  *   // ... other links
@@ -435,7 +435,7 @@ export function createExperimentInfoCard(experimentName_1) {
                     summarySection.appendChild(outcomeSections.summarySection);
                 }
                 const metricsSection = figma.createFrame();
-                metricsSection.name = "Section: Key Metrics";
+                metricsSection.name = "Section: Goals and Variants";
                 metricsSection.layoutMode = "VERTICAL";
                 metricsSection.counterAxisSizingMode = "AUTO";
                 metricsSection.primaryAxisSizingMode = "AUTO";
@@ -447,7 +447,7 @@ export function createExperimentInfoCard(experimentName_1) {
                 metricsLabel.fontSize = TOKENS.fontSizeLabel;
                 metricsLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
                 metricsLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-                metricsLabel.characters = "Goals";
+                metricsLabel.characters = "Goals and Variants";
                 metricsSection.appendChild(metricsLabel);
                 metricsSection.appendChild(outcomeSections.metricsTable);
                 contentStack.appendChild(metricsSection);
@@ -769,7 +769,8 @@ function appendVariantsSection(parent, variants) {
         section.layoutAlign = 'STRETCH';
         section.itemSpacing = 8;
         section.fills = [];
-        section.name = "Section: Variants";
+        section.visible = false;
+        section.name = "OLD Section: Goals and Variants";
         // Section title
         const titleLabel = figma.createText();
         titleLabel.fontName = { family: "Figtree", style: "Bold" };
@@ -777,7 +778,7 @@ function appendVariantsSection(parent, variants) {
         titleLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
         titleLabel.opacity = 1;
         titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-        titleLabel.characters = "Variants";
+        titleLabel.characters = "Goals and Variants";
         section.appendChild(titleLabel);
         // Table container
         const tableContainer = figma.createFrame();

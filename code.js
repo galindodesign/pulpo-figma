@@ -1912,52 +1912,68 @@ function isKnownMessageType(msg) {
 const KEEP_OPEN = true;
 if (figma.editorType === 'figma') {
     // --- SAMPLE DATA (mirrors UI sample) ---
-    const sampleEvents = [
+    const sampleMetrics = [
         {
-            id: 'event-0', // THIS IS AN EVENT ID IN AN EVENT CARD
-            name: 'Landing page', // THIS IS THE EVENT NAME IN AN EVENT CARD
-            hasVariants: false, // THIS IS AN EVENT WITHOUT VARIANTS  
-            variants: [] // THIS IS AN EMPTY VARIANTS ARRAY FOR AN EVENT WITHOUT VARIANTS
+            id: 'checkout_cvr',
+            name: 'Checkout conversion rate',
+            abbreviation: 'CVR',
+            direction: 'increase',
+            thresholdPct: 48,
+            isPrimary: true,
         },
         {
-            id: 'event-1', // THIS IS AN EVENT ID IN AN EVENT CARD
-            name: 'Conversion button', // THIS IS THE EVENT NAME IN AN EVENT CARD
-            hasVariants: true, // THIS IS AN EVENT WITH VARIANTS
+            id: 'cta_ctr',
+            name: 'CTA click-through rate',
+            abbreviation: 'CTR',
+            direction: 'increase',
+            thresholdPct: 72,
+        },
+        {
+            id: 'support_rate',
+            name: 'Support contact rate',
+            abbreviation: 'SCR',
+            direction: 'decrease',
+            thresholdPct: 6,
+        },
+    ];
+    const sampleEvents = [
+        {
+            id: 'event-0',
+            name: 'Pricing page visit',
+            hasVariants: false,
+            variants: []
+        },
+        {
+            id: 'event-1',
+            name: 'Checkout CTA',
+            hasVariants: true,
             variants: [
                 {
-                    key: 'A', // THIS IS A VARIANT KEY IN AN VARIANT CARD, RELATED TO AN EVENT
-                    name: 'Control', // THIS IS A VARIANT NAME IN AN VARIANT CARD, RELATED TO AN EVENT
-                    description: 'Original version without changes', // THIS IS A VARIANT DESCRIPTION IN AN VARIANT CARD, RELATED TO AN EVENT
-                    color: TOKENS.royalBlue600, // THIS IS THE COLOR FOR THIS VARIANT IN AN EVENT CARD
-                    traffic: 50, // THIS IS THE TRAFFIC PERCENTAGE FOR THIS VARIANT IN AN EVENT CARD
-                    status: 'none', // THIS IS THE STATUS FOR THIS VARIANT IN AN EVENT CARD
-                    metrics: { ctr: 0.695, cr: 0.425, su: 0.0 } // THIS IS THE METRICS FOR THIS VARIANT IN AN EVENT CARD
+                    key: 'A',
+                    name: 'Blue button',
+                    description: 'Current blue "Start free trial" CTA with standard pricing copy.',
+                    color: TOKENS.royalBlue600,
+                    traffic: 50,
+                    status: 'none',
+                    isControl: true,
+                    metrics: { cvr: 0.421, ctr: 0.684, scr: 0.071 }
                 },
                 {
-                    key: 'B', // THIS IS A VARIANT KEY IN AN VARIANT CARD, RELATED TO AN EVENT
-                    name: 'Variation A', // THIS IS A VARIANT NAME IN AN VARIANT CARD, RELATED TO AN EVENT
-                    description: 'New CTA button design', // THIS IS A VARIANT DESCRIPTION IN AN VARIANT CARD, RELATED TO AN EVENT  
-                    color: TOKENS.malachite600, // THIS IS THE COLOR FOR THIS VARIANT IN AN EVENT CARD
-                    traffic: 30, // THIS IS THE TRAFFIC PERCENTAGE FOR THIS VARIANT IN AN EVENT CARD  
-                    status: 'running', // THIS IS THE STATUS FOR THIS VARIANT IN AN EVENT CARD
-                    metrics: { ctr: 0.725, cr: 0.480, su: 0.0 } // THIS IS THE METRICS FOR THIS VARIANT IN AN EVENT CARD
-                },
-                {
-                    key: 'C', // THIS IS A VARIANT KEY IN AN VARIANT CARD, RELATED TO AN EVENT
-                    name: '', // BLANK NAME TO TRIGGER FALLBACK
-                    description: 'CTA with icon', // THIS IS A VARIANT DESCRIPTION IN AN VARIANT CARD, RELATED TO AN EVENT
-                    color: TOKENS.yellow600, // THIS IS THE COLOR FOR THIS VARIANT IN AN EVENT CARD
-                    traffic: 20, // THIS IS THE TRAFFIC PERCENTAGE FOR THIS VARIANT IN AN EVENT CARD
-                    status: 'winner', // THIS IS THE STATUS FOR THIS VARIANT IN AN EVENT CARD
-                    metrics: { ctr: 0.755, cr: 0.510, su: 0.0 } // THIS IS THE METRICS FOR THIS VARIANT IN AN EVENT CARD
+                    key: 'B',
+                    name: 'Red button',
+                    description: 'Red "Start free trial" CTA with the same pricing copy.',
+                    color: TOKENS.coralRed500,
+                    traffic: 50,
+                    status: 'winner',
+                    metrics: { cvr: 0.493, ctr: 0.742, scr: 0.052 }
                 }
             ]
         },
         {
-            id: 'event-2', // THIS IS AN EVENT ID IN AN EVENT CARD
-            name: 'Checkout page', // THIS IS THE EVENT NAME IN AN EVENT CARD
-            hasVariants: false, // THIS IS AN EVENT WITHOUT VARIANTS    
-            variants: [] // THIS IS AN EMPTY VARIANTS ARRAY FOR AN EVENT WITHOUT VARIANTS
+            id: 'event-2',
+            name: 'Trial signup complete',
+            hasVariants: false,
+            variants: []
         },
     ];
     // --- DEMO: Create node cards for each event and its variants ---
@@ -2031,9 +2047,22 @@ if (figma.editorType === 'figma') {
             // Convert sample data to v2 format
             const experiment = {
                 id: experimentId,
-                name: 'Sample Experiment',
-                roundNumber: 1,
-                description: 'This is a sample experiment info card.',
+                name: 'Pricing Page Button Color Experiment',
+                roundNumber: 2,
+                description: 'Test whether a red checkout CTA increases trial starts compared with the current blue button.',
+                status: 'rolled_out',
+                experimentType: 'ab_test',
+                hypothesis: 'If the CTA uses a higher-contrast red treatment, more pricing-page visitors will notice it and start checkout.',
+                owner: 'Growth Team',
+                audience: 'New pricing-page visitors on self-serve plans',
+                startDate: '2026-04-01',
+                endDate: '2026-04-21',
+                sampleSize: 18420,
+                confidenceLevel: 95,
+                outcomes: {
+                    rolledOutVariantId: `variant-event-1-1`,
+                    notes: 'Red button cleared the primary CVR goal and reduced support contact rate, so it was rolled out.',
+                },
             };
             // Convert events to v2 format
             const events = sampleEvents.map((event, eventIdx) => {
@@ -2046,6 +2075,7 @@ if (figma.editorType === 'figma') {
                     traffic: variant.traffic,
                     metrics: variant.metrics,
                     style: variant.color ? { variantColor: variant.color } : undefined,
+                    isControl: variant.isControl,
                     status: variant.status, // Preserve status for card rendering
                     color: variant.color, // Preserve color for card rendering
                 }));
@@ -2154,7 +2184,7 @@ if (figma.editorType === 'figma') {
                 connectors,
             };
             // Use unified flow creation function
-            yield createFlowV2FromData(experiment, flow);
+            yield createFlowV2FromData(experiment, flow, sampleMetrics);
         });
     }
     const MIN_UI_WIDTH = 500;

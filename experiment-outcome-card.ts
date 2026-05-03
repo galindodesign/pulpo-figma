@@ -15,14 +15,14 @@ import type { MetricDefinition } from "./types";
  * Displays experiment metrics outcomes in a table format following growth experiment best practices:
  * - Clear comparison of variants against control
  * - Uplift/change percentages
- * - Primary metric highlighting
+ * - Goal-level metric comparison
  * - Rolled out variant indicator
  */
 
 export interface VariantOutcome {
   id: string;
   key: string;           // "A", "B", "C"
-  name: string;          // "Control", "Variation A"
+  name: string;          // "Blue button", "Red button"
   color?: string;        // Variant dot color
   figmaLink?: string;    // Optional design link for this variant
   isControl?: boolean;   // Is this the control/baseline variant
@@ -109,65 +109,85 @@ function getGoalPerformance(metric: MetricDefinition | undefined, value: number 
   return value >= metric.thresholdPct;
 }
 
-type OutcomeState = "winning" | "losing" | "inconclusive" | "running" | "paused" | "rolled_out";
+type OutcomeState = "recommendation" | "inconclusive" | "running" | "paused" | "rolled_out";
 
-function classifyOutcomeState(data: ExperimentOutcomeData): { state: OutcomeState; headline: string; detail: string } {
-  const primaryMetricDef = data.metrics.find(m => getMetricKey(m) === data.primaryMetric || m.isPrimary);
-  const primaryMetricKey = data.primaryMetric || (primaryMetricDef ? getMetricKey(primaryMetricDef) : undefined);
-  const metricLabel = primaryMetricDef?.abbreviation || primaryMetricDef?.name || "primary metric";
-  const bestVariant = data.variants
-    .filter(v => !v.isControl)
-    .map(v => ({ variant: v, uplift: primaryMetricKey ? v.metrics[primaryMetricKey]?.uplift : undefined }))
-    .filter(v => v.uplift !== undefined)
-    .sort((a, b) => (b.uplift! - a.uplift!))[0];
+interface OutcomeSummaryContent {
+  state: OutcomeState;
+  headline: string;
+  detail: string;
+  facts: string[];
+  nextStep: string;
+}
+
+function classifyOutcomeState(data: ExperimentOutcomeData): OutcomeSummaryContent {
+  const rolledOutVariant = data.variants.find(v => v.isRolledOut);
+  const primaryMetric = getPrimaryDecisionMetric(data);
+  const leadingVariant = primaryMetric ? getLeadingVariant(data, primaryMetric) : undefined;
+  const primaryFact = primaryMetric && leadingVariant
+    ? formatPrimaryMetricFact(primaryMetric, leadingVariant, getComparisonVariant(data))
+    : "Primary metric: not set";
+  const facts = [
+    primaryFact,
+    `${data.variants.length} variant${data.variants.length === 1 ? "" : "s"} compared`,
+  ];
+
+  if (data.totalSampleSize) {
+    facts.push(`${data.totalSampleSize.toLocaleString()} users sampled`);
+  }
 
   if (data.status === "running") {
     return {
-      state: "inconclusive",
-      headline: "Inconclusive",
-      detail: `Primary metric (${metricLabel}) has not reached significance yet. Keep running and collect more data.`,
+      state: "running",
+      headline: "Keep collecting evidence",
+      detail: leadingVariant
+        ? `${leadingVariant.name} is currently leading on the primary metric, but results are still in progress.`
+        : "Results are still developing. Use the goal table to watch the primary metric and guardrails before deciding.",
+      facts,
+      nextStep: "Continue monitoring until the experiment reaches its planned sample size or decision threshold.",
     };
   }
 
   if (data.status === "paused") {
     return {
       state: "paused",
-      headline: "Paused",
-      detail: "Experiment is paused. Resume to collect more evidence, or close with current learnings.",
+      headline: "Experiment paused",
+      detail: "The current data is preserved, but the experiment is not collecting new evidence.",
+      facts,
+      nextStep: "Resume to gather more data, or close the experiment with the current learning and rationale.",
     };
   }
 
-  if (data.status === "rolled_out") {
-    const rolledOutVariant = data.variants.find(v => v.isRolledOut);
-    const uplift = primaryMetricKey && rolledOutVariant ? rolledOutVariant.metrics[primaryMetricKey]?.uplift : undefined;
-    const upliftText = uplift !== undefined ? ` (${formatUplift(uplift)})` : "";
+  if (data.status === "rolled_out" || rolledOutVariant) {
+    const chosenVariant = rolledOutVariant || leadingVariant;
     return {
       state: "rolled_out",
-      headline: "Winning",
-      detail: `${rolledOutVariant?.name || "Winning variant"} is live${upliftText}. Monitor for regressions post-rollout.`,
+      headline: chosenVariant ? `Decision: ${chosenVariant.name} is live` : "Decision: rollout complete",
+      detail: chosenVariant
+        ? `${chosenVariant.name} has been moved forward. Use the table above to confirm the primary metric and any guardrail trade-offs.`
+        : "A rollout decision has been recorded. Use the table above to confirm the primary metric and any guardrail trade-offs.",
+      facts,
+      nextStep: "Monitor post-rollout performance and rollback if guardrails regress.",
     };
   }
 
-  if (!bestVariant || bestVariant.uplift === undefined) {
+  if (data.status === "completed" && primaryMetric && leadingVariant) {
     return {
-      state: "inconclusive",
-      headline: "Inconclusive",
-      detail: "No clear winner yet. Extend the test or refine the hypothesis before deciding.",
-    };
-  }
-
-  if (bestVariant.uplift > 0) {
-    return {
-      state: "winning",
-      headline: "Winning",
-      detail: `${bestVariant.variant.name} is outperforming Control by ${formatUplift(bestVariant.uplift)} on ${metricLabel}.`,
+      state: "recommendation",
+      headline: `Recommendation: review ${leadingVariant.name}`,
+      detail: `${leadingVariant.name} leads on ${getMetricDisplayName(primaryMetric)}. Confirm guardrails and qualitative context before rollout.`,
+      facts,
+      nextStep: "Choose a rollout candidate only if the primary win is strong enough and no guardrails show meaningful regression.",
     };
   }
 
   return {
-    state: "losing",
-    headline: "Losing",
-    detail: `Variants are underperforming Control (${formatUplift(bestVariant.uplift)} on ${metricLabel}). Consider iterating before rollout.`,
+    state: "inconclusive",
+    headline: "Decision needs more context",
+    detail: primaryMetric
+      ? "No clear rollout decision has been marked. Compare the primary metric against guardrails before choosing a variant."
+      : "Set a primary metric so the outcome card can explain which result should drive the decision.",
+    facts,
+    nextStep: "Document the decision criteria, then mark the rollout variant when the team has aligned.",
   };
 }
 
@@ -181,6 +201,92 @@ function getMetricKey(metric: MetricDefinition): string {
   return metric.name.replace(/\s+/g, '_').toLowerCase();
 }
 
+function getMetricDisplayName(metric: MetricDefinition): string {
+  const name = (metric.name || '').trim();
+  const abbreviation = (metric.abbreviation || '').trim();
+  if (!abbreviation || abbreviation.toLowerCase() === name.toLowerCase()) {
+    return name;
+  }
+  return `${name} (${abbreviation})`;
+}
+
+function getPrimaryDecisionMetric(data: ExperimentOutcomeData): MetricDefinition | undefined {
+  if (data.primaryMetric) {
+    const primaryMetricKey = data.primaryMetric.trim().toLowerCase();
+    const matchedMetric = data.metrics.find(metric => (
+      metric.id.toLowerCase() === primaryMetricKey ||
+      getMetricKey(metric) === primaryMetricKey ||
+      metric.name.toLowerCase() === primaryMetricKey ||
+      metric.abbreviation?.toLowerCase() === primaryMetricKey
+    ));
+
+    if (matchedMetric) {
+      return matchedMetric;
+    }
+  }
+
+  return data.metrics.find(metric => metric.isPrimary) || data.metrics[0];
+}
+
+function getComparisonVariant(data: ExperimentOutcomeData): VariantOutcome | undefined {
+  return data.variants.find(variant => variant.isControl === true) || data.variants[0];
+}
+
+function getLeadingVariant(data: ExperimentOutcomeData, metric: MetricDefinition): VariantOutcome | undefined {
+  if (metric.direction === "neutral") {
+    return undefined;
+  }
+
+  const metricKey = getMetricKey(metric);
+  const variantsWithValue = data.variants.filter(variant => {
+    const value = variant.metrics[metricKey]?.value;
+    return typeof value === "number" && Number.isFinite(value);
+  });
+
+  if (variantsWithValue.length === 0) {
+    return undefined;
+  }
+
+  return variantsWithValue.reduce((bestVariant, candidateVariant) => {
+    const bestValue = bestVariant.metrics[metricKey]?.value ?? 0;
+    const candidateValue = candidateVariant.metrics[metricKey]?.value ?? 0;
+
+    if (metric.direction === "decrease") {
+      return candidateValue < bestValue ? candidateVariant : bestVariant;
+    }
+
+    return candidateValue > bestValue ? candidateVariant : bestVariant;
+  });
+}
+
+function formatPrimaryMetricFact(
+  metric: MetricDefinition,
+  variant: VariantOutcome,
+  comparisonVariant: VariantOutcome | undefined
+): string {
+  const metricData = variant.metrics[getMetricKey(metric)];
+  const metricValue = formatMetricValue(metricData?.value, metric);
+  const deltaLabel = variant.id === comparisonVariant?.id
+    ? "baseline"
+    : metricData?.uplift !== undefined
+      ? `${formatUplift(metricData.uplift)} vs control`
+      : "no control delta";
+  const goalPerformance = getGoalPerformance(metric, metricData?.value);
+  const goalLabel = goalPerformance === undefined ? "goal not set" : goalPerformance ? "goal met" : "goal not met";
+
+  return `Primary metric: ${variant.name} at ${metricValue} (${deltaLabel}, ${goalLabel})`;
+}
+
+const OUTCOME_SUMMARY_MIN_WIDTH = 728;
+const OUTCOME_SUMMARY_HORIZONTAL_PADDING = 16;
+
+function setWrappedText(text: TextNode, characters: string, width: number): void {
+  text.textAutoResize = "HEIGHT";
+  text.layoutAlign = "STRETCH";
+  text.characters = characters;
+  text.resize(width, text.height);
+}
+
 /**
  * Creates an experiment outcome card displaying metrics results and variant comparisons
  * 
@@ -191,7 +297,7 @@ function getMetricKey(metric: MetricDefinition): string {
  * 
  * Features:
  * - Variant comparison against control (baseline)
- * - Primary metric highlighting with star icon
+ * - Goal-level performance comparison
  * - Traffic/sample size annotations
  * - Rolled-out indicator badge for variants in production
  * - Status-based styling (running, completed, failed, rolled_out)
@@ -203,12 +309,12 @@ function getMetricKey(metric: MetricDefinition): string {
  * 
  * @example
  * const outcomeCard = await createExperimentOutcomeCard({
- *   experimentName: 'CTA Button Color Test',
+ *   experimentName: 'Pricing Page Button Color Experiment',
  *   experimentType: 'ab_test',
  *   status: 'completed',
  *   variants: [
- *     { key: 'A', name: 'Control', traffic: 50, metrics: { conversions: 1200 }, isControl: true },
- *     { key: 'B', name: 'Red CTA', traffic: 50, metrics: { conversions: 1450 }, uplift: 20.8 }
+ *     { key: 'A', name: 'Blue button', traffic: 50, metrics: { conversions: 1200 }, isControl: true },
+ *     { key: 'B', name: 'Red button', traffic: 50, metrics: { conversions: 1450 }, uplift: 20.8 }
  *   ],
  *   metrics: [
  *     { id: 'conv', name: 'Conversions', isPrimary: true }
@@ -353,10 +459,8 @@ async function createMetricsTablesSection(data: ExperimentOutcomeData): Promise<
   section.fills = [];
   section.name = "Metrics Tables";
 
-  const metricsTable = await createMetricsTable(data);
   const flippedMetricsTable = await createFlippedMetricsTable(data);
 
-  section.appendChild(metricsTable);
   section.appendChild(flippedMetricsTable);
 
   return section;
@@ -383,7 +487,7 @@ async function createMetricsTable(data: ExperimentOutcomeData): Promise<FrameNod
   for (let i = 0; i < data.metrics.length; i++) {
     const metric = data.metrics[i];
     const isLast = i === data.metrics.length - 1;
-    const metricRow = await createMetricRow(metric, data.variants, data.primaryMetric, isLast);
+    const metricRow = await createMetricRow(metric, data.variants, isLast);
     table.appendChild(metricRow);
   }
 
@@ -415,7 +519,6 @@ async function createFlippedMetricsTable(data: ExperimentOutcomeData): Promise<F
         variant,
         data.metrics,
         comparisonVariant,
-        data.primaryMetric,
         isLast
       );
       table.appendChild(variantRow);
@@ -483,12 +586,11 @@ async function createTableHeaderRow(data: ExperimentOutcomeData, variantCount: n
 async function createFlippedTableHeaderRow(metrics: MetricDefinition[]): Promise<FrameNode> {
   const row = figma.createFrame();
   row.layoutMode = "HORIZONTAL";
-  row.counterAxisSizingMode = "FIXED";
+  row.counterAxisSizingMode = "AUTO";
   row.primaryAxisSizingMode = "FIXED";
   row.layoutAlign = "STRETCH";
-  row.counterAxisAlignItems = "CENTER";
+  row.counterAxisAlignItems = "MIN";
   row.minHeight = 48;
-  row.resize(row.width, 48);
   row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
   row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
   row.strokeWeight = 1;
@@ -499,17 +601,20 @@ async function createFlippedTableHeaderRow(metrics: MetricDefinition[]): Promise
 
   const variantHeader = createTableCell('Variant', 200, true, false);
   variantHeader.layoutGrow = 0;
+  variantHeader.layoutAlign = "STRETCH";
   row.appendChild(variantHeader);
 
   if (metrics.length > 0) {
     for (const metric of metrics) {
       const metricHeader = createFlippedMetricHeaderCell(metric);
       metricHeader.layoutGrow = 1;
+      metricHeader.layoutAlign = "STRETCH";
       row.appendChild(metricHeader);
     }
   } else {
     const metricHeader = createTableCell('Metric', 120, true, true);
     metricHeader.layoutGrow = 1;
+    metricHeader.layoutAlign = "STRETCH";
     row.appendChild(metricHeader);
   }
 
@@ -555,7 +660,7 @@ function createVariantHeaderCell(variant: VariantOutcome): FrameNode {
 function createFlippedMetricHeaderCell(metric: MetricDefinition): FrameNode {
   const cell = figma.createFrame();
   cell.layoutMode = "VERTICAL";
-  cell.counterAxisSizingMode = "FIXED";
+  cell.counterAxisSizingMode = "AUTO";
   cell.primaryAxisSizingMode = "FIXED";
   cell.layoutAlign = "STRETCH";
   cell.minWidth = 120;
@@ -563,18 +668,20 @@ function createFlippedMetricHeaderCell(metric: MetricDefinition): FrameNode {
   cell.counterAxisAlignItems = "CENTER";
   cell.primaryAxisAlignItems = "CENTER";
   cell.itemSpacing = 2;
+  cell.paddingTop = 8;
+  cell.paddingBottom = 8;
   cell.paddingLeft = cell.paddingRight = 8;
   cell.fills = [];
   cell.name = `Metric Header: ${metric.name}`;
 
-  const metricLabel = metric.abbreviation || metric.name;
   const metricText = figma.createText();
   metricText.fontName = getFontStyle("Medium");
   metricText.fontSize = TOKENS.fontSizeBodySm;
   metricText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-  metricText.textAutoResize = "WIDTH_AND_HEIGHT";
   metricText.textAlignHorizontal = "CENTER";
-  metricText.characters = metricLabel;
+  metricText.characters = getMetricDisplayName(metric);
+  metricText.textAutoResize = "HEIGHT";
+  metricText.layoutAlign = "STRETCH";
   cell.appendChild(metricText);
 
   const goalLabel = getGoalLabel(metric);
@@ -583,9 +690,10 @@ function createFlippedMetricHeaderCell(metric: MetricDefinition): FrameNode {
     goalText.fontName = getFontStyle("Regular");
     goalText.fontSize = TOKENS.fontSizeLabel;
     goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
-    goalText.textAutoResize = "WIDTH_AND_HEIGHT";
     goalText.textAlignHorizontal = "CENTER";
     goalText.characters = goalLabel;
+    goalText.textAutoResize = "HEIGHT";
+    goalText.layoutAlign = "STRETCH";
     cell.appendChild(goalText);
   }
 
@@ -611,7 +719,7 @@ function getGoalDirectionArrow(metric: MetricDefinition): string {
 /**
  * Create a goal cell showing the target percent (preferred) or legacy range (min-max)
  */
-function createGoalCell(metric: MetricDefinition, isPrimary: boolean = false): FrameNode {
+function createGoalCell(metric: MetricDefinition): FrameNode {
   const cell = figma.createFrame();
   cell.layoutMode = "VERTICAL";
   cell.counterAxisSizingMode = "FIXED"; // Fixed height
@@ -628,7 +736,7 @@ function createGoalCell(metric: MetricDefinition, isPrimary: boolean = false): F
 
   if (typeof metric.thresholdPct === 'number' && Number.isFinite(metric.thresholdPct)) {
     const goalText = figma.createText();
-    goalText.fontName = getFontStyle(isPrimary ? "Bold" : "Medium");
+    goalText.fontName = getFontStyle("Medium");
     goalText.fontSize = TOKENS.fontSizeBodyMd;
     goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
     goalText.textAutoResize = "WIDTH_AND_HEIGHT";
@@ -637,7 +745,7 @@ function createGoalCell(metric: MetricDefinition, isPrimary: boolean = false): F
     cell.appendChild(goalText);
   } else if (metric.min !== undefined && metric.max !== undefined) {
     const goalText = figma.createText();
-    goalText.fontName = getFontStyle(isPrimary ? "Bold" : "Medium");
+    goalText.fontName = getFontStyle("Medium");
     goalText.fontSize = TOKENS.fontSizeBodyMd;
     goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
     goalText.textAutoResize = "WIDTH_AND_HEIGHT";
@@ -664,8 +772,7 @@ function createGoalCell(metric: MetricDefinition, isPrimary: boolean = false): F
  */
 function createBaselineCell(
   metricData: VariantOutcome['metrics'][string] | undefined,
-  variant: VariantOutcome,
-  isPrimary: boolean = false
+  variant: VariantOutcome
 ): FrameNode {
   const cell = figma.createFrame();
   cell.layoutMode = "VERTICAL";
@@ -683,7 +790,7 @@ function createBaselineCell(
 
   // Main value only (name and badge are in header)
   const valueText = figma.createText();
-  valueText.fontName = getFontStyle(isPrimary ? "Bold" : "Medium");
+  valueText.fontName = getFontStyle("Medium");
   valueText.fontSize = TOKENS.fontSizeBodyMd;
   valueText.textAutoResize = "WIDTH_AND_HEIGHT";
   valueText.textAlignHorizontal = "CENTER";
@@ -702,7 +809,6 @@ function createBaselineCell(
 async function createMetricRow(
   metric: MetricDefinition,
   variants: VariantOutcome[],
-  primaryMetric?: string,
   isLast: boolean = false
 ): Promise<FrameNode> {
   const row = figma.createFrame();
@@ -726,15 +832,13 @@ async function createMetricRow(
   row.name = `Row: ${metric.name}`;
 
   const metricKey = getMetricKey(metric);
-  const isPrimary = primaryMetric === metricKey || metric.isPrimary === true;
-
   // Metric name cell (fixed width)
-  const metricCell = createMetricNameCell(metric, isPrimary);
+  const metricCell = createMetricNameCell(metric);
   metricCell.layoutGrow = 0; // Don't grow
   row.appendChild(metricCell);
 
   // Goal cell (fixed width) - shows min-max range
-  const goalCell = createGoalCell(metric, isPrimary);
+  const goalCell = createGoalCell(metric);
   goalCell.layoutGrow = 0; // Don't grow
   row.appendChild(goalCell);
 
@@ -747,13 +851,13 @@ async function createMetricRow(
     for (const variant of variants) {
       const metricData = variant.metrics[metricKey];
       const isComparison = !!comparisonVariant && variant.id === comparisonVariant.id;
-      const valueCell = createMetricValueCell(metricData, isComparison, isPrimary, metric);
+      const valueCell = createMetricValueCell(metricData, isComparison, metric);
       valueCell.layoutGrow = 1; // Grow to fill available space
       row.appendChild(valueCell);
     }
   } else {
     // No variants at all - still render one placeholder value cell to match header.
-    const emptyValueCell = createMetricValueCell(undefined, true, isPrimary, metric);
+    const emptyValueCell = createMetricValueCell(undefined, true, metric);
     emptyValueCell.layoutGrow = 1;
     row.appendChild(emptyValueCell);
   }
@@ -765,7 +869,6 @@ async function createVariantMetricRow(
   variant: VariantOutcome,
   metrics: MetricDefinition[],
   comparisonVariant: VariantOutcome | undefined,
-  primaryMetric?: string,
   isLast: boolean = false
 ): Promise<FrameNode> {
   const row = figma.createFrame();
@@ -797,13 +900,12 @@ async function createVariantMetricRow(
       const metricKey = getMetricKey(metric);
       const metricData = variant.metrics[metricKey];
       const isComparison = !!comparisonVariant && variant.id === comparisonVariant.id;
-      const isPrimary = primaryMetric === metricKey || metric.isPrimary === true;
-      const valueCell = createMetricValueCell(metricData, isComparison, isPrimary, metric);
+      const valueCell = createMetricValueCell(metricData, isComparison, metric);
       valueCell.layoutGrow = 1;
       row.appendChild(valueCell);
     }
   } else {
-    const emptyValueCell = createMetricValueCell(undefined, true, false);
+    const emptyValueCell = createMetricValueCell(undefined, true);
     emptyValueCell.layoutGrow = 1;
     row.appendChild(emptyValueCell);
   }
@@ -829,7 +931,7 @@ async function createEmptyVariantMetricRow(metrics: MetricDefinition[]): Promise
 
   const columnCount = Math.max(metrics.length, 1);
   for (let i = 0; i < columnCount; i++) {
-    const emptyValueCell = createMetricValueCell(undefined, true, false, metrics[i]);
+    const emptyValueCell = createMetricValueCell(undefined, true, metrics[i]);
     emptyValueCell.layoutGrow = 1;
     row.appendChild(emptyValueCell);
   }
@@ -906,7 +1008,7 @@ function createVariantNameCell(variant: VariantOutcome): FrameNode {
 /**
  * Create the metric name cell
  */
-function createMetricNameCell(metric: MetricDefinition, isPrimary: boolean): FrameNode {
+function createMetricNameCell(metric: MetricDefinition): FrameNode {
   const cell = figma.createFrame();
   cell.layoutMode = "VERTICAL";
   cell.counterAxisSizingMode = "FIXED"; // Fixed width
@@ -933,7 +1035,7 @@ function createMetricNameCell(metric: MetricDefinition, isPrimary: boolean): Fra
   nameRow.name = "Name Row";
 
   const nameText = figma.createText();
-  nameText.fontName = getFontStyle(isPrimary ? "Medium" : "Regular");
+  nameText.fontName = getFontStyle("Regular");
   nameText.fontSize = TOKENS.fontSizeBodySm;
   nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   nameText.textAutoResize = "WIDTH_AND_HEIGHT";
@@ -944,7 +1046,7 @@ function createMetricNameCell(metric: MetricDefinition, isPrimary: boolean): Fra
 
   // Sub-info row: abbreviation only (range moved to value cell)
   const hasAbbrev = metric.abbreviation && metric.abbreviation !== metric.name;
-  
+
   if (hasAbbrev) {
     const subText = figma.createText();
     subText.fontName = getFontStyle("Regular");
@@ -964,7 +1066,6 @@ function createMetricNameCell(metric: MetricDefinition, isPrimary: boolean): Fra
 function createMetricValueCell(
   metricData: VariantOutcome['metrics'][string] | undefined,
   isControl: boolean = false,
-  isPrimary: boolean = false,
   metric?: MetricDefinition
 ): FrameNode {
   const cell = figma.createFrame();
@@ -995,7 +1096,7 @@ function createMetricValueCell(
 
   // Main value
   const valueText = figma.createText();
-  valueText.fontName = getFontStyle(isPrimary ? "Bold" : "Medium");
+  valueText.fontName = getFontStyle("Medium");
   valueText.fontSize = TOKENS.fontSizeBodyMd;
   valueText.textAutoResize = "WIDTH_AND_HEIGHT";
   valueText.textAlignHorizontal = "CENTER";
@@ -1080,56 +1181,121 @@ function createTableCell(
 async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameNode> {
   const section = figma.createFrame();
   section.layoutMode = "VERTICAL";
-  section.counterAxisSizingMode = "AUTO";
+  section.counterAxisSizingMode = "FIXED";
   section.primaryAxisSizingMode = "AUTO";
-  section.itemSpacing = 8;
-  section.paddingTop = section.paddingBottom = 12;
-  section.paddingLeft = section.paddingRight = 12;
-  section.cornerRadius = 8;
-  section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  section.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+  section.itemSpacing = 10;
+  section.paddingTop = section.paddingBottom = 16;
+  section.paddingLeft = section.paddingRight = OUTCOME_SUMMARY_HORIZONTAL_PADDING;
+  section.cornerRadius = 12;
+  section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.azure50) }];
+  section.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.azure100) }];
   section.strokeWeight = 1;
-  section.name = "Outcome Section";
+  section.name = "Outcome Summary Section";
   section.layoutAlign = "STRETCH";
+  section.minWidth = OUTCOME_SUMMARY_MIN_WIDTH;
+
+  const contentWidth = OUTCOME_SUMMARY_MIN_WIDTH - (OUTCOME_SUMMARY_HORIZONTAL_PADDING * 2);
 
   const outcome = classifyOutcomeState(data);
-  const primaryMetricDef = data.metrics.find(m => getMetricKey(m) === data.primaryMetric || m.isPrimary);
-  const primaryMetricKey = data.primaryMetric || (primaryMetricDef ? getMetricKey(primaryMetricDef) : undefined);
-  const primaryMetricLabel = primaryMetricDef?.abbreviation || primaryMetricDef?.name || "primary metric";
 
-  // Header (styled same as section labels)
+  const stateColors: Record<OutcomeState, string> = {
+    recommendation: TOKENS.royalBlue700,
+    inconclusive: TOKENS.azure600,
+    running: TOKENS.royalBlue700,
+    paused: TOKENS.yellow700,
+    rolled_out: TOKENS.malachite700,
+  };
+
+  const headerRow = figma.createFrame();
+  headerRow.layoutMode = "HORIZONTAL";
+  headerRow.counterAxisSizingMode = "AUTO";
+  headerRow.primaryAxisSizingMode = "AUTO";
+  headerRow.counterAxisAlignItems = "CENTER";
+  headerRow.itemSpacing = 8;
+  headerRow.fills = [];
+  headerRow.name = "Outcome Summary Header";
+
   const headerText = figma.createText();
   headerText.fontName = getFontStyle("Medium");
   headerText.fontSize = TOKENS.fontSizeLabel;
-  headerText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  headerText.opacity = 0.5;
+  headerText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
   headerText.textAutoResize = "WIDTH_AND_HEIGHT";
-  headerText.characters = "Outcome";
-  section.appendChild(headerText);
+  headerText.characters = "Outcome summary";
+  headerRow.appendChild(headerText);
+
+  const stateBadge = createBadge(
+    outcome.state === "rolled_out" ? "Decision" : outcome.state === "running" ? "Live read" : "Guidance",
+    "micro",
+    TOKENS.fillsSurface,
+    stateColors[outcome.state]
+  );
+  headerRow.appendChild(stateBadge);
+  section.appendChild(headerRow);
+
+  const headlineText = figma.createText();
+  headlineText.fontName = getFontStyle("Bold");
+  headlineText.fontSize = TOKENS.fontSizeBodyLg;
+  headlineText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  setWrappedText(headlineText, outcome.headline, contentWidth);
+  section.appendChild(headlineText);
 
   const outcomeDetail = figma.createText();
-  outcomeDetail.fontName = getFontStyle("Medium");
+  outcomeDetail.fontName = getFontStyle("Regular");
   outcomeDetail.fontSize = TOKENS.fontSizeBodyMd;
-  outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  outcomeDetail.textAutoResize = "WIDTH_AND_HEIGHT";
-  outcomeDetail.characters = outcome.detail;
+  outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+  setWrappedText(outcomeDetail, outcome.detail, contentWidth);
   section.appendChild(outcomeDetail);
 
-  const rolledOutVariant = data.variants.find(v => v.isRolledOut);
-  if (rolledOutVariant) {
-    const rolledOutMetric = primaryMetricKey ? rolledOutVariant.metrics[primaryMetricKey] : undefined;
-    const upliftText = rolledOutMetric?.uplift !== undefined ? formatUplift(rolledOutMetric.uplift) : "--";
+  const factsFrame = figma.createFrame();
+  factsFrame.layoutMode = "VERTICAL";
+  factsFrame.counterAxisSizingMode = "FIXED";
+  factsFrame.primaryAxisSizingMode = "AUTO";
+  factsFrame.layoutAlign = "STRETCH";
+  factsFrame.minWidth = contentWidth;
+  factsFrame.itemSpacing = 4;
+  factsFrame.fills = [];
+  factsFrame.name = "Outcome Evidence";
 
-    const rolledOutLine = figma.createText();
-    rolledOutLine.fontName = getFontStyle("Medium");
-    rolledOutLine.fontSize = TOKENS.fontSizeBodyMd;
-    rolledOutLine.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-    rolledOutLine.textAutoResize = "WIDTH_AND_HEIGHT";
-    rolledOutLine.characters = `Rolled out: ${rolledOutVariant.name} (${upliftText} ${primaryMetricLabel})`;
-    section.appendChild(rolledOutLine);
+  for (const fact of outcome.facts) {
+    factsFrame.appendChild(createSummaryFactRow(fact, stateColors[outcome.state], contentWidth));
   }
+  section.appendChild(factsFrame);
+
+  const nextStepText = figma.createText();
+  nextStepText.fontName = getFontStyle("Medium");
+  nextStepText.fontSize = TOKENS.fontSizeBodySm;
+  nextStepText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  setWrappedText(nextStepText, `Next step: ${outcome.nextStep}`, contentWidth);
+  section.appendChild(nextStepText);
 
   return section;
+}
+
+function createSummaryFactRow(fact: string, accentColor: string, width: number): FrameNode {
+  const row = figma.createFrame();
+  row.layoutMode = "HORIZONTAL";
+  row.counterAxisSizingMode = "AUTO";
+  row.primaryAxisSizingMode = "FIXED";
+  row.layoutAlign = "STRETCH";
+  row.counterAxisAlignItems = "CENTER";
+  row.itemSpacing = 6;
+  row.fills = [];
+  row.name = "Outcome Evidence Row";
+  row.minWidth = width;
+
+  const dot = figma.createEllipse();
+  dot.resize(5, 5);
+  dot.fills = [{ type: "SOLID", color: hexToRgb(accentColor) }];
+  row.appendChild(dot);
+
+  const factText = figma.createText();
+  factText.fontName = getFontStyle("Regular");
+  factText.fontSize = TOKENS.fontSizeBodySm;
+  factText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+  setWrappedText(factText, fact, width - 11);
+  row.appendChild(factText);
+
+  return row;
 }
 
 
@@ -1151,11 +1317,11 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
  * 
  * @example
  * const outcomeCard = await createOutcomeCardFromExperimentData(
- *   'New CTA Button',
+ *   'Pricing Page Button Color Experiment',
  *   [{ id: 'conv', name: 'Conversions', isPrimary: true }],
  *   [
- *     { key: 'A', name: 'Control', traffic: 50, isControl: true, metrics: { conversions: 100 } },
- *     { key: 'B', name: 'Red', traffic: 50, metrics: { conversions: 120 } }
+ *     { key: 'A', name: 'Blue button', traffic: 50, isControl: true, metrics: { conversions: 100 } },
+ *     { key: 'B', name: 'Red button', traffic: 50, metrics: { conversions: 120 } }
  *   ],
  *   { status: 'completed' }
  * );
