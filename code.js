@@ -2197,6 +2197,10 @@ if (figma.editorType === 'figma') {
         themeColors: true,
     });
     figma.ui.postMessage({ type: 'plugin-version', version: PLUGIN_VERSION });
+    figma.ui.postMessage({
+        type: 'current-file-context',
+        fileKey: figma.fileKey || ''
+    });
     function createNodeCard(title, subtitle, trafficLabel, note) {
         const card = figma.createFrame();
         card.layoutMode = 'VERTICAL';
@@ -2269,6 +2273,91 @@ if (figma.editorType === 'figma') {
             card.appendChild(noteContainer);
         }
         return card;
+    }
+    function parseFigmaNodeIdFromUrl(rawUrl) {
+        const trimmed = rawUrl.trim();
+        if (!trimmed) {
+            return { kind: 'invalid', url: rawUrl, reason: 'Missing URL' };
+        }
+        const figmaUrlMatch = trimmed.match(/^https?:\/\/([^/]+)(\/[^?#]*)?(?:\?([^#]*))?/i);
+        if (!figmaUrlMatch) {
+            return { kind: 'invalid', url: rawUrl, reason: 'Invalid URL' };
+        }
+        const hostname = figmaUrlMatch[1];
+        if (!/figma\.com$/i.test(hostname) && !/\.figma\.com$/i.test(hostname)) {
+            return { kind: 'invalid', url: rawUrl, reason: 'URL is not a Figma URL' };
+        }
+        const path = figmaUrlMatch[2] || '';
+        const fileKeyMatch = path.match(/^\/(?:file|design|proto|board)\/([^/]+)/i);
+        const fileKey = fileKeyMatch ? decodeURIComponent(fileKeyMatch[1]) : undefined;
+        const query = figmaUrlMatch[3] || '';
+        const nodeIdMatch = query.match(/(?:^|&)(?:node-id|node_id)=([^&]+)/i);
+        const nodeId = nodeIdMatch ? nodeIdMatch[1] : '';
+        if (!nodeId) {
+            return { kind: 'external-url', url: trimmed, reason: 'Missing node id' };
+        }
+        try {
+            return { kind: 'node-id', nodeId: decodeURIComponent(nodeId).replace(/-/g, ':'), fileKey };
+        }
+        catch (_a) {
+            return { kind: 'invalid', url: rawUrl, reason: 'Invalid Figma node id' };
+        }
+    }
+    function resolveFigmaNodeUrl(rawUrl) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!rawUrl)
+                return undefined;
+            const parsed = parseFigmaNodeIdFromUrl(rawUrl);
+            if (parsed.kind !== 'node-id')
+                return parsed;
+            try {
+                const currentFileKey = figma.fileKey;
+                if (parsed.fileKey && currentFileKey && parsed.fileKey !== currentFileKey) {
+                    return { kind: 'external-url', url: rawUrl.trim(), reason: 'Different Figma file' };
+                }
+                const figmaWithLookup = figma;
+                const node = typeof figmaWithLookup.getNodeByIdAsync === 'function'
+                    ? yield figmaWithLookup.getNodeByIdAsync(parsed.nodeId)
+                    : null;
+                if (node && 'type' in node && node.type !== 'PAGE' && node.type !== 'DOCUMENT') {
+                    return { kind: 'current-file-node', node: node };
+                }
+                return { kind: 'external-url', url: rawUrl.trim(), reason: 'Node was not found in current file' };
+            }
+            catch (error) {
+                console.warn('Could not resolve Figma node URL', rawUrl, error);
+                return { kind: 'invalid', url: rawUrl, reason: 'Could not resolve node in current file' };
+            }
+        });
+    }
+    function resolveThumbnailSourceFromFigmaLink(rawUrl, label) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const resolution = yield resolveFigmaNodeUrl(rawUrl);
+            if (!resolution)
+                return { node: null };
+            if (resolution.kind === 'current-file-node') {
+                return { node: resolution.node };
+            }
+            const suffix = label ? ` for ${label}` : '';
+            if (resolution.kind === 'external-url') {
+                console.warn(`Figma thumbnail link${suffix} could not be resolved in the current file; leaving placeholder.`, resolution.reason, resolution.url);
+                const reason = resolution.reason === 'Different Figma file'
+                    ? 'points to another Figma file'
+                    : 'is not in this file';
+                figma.notify(`Figma frame link${suffix} ${reason}, so the thumbnail stayed as a placeholder.`);
+                return {
+                    node: null,
+                    message: resolution.reason === 'Different Figma file'
+                        ? 'Frame link is from another Figma file'
+                        : 'Frame link could not be found in this file',
+                };
+            }
+            else {
+                console.warn(`Invalid Figma thumbnail link${suffix}; leaving placeholder.`, resolution.reason, resolution.url);
+                figma.notify(`Figma frame link${suffix} could not be used, so the thumbnail stayed as a placeholder.`);
+                return { node: null, message: 'Frame link could not be used' };
+            }
+        });
     }
     // --- Unified V2 Flow Creation Function ---
     // Extracted from message handler for reuse by both UI messages and sample flows
@@ -2479,9 +2568,12 @@ if (figma.editorType === 'figma') {
                         const rolledOutVariantId = (_w = (_v = experiment.outcomes) === null || _v === void 0 ? void 0 : _v.rolledOutVariantId) !== null && _w !== void 0 ? _w : (_x = experiment.outcomes) === null || _x === void 0 ? void 0 : _x.rolledoutVariantId;
                         const isRolledout = rolledOutVariantId === variant.id;
                         const variantForCard = Object.assign(Object.assign({}, variant), { name: safeVariantName, status: isRolledout ? 'winner' : (variant.status || 'none'), metrics: variant.metrics || {}, color: variantColor });
+                        const variantThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(variant, 'figmaLink'), `variant "${safeVariantName}"`);
                         const variantCard = yield createVariantCard(variantForCard, vIdx, {
                             rolledout: isRolledout,
-                            metrics: metrics
+                            metrics: metrics,
+                            thumbnailSource: variantThumbnail.node,
+                            thumbnailMessage: variantThumbnail.message,
                         });
                         // Position off-screen temporarily (will be positioned correctly in Stage 4d)
                         // We need to add to page to get accurate measurements from Figma's layout engine
@@ -2511,8 +2603,9 @@ if (figma.editorType === 'figma') {
                 const safeEventName = typeof event.name === 'string' && event.name.trim().length > 0
                     ? event.name
                     : `Touchpoint ${eventIdx + 1}`;
+                const eventThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(event, 'figmaLink'), `touchpoint "${safeEventName}"`);
                 // Create event card
-                const eventCard = createEventCard(safeEventName, (_z = (_y = event.variants) === null || _y === void 0 ? void 0 : _y.length) !== null && _z !== void 0 ? _z : 0, eventIdx);
+                const eventCard = createEventCard(safeEventName, (_z = (_y = event.variants) === null || _y === void 0 ? void 0 : _y.length) !== null && _z !== void 0 ? _z : 0, eventIdx, eventThumbnail.node, eventThumbnail.message);
                 // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
                 eventCard.name = `Touchpoint`;
                 // eventCard.name = `Touchpoint: ${safeEventName}`;
@@ -2527,6 +2620,7 @@ if (figma.editorType === 'figma') {
                         hasVariants: !!((_1 = event.variants) === null || _1 === void 0 ? void 0 : _1.length),
                         nodeType: 'EVENT_NODE',
                         entryNoteId: (_2 = event.entryNote) === null || _2 === void 0 ? void 0 : _2.id,
+                        figmaLink: safeGetString(event, 'figmaLink'),
                     },
                 });
                 // Position this event at calculated X, aligned to baseY (will be centered vertically in Stage 4f)
@@ -2579,6 +2673,7 @@ if (figma.editorType === 'figma') {
                                 traffic: variant.traffic,
                                 nodeType: 'VARIANT_NODE',
                                 parentEventId: variant.parentEventId,
+                                figmaLink: safeGetString(variant, 'figmaLink'),
                             },
                         });
                         // Position variant in horizontal row below event

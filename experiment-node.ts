@@ -5,6 +5,108 @@ import { TOKENS } from './design-tokens';
 import { hexToRgb, getFontStyle, createBadge } from './layout-utils';
 import type { MetricDefinition } from './types';
 
+const THUMBNAIL_WIDTH = 368;
+const THUMBNAIL_HEIGHT = 260;
+
+type ThumbnailSourceNode = SceneNode & {
+  clone(): SceneNode;
+  resize?: (width: number, height: number) => void;
+  resizeWithoutConstraints?: (width: number, height: number) => void;
+};
+
+function canCloneThumbnailSource(node: SceneNode | null | undefined): node is ThumbnailSourceNode {
+  return !!node && typeof (node as { clone?: unknown }).clone === 'function';
+}
+
+function resizeThumbnailChild(node: SceneNode, width: number, height: number): void {
+  const resizable = node as SceneNode & {
+    resize?: (width: number, height: number) => void;
+    resizeWithoutConstraints?: (width: number, height: number) => void;
+  };
+
+  if (typeof resizable.resize === 'function') {
+    resizable.resize(width, height);
+  } else if (typeof resizable.resizeWithoutConstraints === 'function') {
+    resizable.resizeWithoutConstraints(width, height);
+  }
+}
+
+function createThumbnailFrame(
+  sourceNode?: SceneNode | null,
+  options: { cornerRadius?: number; placeholderMessage?: string } = {}
+): FrameNode {
+  const thumb = figma.createFrame();
+  thumb.layoutMode = 'NONE';
+  thumb.resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
+  thumb.cornerRadius = options.cornerRadius ?? TOKENS.radiusMD;
+  thumb.name = 'Thumbnail - Replace with image';
+  thumb.layoutAlign = 'MIN';
+  thumb.clipsContent = true;
+
+  if (!canCloneThumbnailSource(sourceNode)) {
+    thumb.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue100) }];
+    thumb.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue200) }];
+    thumb.strokeWeight = 1;
+    if (options.placeholderMessage) {
+      const title = figma.createText();
+      title.fontName = getFontStyle("Bold");
+      title.fontSize = TOKENS.fontSizeBodySm;
+      title.lineHeight = { value: 16, unit: "PIXELS" };
+      title.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+      title.textAlignHorizontal = 'CENTER';
+      title.textAutoResize = 'HEIGHT';
+      title.characters = options.placeholderMessage;
+      title.resize(THUMBNAIL_WIDTH - 48, title.height);
+      title.name = 'Thumbnail Message Title';
+
+      const helper = figma.createText();
+      helper.fontName = getFontStyle("Regular");
+      helper.fontSize = TOKENS.fontSizeLabel;
+      helper.lineHeight = { value: 14, unit: "PIXELS" };
+      helper.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
+      helper.textAlignHorizontal = 'CENTER';
+      helper.textAutoResize = 'HEIGHT';
+      helper.characters = 'Use a frame from this Figma file to render a preview.';
+      helper.resize(THUMBNAIL_WIDTH - 48, helper.height);
+      helper.name = 'Thumbnail Message Helper';
+
+      const contentHeight = title.height + 8 + helper.height;
+      title.x = 24;
+      title.y = (THUMBNAIL_HEIGHT - contentHeight) / 2;
+      helper.x = 24;
+      helper.y = title.y + title.height + 8;
+
+      thumb.appendChild(title);
+      thumb.appendChild(helper);
+    }
+    return thumb;
+  }
+
+  thumb.fills = [];
+  thumb.strokes = [];
+
+  const clone = sourceNode.clone();
+  clone.name = 'Thumbnail Source';
+
+  const sourceWidth = Math.max(1, sourceNode.width || THUMBNAIL_WIDTH);
+  const sourceHeight = Math.max(1, sourceNode.height || THUMBNAIL_HEIGHT);
+  const scale = Math.max(THUMBNAIL_WIDTH / sourceWidth, THUMBNAIL_HEIGHT / sourceHeight);
+  const resizedWidth = sourceWidth * scale;
+  const resizedHeight = sourceHeight * scale;
+
+  resizeThumbnailChild(clone, resizedWidth, resizedHeight);
+  clone.x = (THUMBNAIL_WIDTH - resizedWidth) / 2;
+  clone.y = (THUMBNAIL_HEIGHT - resizedHeight) / 2;
+
+  const roundedClone = clone as SceneNode & { cornerRadius?: number | PluginAPI['mixed'] };
+  if (typeof roundedClone.cornerRadius === 'number') {
+    roundedClone.cornerRadius = TOKENS.radiusSM;
+  }
+
+  thumb.appendChild(clone);
+  return thumb;
+}
+
 /**
  * Creates an icon frame from an SVG string using Figma's importSVGAsync
  * Handles color updates and scaling to match the target size
@@ -133,7 +235,13 @@ async function createIconFromSVG(
  * eventCard.y = 200;
  * figma.currentPage.appendChild(eventCard);
  */
-export function createEventCard(eventName: string, variantCount?: number, eventIndex?: number): FrameNode {
+export function createEventCard(
+  eventName: string,
+  variantCount?: number,
+  eventIndex?: number,
+  thumbnailSource?: SceneNode | null,
+  thumbnailMessage?: string
+): FrameNode {
   const card = figma.createFrame();
   card.layoutMode = 'VERTICAL';
   card.counterAxisSizingMode = 'AUTO';
@@ -164,7 +272,6 @@ export function createEventCard(eventName: string, variantCount?: number, eventI
   // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
   card.name = `Touchpoint: ${eventName}`;
 
-  let thumb: FrameNode;
   const selection = figma.currentPage.selection;
   
   // Check if user has selected a Frame or Rectangle to use as thumbnail
@@ -173,51 +280,11 @@ export function createEventCard(eventName: string, variantCount?: number, eventI
   const selectedNode = selection && selection.length > 0 ? selection[0] : null;
   const isValidThumbnailSource = selectedNode && 
     (selectedNode.type === 'FRAME' || selectedNode.type === 'RECTANGLE');
-  
-  if (selectedNode && isValidThumbnailSource) {
-    // If it's already a Frame, clone it directly
-    if (selectedNode.type === 'FRAME') {
-      thumb = selectedNode.clone() as FrameNode;
-      thumb.resize(368, 260);
-      thumb.cornerRadius = TOKENS.radiusMD;
-      thumb.name = 'Thumbnail - Replace with image';
-      thumb.layoutAlign = 'MIN';
-      thumb.clipsContent = true;
-    }
-    // If it's a Rectangle (with or without image fill), wrap it in a Frame
-    else {
-      const rect = selectedNode.clone() as RectangleNode;
-      thumb = figma.createFrame();
-      thumb.layoutMode = 'NONE';
-      thumb.resize(368, 260);
-      thumb.cornerRadius = TOKENS.radiusMD;
-      thumb.name = 'Thumbnail - Replace with image';
-      thumb.layoutAlign = 'MIN';
-      thumb.clipsContent = true;
-      
-      // Resize and center the rectangle in the frame
-      rect.resize(368, 260);
-      rect.x = 0;
-      rect.y = 0;
-      if ('cornerRadius' in rect) rect.cornerRadius = TOKENS.radiusSM;
-      thumb.appendChild(rect);
-    }
-  } else {
-    // Create empty placeholder Frame ready for "Replace with"
-    // This is the default when no valid thumbnail source is selected
-    const placeholder = figma.createFrame();
-    placeholder.layoutMode = 'NONE';
-    placeholder.resize(368, 260);
-    placeholder.cornerRadius = TOKENS.radiusMD;
-    placeholder.name = 'Thumbnail - Replace with image';
-    placeholder.layoutAlign = 'MIN';
-    placeholder.clipsContent = true;
-    placeholder.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue100) }];
-    placeholder.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue200) }];
-    placeholder.strokeWeight = 1;
-    // Empty Frame with background fill - ready for "Replace with"
-    thumb = placeholder;
-  }
+  const resolvedThumbnailSource = thumbnailSource || (isValidThumbnailSource ? selectedNode : null);
+  const thumb = createThumbnailFrame(resolvedThumbnailSource, {
+    cornerRadius: TOKENS.radiusMD,
+    placeholderMessage: thumbnailMessage,
+  });
   card.appendChild(thumb);
 
   // Group Touchpoint Name Text and Number of Variants Badge
@@ -341,6 +408,8 @@ export async function createVariantCard(
   options?: { 
     rolledout?: boolean;
     metrics?: MetricDefinition[]; // Available metrics from plugin
+    thumbnailSource?: SceneNode | null;
+    thumbnailMessage?: string;
     /**
      * Whether to render the variant description text on the canvas node.
      * Default: false (hidden) to keep nodes compact.
@@ -382,18 +451,10 @@ export async function createVariantCard(
   card.primaryAxisAlignItems = 'MIN';
   card.counterAxisAlignItems = 'MIN';
 
-  // Empty placeholder Frame ready for "Replace with"
-  const thumb = figma.createFrame();
-  thumb.layoutMode = 'NONE';
-  thumb.resize(368, 260);
-  thumb.cornerRadius = TOKENS.radiusSM;
-  thumb.name = 'Thumbnail - Replace with image';
-  thumb.layoutAlign = 'MIN';
-  thumb.clipsContent = true;
-  thumb.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue100) }];
-  thumb.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue200) }];
-  thumb.strokeWeight = 1;
-  // Empty Frame with background fill - ready for "Replace with"
+  const thumb = createThumbnailFrame(options?.thumbnailSource, {
+    cornerRadius: TOKENS.radiusSM,
+    placeholderMessage: options?.thumbnailMessage,
+  });
   card.appendChild(thumb);
 
   // Variant details section: name row + control label + traffic
@@ -653,13 +714,13 @@ export async function createVariantCard(
     linkRow.layoutAlign = 'STRETCH';
     linkRow.paddingTop = 16;
 
-    // Figma brand icon (multi-color SVG, same as experiment info card)
+    // Figma outline icon, matching linked-frame indicators in the plugin UI
     const figmaIconSvg = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-      <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4z" fill="#0ACF83"/>
-      <path d="M4 12c0-2.208 1.792-4 4-4h4v8H8c-2.208 0-4-1.792-4-4z" fill="#A259FF"/>
-      <path d="M4 4c0-2.208 1.792-4 4-4h4v8H8C5.792 8 4 6.208 4 4z" fill="#F24E1E"/>
-      <path d="M12 0h4c2.208 0 4 1.792 4 4s-1.792 4-4 4h-4V0z" fill="#FF7262"/>
-      <path d="M20 12c0 2.208-1.792 4-4 4s-4-1.792-4-4 1.792-4 4-4 4 1.792 4 4z" fill="#1ABCFE"/>
+      <path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
     try {
       const figmaIcon = figma.createNodeFromSvg(figmaIconSvg);

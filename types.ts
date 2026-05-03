@@ -90,6 +90,7 @@ export interface VariantV2 {
   key: string;
   name: string;
   description?: string;
+  figmaLink?: string;
   traffic: number;
   metrics?: VariantMetrics;
   style?: {
@@ -119,6 +120,7 @@ export interface EventNodeV2 {
   id: string;
   name: string;
   nodeType: 'EVENT_NODE';
+  figmaLink?: string;
   entryNote?: EntryNoteV2;
   variants?: VariantV2[];
 }

@@ -15,13 +15,13 @@ import { createOutcomeCardSections, mapExperimentDataToOutcomeData, } from "./ex
 import { EXPERIMENT_STATUS_STYLES, formatDateForDisplay, getExperimentTypeLabel, } from "./experiment-card-shared";
 // Brand icon SVG markup (complete SVGs for figma.createNodeFromSvg)
 const BRAND_SVGS = {
-    // Official Figma multi-color logo
+    // Figma outline icon, matching linked-frame indicators in the plugin UI
     figma: `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-    <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4z" fill="#0ACF83"/>
-    <path d="M4 12c0-2.208 1.792-4 4-4h4v8H8c-2.208 0-4-1.792-4-4z" fill="#A259FF"/>
-    <path d="M4 4c0-2.208 1.792-4 4-4h4v8H8C5.792 8 4 6.208 4 4z" fill="#F24E1E"/>
-    <path d="M12 0h4c2.208 0 4 1.792 4 4s-1.792 4-4 4h-4V0z" fill="#FF7262"/>
-    <path d="M20 12c0 2.208-1.792 4-4 4s-4-1.792-4-4 1.792-4 4-4 4 1.792 4 4z" fill="#1ABCFE"/>
+    <path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`,
     // Miro multi-color logo
     miro: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">

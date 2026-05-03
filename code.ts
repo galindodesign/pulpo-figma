@@ -2474,6 +2474,10 @@ if (figma.editorType === 'figma') {
   });
 
   figma.ui.postMessage({ type: 'plugin-version', version: PLUGIN_VERSION });
+  figma.ui.postMessage({
+    type: 'current-file-context',
+    fileKey: (figma as typeof figma & { fileKey?: string | null }).fileKey || ''
+  });
 
   function createNodeCard(title: string, subtitle?: string, trafficLabel?: string, note?: string): FrameNode {
     const card = figma.createFrame();
@@ -2555,6 +2559,106 @@ if (figma.editorType === 'figma') {
     }
 
     return card;
+  }
+
+  type FigmaNodeUrlResolution =
+    | { kind: 'current-file-node'; node: SceneNode }
+    | { kind: 'external-url'; url: string; reason?: string }
+    | { kind: 'invalid'; url: string; reason: string };
+
+  function parseFigmaNodeIdFromUrl(rawUrl: string): FigmaNodeUrlResolution | { kind: 'node-id'; nodeId: string; fileKey?: string } {
+    const trimmed = rawUrl.trim();
+    if (!trimmed) {
+      return { kind: 'invalid', url: rawUrl, reason: 'Missing URL' };
+    }
+
+    const figmaUrlMatch = trimmed.match(/^https?:\/\/([^/]+)(\/[^?#]*)?(?:\?([^#]*))?/i);
+    if (!figmaUrlMatch) {
+      return { kind: 'invalid', url: rawUrl, reason: 'Invalid URL' };
+    }
+
+    const hostname = figmaUrlMatch[1];
+    if (!/figma\.com$/i.test(hostname) && !/\.figma\.com$/i.test(hostname)) {
+      return { kind: 'invalid', url: rawUrl, reason: 'URL is not a Figma URL' };
+    }
+
+    const path = figmaUrlMatch[2] || '';
+    const fileKeyMatch = path.match(/^\/(?:file|design|proto|board)\/([^/]+)/i);
+    const fileKey = fileKeyMatch ? decodeURIComponent(fileKeyMatch[1]) : undefined;
+
+    const query = figmaUrlMatch[3] || '';
+    const nodeIdMatch = query.match(/(?:^|&)(?:node-id|node_id)=([^&]+)/i);
+    const nodeId = nodeIdMatch ? nodeIdMatch[1] : '';
+    if (!nodeId) {
+      return { kind: 'external-url', url: trimmed, reason: 'Missing node id' };
+    }
+
+    try {
+      return { kind: 'node-id', nodeId: decodeURIComponent(nodeId).replace(/-/g, ':'), fileKey };
+    } catch {
+      return { kind: 'invalid', url: rawUrl, reason: 'Invalid Figma node id' };
+    }
+  }
+
+  async function resolveFigmaNodeUrl(rawUrl?: string): Promise<FigmaNodeUrlResolution | undefined> {
+    if (!rawUrl) return undefined;
+
+    const parsed = parseFigmaNodeIdFromUrl(rawUrl);
+    if (parsed.kind !== 'node-id') return parsed;
+
+    try {
+      const currentFileKey = (figma as typeof figma & { fileKey?: string | null }).fileKey;
+      if (parsed.fileKey && currentFileKey && parsed.fileKey !== currentFileKey) {
+        return { kind: 'external-url', url: rawUrl.trim(), reason: 'Different Figma file' };
+      }
+
+      const figmaWithLookup = figma as typeof figma & {
+        getNodeByIdAsync?: (id: string) => Promise<BaseNode | null>;
+      };
+      const node = typeof figmaWithLookup.getNodeByIdAsync === 'function'
+        ? await figmaWithLookup.getNodeByIdAsync(parsed.nodeId)
+        : null;
+
+      if (node && 'type' in node && node.type !== 'PAGE' && node.type !== 'DOCUMENT') {
+        return { kind: 'current-file-node', node: node as SceneNode };
+      }
+
+      return { kind: 'external-url', url: rawUrl.trim(), reason: 'Node was not found in current file' };
+    } catch (error) {
+      console.warn('Could not resolve Figma node URL', rawUrl, error);
+      return { kind: 'invalid', url: rawUrl, reason: 'Could not resolve node in current file' };
+    }
+  }
+
+  async function resolveThumbnailSourceFromFigmaLink(
+    rawUrl?: string,
+    label?: string
+  ): Promise<{ node: SceneNode | null; message?: string }> {
+    const resolution = await resolveFigmaNodeUrl(rawUrl);
+    if (!resolution) return { node: null };
+
+    if (resolution.kind === 'current-file-node') {
+      return { node: resolution.node };
+    }
+
+    const suffix = label ? ` for ${label}` : '';
+    if (resolution.kind === 'external-url') {
+      console.warn(`Figma thumbnail link${suffix} could not be resolved in the current file; leaving placeholder.`, resolution.reason, resolution.url);
+      const reason = resolution.reason === 'Different Figma file'
+        ? 'points to another Figma file'
+        : 'is not in this file';
+      figma.notify(`Figma frame link${suffix} ${reason}, so the thumbnail stayed as a placeholder.`);
+      return {
+        node: null,
+        message: resolution.reason === 'Different Figma file'
+          ? 'Frame link is from another Figma file'
+          : 'Frame link could not be found in this file',
+      };
+    } else {
+      console.warn(`Invalid Figma thumbnail link${suffix}; leaving placeholder.`, resolution.reason, resolution.url);
+      figma.notify(`Figma frame link${suffix} could not be used, so the thumbnail stayed as a placeholder.`);
+      return { node: null, message: 'Frame link could not be used' };
+    }
   }
 
   // --- Unified V2 Flow Creation Function ---
@@ -2827,10 +2931,16 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
             metrics: variant.metrics || {},
             color: variantColor,
           };
+          const variantThumbnail = await resolveThumbnailSourceFromFigmaLink(
+            safeGetString(variant, 'figmaLink'),
+            `variant "${safeVariantName}"`
+          );
           
           const variantCard = await createVariantCard(variantForCard, vIdx, { 
             rolledout: isRolledout,
-            metrics: metrics
+            metrics: metrics,
+            thumbnailSource: variantThumbnail.node,
+            thumbnailMessage: variantThumbnail.message,
           });
           // Position off-screen temporarily (will be positioned correctly in Stage 4d)
           // We need to add to page to get accurate measurements from Figma's layout engine
@@ -2867,9 +2977,19 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
       const safeEventName = typeof event.name === 'string' && event.name.trim().length > 0
         ? event.name
         : `Touchpoint ${eventIdx + 1}`;
+      const eventThumbnail = await resolveThumbnailSourceFromFigmaLink(
+        safeGetString(event, 'figmaLink'),
+        `touchpoint "${safeEventName}"`
+      );
       
       // Create event card
-      const eventCard = createEventCard(safeEventName, event.variants?.length ?? 0, eventIdx);
+      const eventCard = createEventCard(
+        safeEventName,
+        event.variants?.length ?? 0,
+        eventIdx,
+        eventThumbnail.node,
+        eventThumbnail.message
+      );
       // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
       eventCard.name = `Touchpoint`;
       // eventCard.name = `Touchpoint: ${safeEventName}`;
@@ -2884,6 +3004,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
           hasVariants: !!event.variants?.length,
           nodeType: 'EVENT_NODE',
           entryNoteId: event.entryNote?.id,
+          figmaLink: safeGetString(event, 'figmaLink'),
         },
       });
       
@@ -2943,6 +3064,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
               traffic: variant.traffic,
               nodeType: 'VARIANT_NODE',
               parentEventId: variant.parentEventId,
+              figmaLink: safeGetString(variant, 'figmaLink'),
             },
           });
           
