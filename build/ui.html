@@ -309,13 +309,6 @@
       --variant-name-input-bg: var(--color-white-alpha-700);
       --variant-name-input-hover-bg: var(--color-white-alpha-700);
       --variant-name-input-border-color: var(--color-azure-light-alpha-100);
-      --baseline-chip-hover-bg: color-mix(in srgb, var(--background-surface) 82%, var(--brand) 18%);
-      --baseline-indicator-border: color-mix(in srgb, var(--border) 88%, var(--foreground) 12%);
-      --baseline-indicator-fill: var(--foreground);
-      --baseline-indicator-dot: #ffffff;
-      --baseline-label-color: var(--text-secondary);
-      --baseline-label-active-color: var(--foreground);
-
       /* === Input Field Component (from Figma node 353-7322) === */
       --input-field-bg: var(--figma-color-bg-secondary, var(--color-azure-dark-alpha-50)); 
       --input-field-hover-bg: var(--color-azure-dark-alpha-50); 
@@ -384,12 +377,6 @@
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
       --variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);
       --variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);
-      --baseline-chip-hover-bg: color-mix(in srgb, #ffffff 82%, var(--brand) 18%);
-      --baseline-indicator-border: color-mix(in srgb, var(--border) 84%, var(--foreground) 16%);
-      --baseline-indicator-fill: var(--foreground);
-      --baseline-indicator-dot: #ffffff;
-      --baseline-label-color: var(--text-secondary);
-      --baseline-label-active-color: var(--foreground);
       --input-field-prefix-divider: color-mix(in srgb, var(--text-primary) 24%, transparent);
     }
 
@@ -419,12 +406,6 @@
       --variant-name-input-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 86%, black 14%);
       --variant-name-input-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 76%, white 24%);
       --variant-name-input-border-color: color-mix(in srgb, white 18%, transparent);
-      --baseline-chip-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 68%, white 32%);
-      --baseline-indicator-border: color-mix(in srgb, white 72%, var(--figma-color-bg-secondary, #2c2c30) 28%);
-      --baseline-indicator-fill: color-mix(in srgb, white 84%, var(--figma-color-bg-secondary, #2c2c30) 16%);
-      --baseline-indicator-dot: var(--figma-color-bg-secondary, #2c2c30);
-      --baseline-label-color: color-mix(in srgb, white 72%, var(--text-secondary) 28%);
-      --baseline-label-active-color: #ffffff;
       --input-field-prefix-divider: color-mix(in srgb, white 44%, transparent);
     }
 
@@ -820,14 +801,16 @@
     }
 
     /* Danger hover variant for delete/remove buttons */
-    .icon-btn--danger:hover {
+    .icon-btn--danger:hover,
+    .icon-btn--danger:focus-visible {
+      outline: none;
       background: var(--danger-bg);
       color: var(--danger);
     }
 
     /* ============================================
      * CHIP BUTTON (labeled toggle/action)
-     * Use for: Primary metric, Control variant
+     * Use for: Primary metric and compact inline actions
      * Semantics: <button aria-pressed="true|false">
      * ============================================ */
     .Chip {
@@ -3001,46 +2984,8 @@
       border-bottom: 1px solid var(--color-azure-light-alpha-100); */
     }
 
-    .variant-row > .variant-passive-chip + .figma-frame-link-indicator,
-    .variant-row > .figma-frame-link-indicator + .variant-baseline-slot,
-    .variant-row > .variant-baseline-slot + .variant-actions {
+    .variant-row > .variant-passive-chip + .variant-actions {
       margin-left: calc(-1 * var(--space-4));
-    }
-
-    .variant-baseline-slot {
-      display: inline-flex;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
-    /* Control selector */
-    .Button.Button--toggle.variant-control-toggle {
-      height: 20px;
-      padding: 0 6px;
-      gap: 4px;
-      border-radius: var(--radius-sm);
-      font-size: var(--tooltip-font-size-sm);
-      font-weight: 500;
-      line-height: 1;
-      letter-spacing: .0125rem;
-      flex-shrink: 0;
-      white-space: nowrap;
-    }
-
-    .Button.Button--toggle.variant-control-toggle .Button__icon svg {
-      width: 12px;
-      height: 12px;
-    }
-
-    .variant-control-toggle--action {
-      opacity: 0.7;
-      pointer-events: auto;
-      transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
-    }
-
-    .variant-control-toggle--action:hover,
-    .variant-control-toggle--action:focus-visible {
-      opacity: 1;
     }
 
     .variant-passive-chip {
@@ -3074,15 +3019,12 @@
       padding: 0;
     }
 
-    .variant-passive-chip--control {
-      gap: 4px;
-      background: var(--dropdown-selected-bg);
-      color: var(--text-link);
-    }
-
-    .variant-section-heading__control {
-      color: var(--text-secondary);
-      font-weight: 400;
+    .variant-passive-chip--figma {
+      background: var(--color-azure-light-alpha-50);
+      border-color: var(--color-azure-light-alpha-100);
+      color: var(--text-primary);
+      width: 20px;
+      padding: 0;
     }
 
     /* Variant subtree toggle button */
@@ -3216,6 +3158,22 @@
       width: 100%;
     }
 
+    /* Variant linked design section (sibling of metrics, holds the inline figma link block). */
+    .variant-link-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--input-field-label-gap);
+      width: 100%;
+    }
+
+    .variant-section-separator {
+      width: 100%;
+      height: 1px;
+      background: var(--border);
+      opacity: 0.8;
+      flex: 0 0 auto;
+    }
+
     .variant-metrics-label,
     .variant-section-heading {
       font-size: var(--body-xs-size);
@@ -3327,7 +3285,7 @@
       align-self: stretch;
     }
 
-    /* Variant control selector (0 or 1 selected) */
+    /* Variant significance selector */
     .variant-significance-row {
       display: flex;
       align-items: center;
@@ -3819,6 +3777,28 @@
       cursor: not-allowed;
     }
 
+    /* Destructive option (e.g. Remove variant). Subtle by default, red on hover. */
+    .CustomDropdown__option--danger {
+      color: var(--text-secondary);
+    }
+
+    .CustomDropdown__option--danger .CustomDropdown__option-icon {
+      color: var(--text-secondary);
+    }
+
+    .CustomDropdown__option--danger:hover,
+    .CustomDropdown__option--danger:focus-visible,
+    .CustomDropdown__option--danger.is-keyboard-focused {
+      background: var(--danger-bg) !important;
+      color: var(--danger) !important;
+    }
+
+    .CustomDropdown__option--danger:hover .CustomDropdown__option-icon,
+    .CustomDropdown__option--danger:focus-visible .CustomDropdown__option-icon,
+    .CustomDropdown__option--danger.is-keyboard-focused .CustomDropdown__option-icon {
+      color: var(--danger);
+    }
+
     .CustomDropdown__option-badge {
       width: 12px;
       height: 12px;
@@ -3854,107 +3834,47 @@
       height: 14px;
     }
 
-    .figma-frame-link-indicator {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-      border-radius: var(--radius-xs);
-      background: var(--background);
+    /* ── Inline Figma resource link ─────────────────────────────────
+       Empty/add state intentionally reuses the same .link-input-wrapper /
+       .link-input-row / .InputField structure as the Resources add-link
+       control. Filled state reuses the same .link-row structure as saved
+       resource links. */
+
+    .figma-link-input {
+      width: 100%;
+    }
+
+    /* Anchor variant of .link-row__name — used by figma-link-row so the URL
+       is keyboard-reachable and opens in a new tab. Inherits ellipsis and
+       sizing from .link-row__name; we only override link-specific styling. */
+    a.link-row__name {
+      text-decoration: none;
       color: var(--text-primary);
+      cursor: pointer;
     }
 
-    .figma-frame-link-indicator svg {
-      width: 12px;
-      height: 12px;
+    a.link-row__name:hover,
+    a.link-row__name:focus-visible {
+      outline: none;
+      color: var(--text-link);
+      text-decoration: underline;
     }
 
-    .figma-frame-actions-dropdown .CustomDropdown__menu {
-      width: 360px;
-      min-width: 360px;
-      max-width: 360px;
-    }
-
-    .figma-frame-link-option {
+    /* Event-level inline figma link row.
+       Sits between event-row-main and any event-variants-container, indented so the
+       link row lines up with the event name input (badge is 20px + 8px gap + 12px row pad). */
+    .event-link-row {
       display: flex;
-      flex-direction: column;
-      gap: var(--space-8);
-      padding: 6px var(--input-field-padding-x);
+      align-items: stretch;
       width: 100%;
       box-sizing: border-box;
+      padding: 0 var(--space-12) var(--space-12) calc(var(--space-12) + 20px + var(--space-8));
+      margin-top: calc(-1 * var(--space-8));
     }
 
-    .figma-frame-link-option__label {
-      display: flex;
-      align-items: center;
-      gap: var(--space-8);
-      color: var(--text-secondary);
-      font-size: 11px;
-      font-weight: 500;
-    }
-
-    .figma-frame-link-option__summary {
-      display: flex;
-      align-items: center;
-      gap: var(--space-8);
-      min-width: 0;
+    .event-link-row .figma-link-input,
+    .event-link-row .figma-link-row {
       width: 100%;
-      padding: var(--space-4) var(--space-8);
-      border-radius: var(--radius-sm);
-      background: var(--input-field-bg);
-    }
-
-    .figma-frame-link-option__url {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: var(--text-primary);
-      font-size: 11px;
-    }
-
-    .figma-frame-link-option__text-action {
-      border: none;
-      background: transparent;
-      color: var(--text-link);
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 500;
-      padding: 0;
-      white-space: nowrap;
-    }
-
-    .figma-frame-link-option__text-action.danger {
-      color: var(--text-secondary);
-    }
-
-    .figma-frame-link-option__input-row {
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      width: 100%;
-    }
-
-    .figma-frame-link-option.has-value:not(.is-editing) .figma-frame-link-option__input-row {
-      display: none;
-    }
-
-    .figma-frame-link-option .InputField {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .figma-frame-link-option .InputField__wrapper {
-      height: 24px;
-    }
-
-    .figma-frame-link-option__action {
-      width: 24px;
-      height: 24px;
-      flex-shrink: 0;
     }
 
     .figma-frame-menu-divider {
@@ -4984,7 +4904,7 @@
           <div class="section-block-left">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Goals</h2>
-              <span class="section-info-icon" data-tooltip="Metrics you’re optimizing for. Primary goal picks the winner." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Goals">
+              <span class="section-info-icon" data-tooltip="Metrics you’re optimizing for. The primary goal guides the outcome summary." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Goals">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -5225,7 +5145,7 @@
         window.startExampleExperiment = function() {
           var vals = {
             experimentName: 'Pricing Page Button Color Experiment',
-            experimentDescription: 'Test whether a red checkout CTA increases trial starts compared with the current blue button.',
+            experimentDescription: 'Test whether CTA color changes help more pricing-page visitors start checkout.',
             experimentHypothesis: 'If the CTA uses a higher-contrast red treatment, more pricing-page visitors will notice it and start checkout.',
             experimentAudience: 'New pricing-page visitors on self-serve plans',
             experimentSampleSize: '18420',
@@ -5327,6 +5247,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       'maximize-2': '<polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/>',
       // https://lucide.dev/icons/minimize-2
       'minimize-2': '<polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" x2="21" y1="10" y2="3"/><line x1="3" x2="10" y1="21" y2="14"/>',
+      // https://lucide.dev/icons/chart-column
+      'chart-column': '<path d="M3 3v18h18"/><path d="M7 17V9"/><path d="M12 17V5"/><path d="M17 17V6"/>',
+      // https://lucide.dev/icons/eye
+      'eye': '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+      // https://lucide.dev/icons/eye-off
+      'eye-off': '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
+      // https://lucide.dev/icons/external-link
+      'external-link': '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
       // https://lucide.dev/icons/link
       'link': '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
       // https://lucide.dev/icons/figma
@@ -5960,7 +5888,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         name: 'Checkout CTA',
         hasVariants: true,
         variants: [
-          { id: 'var-0-0', name: 'Blue button', description: 'Current blue "Start free trial" CTA with standard pricing copy.', color: '#3B8FF6', traffic: 50, isControl: true, metrics: { cvr: 42.1, ctr: 68.4, scr: 7.1 } },
+          { id: 'var-0-0', name: 'Blue button', description: 'Blue "Start free trial" CTA with standard pricing copy.', color: '#3B8FF6', traffic: 50, isControl: false, metrics: { cvr: 42.1, ctr: 68.4, scr: 7.1 } },
           { id: 'var-0-1', name: 'Red button', description: 'Red "Start free trial" CTA with the same pricing copy.', color: '#FF3838', traffic: 50, isControl: false, metrics: { cvr: 49.3, ctr: 74.2, scr: 5.2 } },
         ]
       },
@@ -6120,9 +6048,11 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       actions.className = 'goal-actions';
 
       const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'icon-btn';
       deleteBtn.type = 'button';
-      deleteBtn.innerHTML = getIcon('x');
+      deleteBtn.className = 'icon-btn icon-btn--danger';
+      deleteBtn.innerHTML = getIcon('x', { size: 14 });
+      deleteBtn.title = 'Remove goal metric';
+      deleteBtn.setAttribute('aria-label', 'Remove goal metric');
 
       actions.appendChild(deleteBtn);
 
@@ -6478,28 +6408,35 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       return displayName;
     }
 
-    function updateControlHeadingLabel(eventIndex) {
-      const controlLabel = document.querySelector(`[data-control-label-event-index="${eventIndex}"]`);
-      const event = events?.[eventIndex];
-      if (!controlLabel || !event || !Array.isArray(event.variants)) return;
-
-      const controlIndex = event.variants.findIndex(v => v.isControl === true);
-      const resolvedControlIndex = controlIndex >= 0 ? controlIndex : 0;
-      const controlVariant = event.variants[resolvedControlIndex];
-      controlLabel.textContent = `· Control: ${getVariantDisplayName(controlVariant, resolvedControlIndex)}`;
+    /** True if variant.metrics has at least one finite number or non-empty string (legacy / saved outcomes). */
+    function variantHasStoredGoalOutcomeValues(variant) {
+      const m = variant?.metrics;
+      if (!m || typeof m !== 'object') return false;
+      return Object.values(m).some((v) => {
+        if (typeof v === 'number' && Number.isFinite(v)) return true;
+        if (typeof v === 'string' && String(v).trim() !== '') return true;
+        return false;
+      });
     }
 
-    function createFigmaFrameLinkIndicator() {
-      const indicator = document.createElement('span');
-      indicator.className = 'figma-frame-link-indicator';
-      indicator.setAttribute('data-tooltip', 'Figma frame linked');
-      indicator.setAttribute('data-tooltip-position', 'bottom');
-      indicator.setAttribute('data-tooltip-align', 'center');
-      indicator.setAttribute('data-tooltip-cursor', 'default');
-      indicator.setAttribute('role', 'img');
-      indicator.setAttribute('aria-label', 'Figma frame linked');
-      indicator.innerHTML = `<span aria-hidden="true">${getIcon('figma', { size: 13, strokeWidth: 1.75 })}</span>`;
-      return indicator;
+    /**
+     * Whether to show per-variant goal outcome fields in the plugin UI.
+     * Explicit false hides even when metrics exist; undefined + saved values keeps legacy experiments visible.
+     */
+    function shouldShowVariantGoalOutcomesUI(variant) {
+      if (variant?.showGoalOutcomes === true) return true;
+      if (variant?.showGoalOutcomes === false) return false;
+      return variantHasStoredGoalOutcomeValues(variant);
+    }
+
+    /**
+     * Whether to show the inline "Linked design" Figma link block for a variant or touchpoint.
+     * Explicit false hides; undefined falls back to whether a URL exists (legacy grace).
+     */
+    function shouldShowFigmaLinkUI(item) {
+      if (item?.showFigmaLink === true) return true;
+      if (item?.showFigmaLink === false) return false;
+      return Boolean(item?.figmaLink);
     }
 
     const CUSTOM_DROPDOWN_VIEWPORT_MARGIN = 8;
@@ -6516,7 +6453,11 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const menu = getCustomDropdownMenu(dropdown);
       if (!menu) return [];
       return Array.from(menu.querySelectorAll('.CustomDropdown__option')).filter((option) => {
-        return !option.disabled && !option.classList.contains('disabled');
+        if (option.disabled || option.classList.contains('disabled')) return false;
+        // Skip options that are hidden via CSS (e.g. the compact figma-link button while
+        // its input is expanded), so keyboard navigation never lands on an invisible target.
+        if (option.offsetParent === null) return false;
+        return true;
       });
     }
 
@@ -6664,120 +6605,210 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       });
     }
 
-    function createFigmaFrameLinkMenuItem({ value, placeholder, onSave, onClear }) {
-      const container = document.createElement('div');
-      container.className = `figma-frame-link-option${value ? ' has-value' : ' is-editing'}`;
-      container.addEventListener('click', (e) => e.stopPropagation());
+    /**
+     * Inline Figma frame link.
+     *
+     * Empty/add state intentionally uses the same component structure as the
+     * Resources add-link control:
+     *   .link-input-wrapper > .link-input-row > .InputField > .InputField__wrapper > input
+     *
+     * The only addition is the Figma brand icon inside the InputField wrapper.
+     * Filled state uses the same .link-row structure as saved resource links.
+     */
+    function createFigmaFrameLinkInlineBlock({
+      value,
+      placeholder,
+      onSave,
+      onClear,
+      compactLabel = 'Link Figma frame',
+      ariaLabel = 'Linked Figma design'
+    }) {
+      if (!value) {
+        const inputWrapper = document.createElement('div');
+        inputWrapper.className = 'link-input-wrapper figma-link-input';
+        inputWrapper.setAttribute('role', 'group');
+        inputWrapper.setAttribute('aria-label', ariaLabel);
+        inputWrapper.addEventListener('click', (e) => e.stopPropagation());
 
-      if (value) {
-        const summary = document.createElement('div');
-        summary.className = 'figma-frame-link-option__summary';
+        const inputRow = document.createElement('div');
+        inputRow.className = 'link-input-row';
 
-        const summaryIcon = document.createElement('span');
-        summaryIcon.className = 'InputField__left-icon figma';
-        summaryIcon.innerHTML = getBrandIcon('figma', { size: 14 });
+        const inputField = document.createElement('div');
+        inputField.className = 'InputField';
+        inputField.setAttribute('data-state', 'default');
+        inputField.setAttribute('data-variant', 'horizontal');
 
-        const urlText = document.createElement('span');
-        urlText.className = 'figma-frame-link-option__url';
-        urlText.textContent = value.replace(/^https?:\/\//, '');
-        urlText.title = value;
+        const fieldWrapper = document.createElement('div');
+        fieldWrapper.className = 'InputField__wrapper';
 
-        const editBtn = document.createElement('button');
-        editBtn.type = 'button';
-        editBtn.className = 'link-row__action edit';
-        editBtn.innerHTML = getIcon('pencil', { size: 14 });
-        editBtn.title = 'Edit Figma frame link';
-        editBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          container.classList.add('is-editing');
-          const input = container.querySelector('.figma-frame-link-option__input-row input');
-          if (input) {
-            input.focus();
-            input.select();
+        const iconEl = document.createElement('span');
+        iconEl.className = 'InputField__left-icon figma';
+        iconEl.innerHTML = getBrandIcon('figma', { size: 14 });
+        fieldWrapper.appendChild(iconEl);
+
+        const input = document.createElement('input');
+        input.type = 'url';
+        input.className = 'InputField__input figma-link-input__field';
+        input.placeholder = placeholder || compactLabel;
+        input.setAttribute('aria-label', compactLabel);
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onSave(input.value);
           }
         });
-
-        const removeFrameBtn = document.createElement('button');
-        removeFrameBtn.type = 'button';
-        removeFrameBtn.className = 'link-row__action delete';
-        removeFrameBtn.innerHTML = getIcon('x', { size: 14 });
-        removeFrameBtn.title = 'Remove Figma frame link';
-        removeFrameBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          onClear();
+        input.addEventListener('paste', () => {
+          setTimeout(() => {
+            const pastedValue = input.value.trim();
+            if (pastedValue && /figma\.com/i.test(pastedValue)) {
+              onSave(pastedValue);
+            }
+          }, 0);
         });
 
-        summary.appendChild(summaryIcon);
-        summary.appendChild(urlText);
-        summary.appendChild(editBtn);
-        summary.appendChild(removeFrameBtn);
-        container.appendChild(summary);
+        fieldWrapper.appendChild(input);
+        inputField.appendChild(fieldWrapper);
+        inputRow.appendChild(inputField);
+        inputWrapper.appendChild(inputRow);
+        return inputWrapper;
       }
 
-      const inputRow = document.createElement('div');
-      inputRow.className = 'figma-frame-link-option__input-row';
+      const row = document.createElement('div');
+      row.className = 'link-row figma-link-row';
+      row.setAttribute('role', 'group');
+      row.setAttribute('aria-label', ariaLabel);
+      // Don't bubble into row-select / click-outside handlers.
+      row.addEventListener('click', (e) => e.stopPropagation());
 
-      const inputField = document.createElement('div');
-      inputField.className = 'InputField';
-      inputField.setAttribute('data-state', value ? 'entered' : 'default');
-      inputField.setAttribute('data-variant', 'horizontal');
+      // ── Brand chip (always visible, even while editing — parity with .link-row) ──
+      const iconEl = document.createElement('div');
+      iconEl.className = 'link-row__icon figma';
+      iconEl.innerHTML = getBrandIcon('figma', { size: 12 });
+      row.appendChild(iconEl);
 
-      const wrapper = document.createElement('div');
-      wrapper.className = 'InputField__wrapper';
+      // ── Info: URL anchor (same saved-row shape as resource links) ──
+      const infoEl = document.createElement('div');
+      infoEl.className = 'link-row__info';
 
-      const iconEl = document.createElement('span');
-      iconEl.className = 'InputField__left-icon figma';
-      iconEl.innerHTML = getBrandIcon('figma', { size: 14 });
-      wrapper.appendChild(iconEl);
+      const urlAnchor = document.createElement('a');
+      urlAnchor.className = 'link-row__name link-row__url';
+      urlAnchor.target = '_blank';
+      urlAnchor.rel = 'noopener noreferrer';
+      urlAnchor.href = value;
+      urlAnchor.textContent = value.replace(/^https?:\/\//, '');
+      urlAnchor.title = `Open ${value} in Figma`;
 
-      const input = document.createElement('input');
-      input.className = 'InputField__input';
-      input.type = 'url';
-      input.value = value || '';
-      input.placeholder = placeholder;
-      input.addEventListener('keydown', (ev) => {
+      infoEl.appendChild(urlAnchor);
+      row.appendChild(infoEl);
+
+      // ── Actions: pencil + x (same saved-row actions as resource links) ──
+      const actionsEl = document.createElement('div');
+      actionsEl.className = 'link-row__actions';
+
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'link-row__action edit figma-link-row__edit';
+      editBtn.innerHTML = getIcon('pencil', { size: 14 });
+      editBtn.title = 'Edit Figma frame link';
+      editBtn.setAttribute('aria-label', 'Edit Figma frame link');
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'link-row__action delete figma-link-row__remove';
+      removeBtn.innerHTML = getIcon('x', { size: 14 });
+      removeBtn.title = 'Remove Figma frame link';
+      removeBtn.setAttribute('aria-label', 'Remove Figma frame link');
+
+      actionsEl.appendChild(editBtn);
+      actionsEl.appendChild(removeBtn);
+      row.appendChild(actionsEl);
+
+      // ── Edit form: same .link-row editing shape used by resource rows ──
+      const editForm = document.createElement('div');
+      editForm.className = 'link-row__edit-form';
+
+      const editInput = document.createElement('input');
+      editInput.type = 'url';
+      editInput.className = 'link-row__edit-input figma-link-row__input';
+      editInput.value = value;
+      editInput.placeholder = placeholder;
+
+      const enterEditMode = () => {
+        row.classList.add('editing');
+        // Defer focus so the layout swap (info/actions hidden, form shown) settles first.
+        requestAnimationFrame(() => {
+          editInput.focus();
+          editInput.select();
+        });
+      };
+
+      const cancelEdit = () => {
+        row.classList.remove('editing');
+        editInput.value = value;
+        editBtn.focus();
+      };
+
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        enterEditMode();
+      });
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onClear();
+      });
+
+      editInput.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter') {
           ev.preventDefault();
-          const saved = onSave(input.value);
-          if (saved) {
-            const dropdown = input.closest('.CustomDropdown');
-            closeCustomDropdown(dropdown);
-          }
+          onSave(editInput.value);
         } else if (ev.key === 'Escape') {
           ev.preventDefault();
-          const dropdown = input.closest('.CustomDropdown');
-          closeCustomDropdown(dropdown);
+          cancelEdit();
         }
       });
-      input.addEventListener('paste', () => {
+      editInput.addEventListener('paste', () => {
+        // Auto-save on a clean Figma URL paste — no extra click needed.
         setTimeout(() => {
-          const pastedValue = input.value.trim();
+          const pastedValue = editInput.value.trim();
           if (pastedValue && /figma\.com/i.test(pastedValue)) {
             onSave(pastedValue);
           }
         }, 0);
       });
-      wrapper.appendChild(input);
-      inputField.appendChild(wrapper);
-      inputRow.appendChild(inputField);
+
+      const editActions = document.createElement('div');
+      editActions.className = 'link-row__edit-actions';
 
       const saveBtn = document.createElement('button');
       saveBtn.type = 'button';
-      saveBtn.className = 'icon-btn figma-frame-link-option__action';
+      saveBtn.className = 'link-row__edit-btn save';
       saveBtn.innerHTML = getIcon('check', { size: 14 });
       saveBtn.title = 'Save Figma frame link';
+      saveBtn.setAttribute('aria-label', 'Save Figma frame link');
       saveBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const saved = onSave(input.value);
-        if (saved) {
-          const dropdown = input.closest('.CustomDropdown');
-          closeCustomDropdown(dropdown);
-        }
+        onSave(editInput.value);
       });
-      inputRow.appendChild(saveBtn);
 
-      container.appendChild(inputRow);
-      return container;
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'link-row__edit-btn cancel';
+      cancelBtn.innerHTML = getIcon('x', { size: 14 });
+      cancelBtn.title = 'Cancel';
+      cancelBtn.setAttribute('aria-label', 'Cancel editing Figma frame link');
+      cancelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        cancelEdit();
+      });
+
+      editActions.appendChild(saveBtn);
+      editActions.appendChild(cancelBtn);
+      editForm.appendChild(editInput);
+      editForm.appendChild(editActions);
+      row.appendChild(editForm);
+
+      return row;
     }
 
     function saveFigmaFrameLink(rawValue, setLink) {
@@ -6788,16 +6819,24 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     }
 
     function createVariantCard(variant, variantIndex, eventIndex) {
-        // Row 1: Tree toggle + Name + Control
+        const showGoalOutcomesUI = shouldShowVariantGoalOutcomesUI(variant);
+        const showFigmaLinkUI = shouldShowFigmaLinkUI(variant);
+        // Subtree appears when EITHER the goal outcomes section or the figma link section
+        // is enabled — one expand chevron controls all detail sections together.
+        const showSubtree = showGoalOutcomesUI || showFigmaLinkUI;
+
+        // Row 1: optional expand toggle + name + status chips
         const row1 = document.createElement('div');
         row1.className = 'variant-row';
 
-        // Tree toggle chevron button
-        const treeToggle = document.createElement('button');
-        treeToggle.type = 'button';
-        treeToggle.className = 'variant-tree-toggle';
-        treeToggle.setAttribute('aria-label', 'Expand variant details');
-        treeToggle.innerHTML = '<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>';
+        let treeToggle = null;
+        if (showSubtree) {
+          treeToggle = document.createElement('button');
+          treeToggle.type = 'button';
+          treeToggle.className = 'variant-tree-toggle';
+          treeToggle.setAttribute('aria-label', 'Expand variant details');
+          treeToggle.innerHTML = '<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>';
+        }
 
         const card = document.createElement('div');
         card.className = 'variant-card';
@@ -6847,9 +6886,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         prefixElement: colorIndicator,
         onChange: (value) => {
           variant.name = value;
-          if (variant.isControl === true) {
-            updateControlHeadingLabel(eventIndex);
-          }
           const statusInput = document.getElementById('experimentStatus');
           if (statusInput && statusInput.value === 'completed') {
             updateRolledoutOptions();
@@ -6924,14 +6960,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const content = document.createElement('div');
       content.className = 'variant-content';
 
-      row1.appendChild(treeToggle);
+      if (treeToggle) row1.appendChild(treeToggle);
       row1.appendChild(nameFieldDiv);
 
-      // Control toggle (move to top row; optional; at most one per event)
-      const controlSlot = document.createElement('div');
-      controlSlot.className = 'variant-baseline-slot';
-
-      // Enforce AT MOST one control per event.
+      // Preserve old saved comparison flags without assigning one by default.
       // If multiple are true (bad state), keep the first and clear the rest.
       const firstControlIndex = events[eventIndex].variants.findIndex(v => v.isControl === true);
       if (firstControlIndex >= 0 && variantIndex !== firstControlIndex) {
@@ -6939,34 +6971,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       }
       // Explicitly store boolean (never undefined)
       variant.isControl = variant.isControl === true;
-
-      if (variant.isControl === true) {
-        const controlChip = document.createElement('span');
-        controlChip.className = 'variant-passive-chip variant-passive-chip--control';
-        controlChip.innerHTML = `<span aria-hidden="true">${getIcon('circle-check-big', { size: 12, strokeWidth: 2 })}</span><span>Control</span>`;
-        controlChip.setAttribute('aria-label', 'Control variant');
-        controlSlot.appendChild(controlChip);
-      } else {
-        const makeControlBtn = document.createElement('button');
-        makeControlBtn.type = 'button';
-        makeControlBtn.className = 'Button secondary Button--toggle variant-control-toggle variant-control-toggle--action';
-        makeControlBtn.id = `variant-control-${eventIndex}-${variantIndex}`;
-        makeControlBtn.innerHTML = `<span class="Button__icon" aria-hidden="true">${getIcon('circle', { size: 12, strokeWidth: 2 })}</span><span>Control</span>`;
-        makeControlBtn.setAttribute('aria-pressed', 'false');
-        makeControlBtn.setAttribute('data-tooltip', 'Set as control variant');
-        makeControlBtn.setAttribute('data-tooltip-position', 'bottom');
-        makeControlBtn.setAttribute('data-tooltip-cursor', 'pointer');
-        makeControlBtn.setAttribute('aria-label', 'Set as control variant');
-        makeControlBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          events[eventIndex].variants.forEach((v, i) => {
-            v.isControl = i === variantIndex;
-          });
-          renderEvents(events);
-        });
-        controlSlot.appendChild(makeControlBtn);
-      }
 
       const statusInput = document.getElementById('experimentStatus');
       const rolledoutInput = document.getElementById('rolledoutVariant');
@@ -6986,45 +6990,92 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       }
 
       if (variant.figmaLink) {
-        row1.appendChild(createFigmaFrameLinkIndicator());
+        const figmaChip = document.createElement('span');
+        figmaChip.className = 'variant-passive-chip variant-passive-chip--figma';
+        figmaChip.innerHTML = `<span aria-hidden="true">${getBrandIcon('figma', { size: 12 })}</span>`;
+        figmaChip.setAttribute('data-tooltip', 'Linked Figma design');
+        figmaChip.setAttribute('data-tooltip-position', 'bottom');
+        figmaChip.setAttribute('data-tooltip-align', 'center');
+        figmaChip.setAttribute('data-tooltip-cursor', 'default');
+        figmaChip.setAttribute('role', 'img');
+        figmaChip.setAttribute('aria-label', 'Linked Figma design');
+        row1.appendChild(figmaChip);
       }
-
-      row1.appendChild(controlSlot);
 
       // Actions (remove variant)
       const actionsDiv = document.createElement('div');
       actionsDiv.className = 'variant-actions';
 
       const variantActionsDropdown = document.createElement('div');
-      variantActionsDropdown.className = 'CustomDropdown event-actions-dropdown figma-frame-actions-dropdown variant-actions-dropdown';
+      variantActionsDropdown.className = 'CustomDropdown event-actions-dropdown variant-actions-dropdown';
 
       const variantActionsTrigger = document.createElement('button');
       variantActionsTrigger.type = 'button';
       variantActionsTrigger.className = 'icon-btn';
+      variantActionsTrigger.setAttribute('aria-label', 'Variant options');
       variantActionsTrigger.innerHTML = getIcon('ellipsis-vertical', { size: 18 });
 
       const variantActionsMenu = document.createElement('div');
       variantActionsMenu.className = 'CustomDropdown__menu';
 
-      const variantFigmaLinkItem = createFigmaFrameLinkMenuItem({
-        value: variant.figmaLink || '',
-        placeholder: 'Paste Figma frame link for this variant',
-        onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
-          variant.figmaLink = url;
-          renderEvents(events);
-        }),
-        onClear: () => {
-          variant.figmaLink = '';
-          renderEvents(events);
+      // Menu actions: add/manage optional variant details. The chevron owns
+      // expand/collapse; these rows only add or focus the inline detail surfaces.
+      const goalOutcomesToggleOption = document.createElement('button');
+      goalOutcomesToggleOption.type = 'button';
+      goalOutcomesToggleOption.className = 'CustomDropdown__option';
+      goalOutcomesToggleOption.innerHTML = `
+        <span class="CustomDropdown__option-icon">${getIcon(showGoalOutcomesUI ? 'eye-off' : 'trophy', { size: 14 })}</span>
+        <span class="CustomDropdown__option-text">${showGoalOutcomesUI ? 'Hide goal outcomes' : 'Add goal outcomes'}</span>
+      `;
+      goalOutcomesToggleOption.onclick = (e) => {
+        e.stopPropagation();
+        if (showGoalOutcomesUI) {
+          variant.showGoalOutcomes = false;
+        } else {
+          variant.showGoalOutcomes = true;
+          variant.collapsed = false;
+          setPendingFocus('variant', variant.id, { focus: 'first-metric' });
         }
-      });
+        closeCustomDropdown(variantActionsDropdown);
+        renderEvents(events);
+      };
 
+      const figmaLinkToggleOption = document.createElement('button');
+      figmaLinkToggleOption.type = 'button';
+      figmaLinkToggleOption.className = 'CustomDropdown__option';
+      const variantHasFigmaLink = !!variant.figmaLink;
+      const variantFigmaActionLabel = variantHasFigmaLink
+        ? 'Edit Figma link'
+        : showFigmaLinkUI
+          ? 'Hide Figma link field'
+          : 'Add Figma link';
+      figmaLinkToggleOption.innerHTML = `
+        <span class="CustomDropdown__option-icon">${variantHasFigmaLink ? getBrandIcon('figma', { size: 14 }) : showFigmaLinkUI ? getIcon('eye-off', { size: 14 }) : getBrandIcon('figma', { size: 14 })}</span>
+        <span class="CustomDropdown__option-text">${variantFigmaActionLabel}</span>
+      `;
+      figmaLinkToggleOption.onclick = (e) => {
+        e.stopPropagation();
+        if (!variantHasFigmaLink && showFigmaLinkUI) {
+          variant.showFigmaLink = false;
+          closeCustomDropdown(variantActionsDropdown);
+          renderEvents(events);
+          return;
+        }
+        variant.showFigmaLink = true;
+        variant.collapsed = false;
+        setPendingFocus('variant', variant.id, { focus: variantHasFigmaLink ? 'figma-link-edit' : 'figma-link' });
+        closeCustomDropdown(variantActionsDropdown);
+        renderEvents(events);
+      };
+
+      // Trash icon + danger color on hover signals destructive intent and
+      // clearly differentiates this from "Hide" / "Remove link" actions.
       const removeVariantOption = document.createElement('button');
       removeVariantOption.type = 'button';
-      removeVariantOption.className = 'CustomDropdown__option';
+      removeVariantOption.className = 'CustomDropdown__option CustomDropdown__option--danger';
       removeVariantOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${getIcon('x', { size: 14 })}</span>
-        <span class="CustomDropdown__option-text">Remove</span>
+        <span class="CustomDropdown__option-icon">${getIcon('trash-2', { size: 14 })}</span>
+        <span class="CustomDropdown__option-text">Remove variant</span>
       `;
       removeVariantOption.onclick = (e) => {
         e.stopPropagation();
@@ -7035,114 +7086,143 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         renderEvents(events);
       };
 
-      const menuDivider = document.createElement('div');
-      menuDivider.className = 'figma-frame-menu-divider';
+      const removeDivider = document.createElement('div');
+      removeDivider.className = 'figma-frame-menu-divider';
 
+      variantActionsMenu.appendChild(figmaLinkToggleOption);
+      variantActionsMenu.appendChild(goalOutcomesToggleOption);
+      variantActionsMenu.appendChild(removeDivider);
       variantActionsMenu.appendChild(removeVariantOption);
-      variantActionsMenu.appendChild(menuDivider);
-      variantActionsMenu.appendChild(variantFigmaLinkItem);
       variantActionsDropdown.appendChild(variantActionsTrigger);
       variantActionsDropdown.appendChild(variantActionsMenu);
       setupCustomDropdown(variantActionsDropdown, { trigger: variantActionsTrigger });
       actionsDiv.appendChild(variantActionsDropdown);
       row1.appendChild(actionsDiv);
 
-      // Subtree container for collapsible content (metrics + figma link)
-      const subtree = document.createElement('div');
-      subtree.className = 'variant-subtree';
+      let subtree = null;
+      if (showSubtree) {
+        // Subtree container for collapsible detail sections (goals + linked design).
+        subtree = document.createElement('div');
+        subtree.className = 'variant-subtree';
 
-      // Restore collapsed state from variant data
-      if (variant.collapsed) {
-        treeToggle.classList.add('collapsed');
-        subtree.classList.add('collapsed');
-      }
-
-      // Toggle subtree visibility on chevron click
-      const updateTreeToggleTooltip = () => {
-        const isCollapsed = treeToggle.classList.contains('collapsed');
-        treeToggle.setAttribute('aria-label', isCollapsed ? 'Expand variant details' : 'Collapse variant details');
-      };
-      treeToggle.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isCollapsed = treeToggle.classList.toggle('collapsed');
-        subtree.classList.toggle('collapsed', isCollapsed);
-        // Persist collapsed state in variant data
-        variant.collapsed = isCollapsed;
-        updateTreeToggleTooltip();
-      });
-      updateTreeToggleTooltip();
-
-      // Metrics section with label and inputs (inside subtree)
-      const metricsSection = document.createElement('div');
-      metricsSection.className = 'variant-metrics-section';
-
-      // Metrics section label
-      const metricsLabel = document.createElement('span');
-      metricsLabel.className = 'variant-metrics-label';
-      metricsLabel.textContent = 'Metrics';
-      metricsSection.appendChild(metricsLabel);
-
-      // Metrics inputs row (dynamically rendered from global metrics array)
-      const row3 = document.createElement('div');
-      row3.className = 'variant-metrics-row';
-
-      // Dynamically create metric fields based on global metrics array
-      metrics.forEach((metric, metricIndex) => {
-        if (!metric.name) return; // Skip metrics without a name
-        
-        const metricKey = (metric.abbreviation || metric.name.replace(/\s+/g, '_')).toLowerCase();
-        const rawMetricValue = variant.metrics?.[metricKey];
-        const displayMetricValue = formatMetricValue(rawMetricValue);
-        const stackedMetricLabel = metric.abbreviation ? `${metric.name} (${metric.abbreviation})` : metric.name;
-
-        const metricFieldDiv = document.createElement('div');
-        metricFieldDiv.className = 'variant-metric-field';
-        const metricField = createInputField({
-          id: `variant-metric-${eventIndex}-${variantIndex}-${metricIndex}`,
-          label: stackedMetricLabel,
-          showLabel: true,
-          showLText: false,
-          smallText: metric.abbreviation || '',
-          showRText: true,
-          suffix: '%',
-          help: '0.00',
-          text: displayMetricValue,
-          variant: 'horizontal',
-          inputType: 'number',
-          onChange: (value) => {
-            if (!variant.metrics) variant.metrics = {};
-            const num = parseFloat(String(value));
-            variant.metrics[metricKey] = Number.isFinite(num) ? num : 0;
-          }
-        });
-        // Match Goals threshold: allow decimals, no spinners
-        const metricInput = metricField.querySelector('.InputField__input');
-        if (metricInput) {
-          metricInput.classList.add('no-native-spinner');
-          metricInput.setAttribute('inputmode', 'decimal');
-          metricInput.step = '0.01';
-          metricInput.min = '0';
+        // Restore collapsed state from variant data
+        if (variant.collapsed && treeToggle) {
+          treeToggle.classList.add('collapsed');
+          subtree.classList.add('collapsed');
         }
-        metricFieldDiv.appendChild(metricField);
-        row3.appendChild(metricFieldDiv);
-      });
 
-      // Show empty state message when no metrics are added
-      if (metrics.length === 0) {
-        const emptyMetricsMessage = document.createElement('div');
-        emptyMetricsMessage.className = 'variant-metrics-empty-state';
-        emptyMetricsMessage.textContent = 'No metrics yet. Add one in the Goals section above.';
-        row3.appendChild(emptyMetricsMessage);
+        // Toggle subtree visibility on chevron click
+        const updateTreeToggleTooltip = () => {
+          if (!treeToggle) return;
+          const isCollapsed = treeToggle.classList.contains('collapsed');
+          treeToggle.setAttribute('aria-label', isCollapsed ? 'Expand variant details' : 'Collapse variant details');
+        };
+        treeToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isCollapsed = treeToggle.classList.toggle('collapsed');
+          subtree.classList.toggle('collapsed', isCollapsed);
+          variant.collapsed = isCollapsed;
+          updateTreeToggleTooltip();
+        });
+        updateTreeToggleTooltip();
+
+        if (showFigmaLinkUI) {
+          // Linked design section. We intentionally don't render a visible heading here
+          // because the inline block's figma icon already identifies the section, and
+          // the sibling Metrics section follows the same hidden-label convention.
+          const linkSection = document.createElement('div');
+          linkSection.className = 'variant-link-section';
+
+          const linkBlock = createFigmaFrameLinkInlineBlock({
+            value: variant.figmaLink || '',
+            placeholder: 'Paste a Figma frame link for this variant',
+            ariaLabel: 'Linked Figma design for variant',
+            onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
+              variant.figmaLink = url;
+              renderEvents(events);
+            }),
+            onClear: () => {
+              variant.figmaLink = '';
+              renderEvents(events);
+            }
+          });
+          linkSection.appendChild(linkBlock);
+          subtree.appendChild(linkSection);
+
+          if (showGoalOutcomesUI) {
+            const separator = document.createElement('div');
+            separator.className = 'variant-section-separator';
+            separator.setAttribute('aria-hidden', 'true');
+            subtree.appendChild(separator);
+          }
+        }
+
+        if (showGoalOutcomesUI) {
+          // Metrics section with label and inputs (inside subtree)
+          const metricsSection = document.createElement('div');
+          metricsSection.className = 'variant-metrics-section';
+
+          const metricsLabel = document.createElement('span');
+          metricsLabel.className = 'variant-metrics-label';
+          metricsLabel.textContent = 'Metrics';
+          metricsSection.appendChild(metricsLabel);
+
+          const row3 = document.createElement('div');
+          row3.className = 'variant-metrics-row';
+
+          metrics.forEach((metric, metricIndex) => {
+            if (!metric.name) return;
+
+            const metricKey = (metric.abbreviation || metric.name.replace(/\s+/g, '_')).toLowerCase();
+            const rawMetricValue = variant.metrics?.[metricKey];
+            const displayMetricValue = formatMetricValue(rawMetricValue);
+            const stackedMetricLabel = metric.abbreviation ? `${metric.name} (${metric.abbreviation})` : metric.name;
+
+            const metricFieldDiv = document.createElement('div');
+            metricFieldDiv.className = 'variant-metric-field';
+            const metricField = createInputField({
+              id: `variant-metric-${eventIndex}-${variantIndex}-${metricIndex}`,
+              label: stackedMetricLabel,
+              showLabel: true,
+              showLText: false,
+              smallText: metric.abbreviation || '',
+              showRText: true,
+              suffix: '%',
+              help: '0.00',
+              text: displayMetricValue,
+              variant: 'horizontal',
+              inputType: 'number',
+              onChange: (value) => {
+                if (!variant.metrics) variant.metrics = {};
+                const num = parseFloat(String(value));
+                variant.metrics[metricKey] = Number.isFinite(num) ? num : 0;
+              }
+            });
+            const metricInput = metricField.querySelector('.InputField__input');
+            if (metricInput) {
+              metricInput.classList.add('no-native-spinner');
+              metricInput.setAttribute('inputmode', 'decimal');
+              metricInput.step = '0.01';
+              metricInput.min = '0';
+            }
+            metricFieldDiv.appendChild(metricField);
+            row3.appendChild(metricFieldDiv);
+          });
+
+          if (metrics.length === 0) {
+            const emptyMetricsMessage = document.createElement('div');
+            emptyMetricsMessage.className = 'variant-metrics-empty-state';
+            emptyMetricsMessage.textContent = 'No metrics yet. Add one in the Goals section above.';
+            row3.appendChild(emptyMetricsMessage);
+          }
+
+          metricsSection.appendChild(row3);
+          subtree.appendChild(metricsSection);
+        }
       }
 
-      metricsSection.appendChild(row3);
-
-      // Add metrics to subtree. Figma frame links live in the row dropdown.
-      subtree.appendChild(metricsSection);
-
-      // Insert row1 (with name field) at the top of the content area
       content.appendChild(row1);
-      content.appendChild(subtree);
+      if (subtree) content.appendChild(subtree);
 
       // Assemble card
       card.appendChild(content);
@@ -7225,8 +7305,48 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       toastHideTimer = null;
     }
 
-    function setPendingFocus(type, id) {
-      pendingFocusTarget = { type, id };
+    function setPendingFocus(type, id, options = {}) {
+      pendingFocusTarget = { type, id, ...options };
+    }
+
+    /**
+     * Focus the right interactive target inside a freshly-rendered figma link surface.
+     * - Empty/add → focus the resource-link InputField.
+     * - Editing   → focus the URL input.
+     * - Edit mode → click the row's pencil action, then focus the edit input.
+     * - Filled    → focus the URL anchor so Enter opens Figma.
+     * Returns true if focus was applied.
+     */
+    function focusFigmaLinkBlock(scope, mode = 'default') {
+      if (!scope) return false;
+      const addInput = scope.querySelector('.figma-link-input__field');
+      if (addInput) {
+        addInput.focus();
+        if (typeof addInput.select === 'function') addInput.select();
+        return true;
+      }
+      const row = scope.querySelector('.figma-link-row');
+      if (!row) return false;
+      if (mode === 'edit' && !row.classList.contains('editing')) {
+        const editButton = row.querySelector('.figma-link-row__edit');
+        if (editButton) editButton.click();
+      }
+      if (row.classList.contains('editing')) {
+        const input = row.querySelector('.figma-link-row__input');
+        if (input) {
+          requestAnimationFrame(() => {
+            input.focus();
+            input.select();
+          });
+          return true;
+        }
+      }
+      const url = row.querySelector('.link-row__url');
+      if (url) {
+        url.focus();
+        return true;
+      }
+      return false;
     }
 
     function applyPendingFocus() {
@@ -7238,7 +7358,12 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         try {
           if (target.type === 'event') {
             const row = document.getElementById(target.id);
-            const input = row?.querySelector('.event-row-main .InputField__input');
+            if (!row) return;
+            if (target.focus === 'figma-link' || target.focus === 'figma-link-edit') {
+              const linkRow = row.querySelector('.event-link-row');
+              if (focusFigmaLinkBlock(linkRow, target.focus === 'figma-link-edit' ? 'edit' : 'default')) return;
+            }
+            const input = row.querySelector('.event-row-main .InputField__input');
             if (input && !input.disabled) {
               input.focus();
               if (typeof input.select === 'function') input.select();
@@ -7247,7 +7372,20 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           }
           if (target.type === 'variant') {
             const card = document.getElementById(target.id);
-            const input = card?.querySelector('.InputField__input');
+            if (!card) return;
+            if (target.focus === 'first-metric') {
+              const metricInput = card.querySelector('.variant-metrics-row .InputField__input');
+              if (metricInput && !metricInput.disabled) {
+                metricInput.focus();
+                if (typeof metricInput.select === 'function') metricInput.select();
+              }
+              return;
+            }
+            if (target.focus === 'figma-link' || target.focus === 'figma-link-edit') {
+              const linkSection = card.querySelector('.variant-link-section');
+              if (focusFigmaLinkBlock(linkSection, target.focus === 'figma-link-edit' ? 'edit' : 'default')) return;
+            }
+            const input = card.querySelector('.InputField__input');
             if (input && !input.disabled) {
               input.focus();
               if (typeof input.select === 'function') input.select();
@@ -7385,46 +7523,22 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+      const showFigmaLinkUI = shouldShowFigmaLinkUI(event);
+
       const actionsDropdown = document.createElement('div');
-      actionsDropdown.className = 'CustomDropdown event-actions-dropdown figma-frame-actions-dropdown';
+      actionsDropdown.className = 'CustomDropdown event-actions-dropdown';
 
       const actionsTrigger = document.createElement('button');
       actionsTrigger.type = 'button';
       actionsTrigger.className = 'icon-btn';
+      actionsTrigger.setAttribute('aria-label', 'Touchpoint options');
       actionsTrigger.innerHTML = getIcon('ellipsis-vertical', { size: 18 });
 
       const actionsMenu = document.createElement('div');
       actionsMenu.className = 'CustomDropdown__menu';
 
-      const removeOption = document.createElement('button');
-      removeOption.type = 'button';
-      removeOption.className = 'CustomDropdown__option';
-      removeOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${getIcon('x', { size: 14 })}</span>
-        <span class="CustomDropdown__option-text">Remove</span>
-      `;
-      removeOption.addEventListener('click', (e) => {
-        e.stopPropagation();
-        events.splice(eventIndex, 1);
-        renderEvents(events);
-      });
-
-      const figmaFrameLinkItem = createFigmaFrameLinkMenuItem({
-        value: event.figmaLink || '',
-        placeholder: 'Paste Figma frame link for this touchpoint',
-        onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
-          event.figmaLink = url;
-          renderEvents(events);
-        }),
-        onClear: () => {
-          event.figmaLink = '';
-          renderEvents(events);
-        }
-      });
-
-      const touchpointMenuDivider = document.createElement('div');
-      touchpointMenuDivider.className = 'figma-frame-menu-divider';
-
+      // "Add variant" is an action (not a toggle). When variants already exist on
+      // a different touchpoint, it's disabled and explained via the tooltip wrapper.
       const currentExpIndex = getExperimentTouchpointIndex(events);
       const variantsExistElsewhere = currentExpIndex >= 0 && currentExpIndex !== eventIndex;
       const touchpointWithVariantsNum = variantsExistElsewhere ? currentExpIndex + 1 : 0;
@@ -7433,7 +7547,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       addVariantsOption.type = 'button';
       addVariantsOption.className = 'CustomDropdown__option' + (variantsExistElsewhere ? ' disabled' : '');
       addVariantsOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${getIcon('git-branch', { size: 14 })}</span>
+        <span class="CustomDropdown__option-icon">${getIcon('git-branch-plus', { size: 14 })}</span>
         <span class="CustomDropdown__option-text">Add variant</span>
       `;
 
@@ -7451,16 +7565,71 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         tooltipWrapper.appendChild(addVariantsOption);
         addVariantsMenuChild = tooltipWrapper;
       }
-      actionsMenu.appendChild(removeOption);
+
+      const figmaLinkToggleOption = document.createElement('button');
+      figmaLinkToggleOption.type = 'button';
+      figmaLinkToggleOption.className = 'CustomDropdown__option';
+      const eventHasFigmaLink = !!event.figmaLink;
+      const eventFigmaActionLabel = eventHasFigmaLink
+        ? 'Edit Figma link'
+        : showFigmaLinkUI
+          ? 'Hide Figma link field'
+          : 'Add Figma link';
+      figmaLinkToggleOption.innerHTML = `
+        <span class="CustomDropdown__option-icon">${eventHasFigmaLink ? getBrandIcon('figma', { size: 14 }) : showFigmaLinkUI ? getIcon('eye-off', { size: 14 }) : getBrandIcon('figma', { size: 14 })}</span>
+        <span class="CustomDropdown__option-text">${eventFigmaActionLabel}</span>
+      `;
+      figmaLinkToggleOption.onclick = (e) => {
+        e.stopPropagation();
+        if (!eventHasFigmaLink && showFigmaLinkUI) {
+          event.showFigmaLink = false;
+          closeCustomDropdown(actionsDropdown);
+          renderEvents(events);
+          return;
+        }
+        event.showFigmaLink = true;
+        setPendingFocus('event', event.id, { focus: eventHasFigmaLink ? 'figma-link-edit' : 'figma-link' });
+        closeCustomDropdown(actionsDropdown);
+        renderEvents(events);
+      };
+
+      // Trash icon + danger color, last position. Mirrors the variant kebab.
+      const removeOption = document.createElement('button');
+      removeOption.type = 'button';
+      removeOption.className = 'CustomDropdown__option CustomDropdown__option--danger';
+      removeOption.innerHTML = `
+        <span class="CustomDropdown__option-icon">${getIcon('trash-2', { size: 14 })}</span>
+        <span class="CustomDropdown__option-text">Remove touchpoint</span>
+      `;
+      removeOption.addEventListener('click', (e) => {
+        e.stopPropagation();
+        events.splice(eventIndex, 1);
+        renderEvents(events);
+      });
+
+      const removeDivider = document.createElement('div');
+      removeDivider.className = 'figma-frame-menu-divider';
+
+      actionsMenu.appendChild(figmaLinkToggleOption);
       actionsMenu.appendChild(addVariantsMenuChild);
-      actionsMenu.appendChild(touchpointMenuDivider);
-      actionsMenu.appendChild(figmaFrameLinkItem);
+      actionsMenu.appendChild(removeDivider);
+      actionsMenu.appendChild(removeOption);
 
       actionsDropdown.appendChild(actionsTrigger);
       actionsDropdown.appendChild(actionsMenu);
       setupCustomDropdown(actionsDropdown, { trigger: actionsTrigger });
+
       if (event.figmaLink) {
-        actionsDiv.appendChild(createFigmaFrameLinkIndicator());
+        const figmaChip = document.createElement('span');
+        figmaChip.className = 'variant-passive-chip variant-passive-chip--figma';
+        figmaChip.innerHTML = `<span aria-hidden="true">${getBrandIcon('figma', { size: 12 })}</span>`;
+        figmaChip.setAttribute('data-tooltip', 'Linked Figma design');
+        figmaChip.setAttribute('data-tooltip-position', 'bottom');
+        figmaChip.setAttribute('data-tooltip-align', 'center');
+        figmaChip.setAttribute('data-tooltip-cursor', 'default');
+        figmaChip.setAttribute('role', 'img');
+        figmaChip.setAttribute('aria-label', 'Linked Figma design');
+        actionsDiv.appendChild(figmaChip);
       }
       actionsDiv.appendChild(actionsDropdown);
 
@@ -7468,6 +7637,29 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       mainRow.appendChild(inputContainer);
       mainRow.appendChild(actionsDiv);
       row.appendChild(mainRow);
+
+      // ── Inline Linked design row ─────────────────────────────
+      // Sits below the main row, indented to align with the event input. Contains
+      // the same inline figma block used in variant cards (CTA / rich card / input).
+      if (showFigmaLinkUI) {
+        const linkRow = document.createElement('div');
+        linkRow.className = 'event-link-row';
+        const linkBlock = createFigmaFrameLinkInlineBlock({
+          value: event.figmaLink || '',
+          placeholder: 'Paste a Figma frame link for this touchpoint',
+          ariaLabel: 'Linked Figma design for touchpoint',
+          onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
+            event.figmaLink = url;
+            renderEvents(events);
+          }),
+          onClear: () => {
+            event.figmaLink = '';
+            renderEvents(events);
+          }
+        });
+        linkRow.appendChild(linkBlock);
+        row.appendChild(linkRow);
+      }
 
       row.addEventListener('click', () => {
         const eventsListEl = document.getElementById('eventsList');
@@ -7500,16 +7692,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       if (hasVariants) {
         const variantsLabel = document.createElement('div');
         variantsLabel.className = 'variant-section-heading';
-        const controlIndex = event.variants.findIndex(v => v.isControl === true);
-        const resolvedControlIndex = controlIndex >= 0 ? controlIndex : 0;
-        const controlVariant = event.variants[resolvedControlIndex];
-        const controlName = getVariantDisplayName(controlVariant, resolvedControlIndex);
-        variantsLabel.append(`Design variants (${variantCount}) `);
-        const controlLabel = document.createElement('span');
-        controlLabel.className = 'variant-section-heading__control';
-        controlLabel.dataset.controlLabelEventIndex = String(eventIndex);
-        controlLabel.textContent = `· Control: ${controlName}`;
-        variantsLabel.appendChild(controlLabel);
+        variantsLabel.append(`Design variants (${variantCount})`);
         variantsList.appendChild(variantsLabel);
       }
 
@@ -7550,9 +7733,9 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           name: '',
           label: String.fromCharCode(65 + variantIndex),
           color: defaultColor,
-          // First variant is control by default; user can toggle to another variant
-          isControl: variantIndex === 0,
-          metrics: {}
+          isControl: false,
+          metrics: {},
+          showGoalOutcomes: false
         };
         event.variants.push(newVariant);
         if (newVariant.id) {
@@ -8117,16 +8300,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const list = document.getElementById('eventsList');
       const emptyState = document.getElementById('eventsEmptyState');
       list.innerHTML = '';
-
-      // Ensure first variant is control by default when none is set
-      if (eventsList && eventsList.length > 0) {
-        eventsList.forEach((event) => {
-          const vars = event.variants;
-          if (Array.isArray(vars) && vars.length > 0 && !vars.some(v => v.isControl === true)) {
-            vars[0].isControl = true;
-          }
-        });
-      }
 
       // Always hide the old empty state - we use inline add row instead
       emptyState.classList.add('hidden');
@@ -9424,7 +9597,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           {
             id: 'event-1', name: 'Checkout CTA', hasVariants: true,
             variants: [
-              { id: 'var-0', name: 'Blue button', description: 'Current blue "Start free trial" CTA with standard pricing copy.', color: '#3B8FF6', traffic: 50, isControl: true, metrics: { cvr: 42.1, ctr: 68.4, scr: 7.1 } },
+              { id: 'var-0', name: 'Blue button', description: 'Blue "Start free trial" CTA with standard pricing copy.', color: '#3B8FF6', traffic: 50, isControl: false, metrics: { cvr: 42.1, ctr: 68.4, scr: 7.1 } },
               { id: 'var-1', name: 'Red button', description: 'Red "Start free trial" CTA with the same pricing copy.', color: '#FF3838', traffic: 50, isControl: false, metrics: { cvr: 49.3, ctr: 74.2, scr: 5.2 } }
             ]
           },
@@ -9434,7 +9607,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
         const vals = {
           experimentName: 'Pricing Page Button Color Experiment',
-          experimentDescription: 'Test whether a red checkout CTA increases trial starts compared with the current blue button.',
+          experimentDescription: 'Test whether CTA color changes help more pricing-page visitors start checkout.',
           experimentHypothesis: 'If the CTA uses a higher-contrast red treatment, more pricing-page visitors will notice it and start checkout.',
           experimentAudience: 'New pricing-page visitors on self-serve plans',
           experimentSampleSize: '18420',

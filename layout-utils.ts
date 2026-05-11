@@ -172,6 +172,12 @@ export function createBadge(
       }
     }
     badge.appendChild(iconClone);
+
+    // Clean up temporary source node (e.g. createNodeFromSvg output) so it
+    // does not remain on the canvas outside the badge.
+    if (icon.parent && icon.parent !== badge) {
+      icon.remove();
+    }
   }
 
   const text = figma.createText();

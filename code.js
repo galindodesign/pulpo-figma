@@ -1951,11 +1951,11 @@ if (figma.editorType === 'figma') {
                 {
                     key: 'A',
                     name: 'Blue button',
-                    description: 'Current blue "Start free trial" CTA with standard pricing copy.',
+                    description: 'Blue "Start free trial" CTA with standard pricing copy.',
                     color: TOKENS.royalBlue600,
                     traffic: 50,
                     status: 'none',
-                    isControl: true,
+                    isControl: false,
                     metrics: { cvr: 0.421, ctr: 0.684, scr: 0.071 }
                 },
                 {
@@ -2049,7 +2049,7 @@ if (figma.editorType === 'figma') {
                 id: experimentId,
                 name: 'Pricing Page Button Color Experiment',
                 roundNumber: 2,
-                description: 'Test whether a red checkout CTA increases trial starts compared with the current blue button.',
+                description: 'Test whether CTA color changes help more pricing-page visitors start checkout.',
                 status: 'rolled_out',
                 experimentType: 'ab_test',
                 hypothesis: 'If the CTA uses a higher-contrast red treatment, more pricing-page visitors will notice it and start checkout.',
@@ -2444,8 +2444,7 @@ if (figma.editorType === 'figma') {
                     event.variants.forEach((variant, index) => {
                         var _a, _b, _c, _d;
                         const rolledOutId = (_b = (_a = experiment.outcomes) === null || _a === void 0 ? void 0 : _a.rolledOutVariantId) !== null && _b !== void 0 ? _b : (_c = experiment.outcomes) === null || _c === void 0 ? void 0 : _c.rolledoutVariantId;
-                        // Normalize isControl: safely extract and validate (prevents accidental multiple baselines)
-                        // This ensures outcome card shows correct control baseline
+                        // Preserve an explicit comparison flag from older saved data without inventing one.
                         const finalIsControl = safeGetBoolean(variant, 'isControl');
                         allVariants.push({
                             id: variant.id,
@@ -2453,7 +2452,6 @@ if (figma.editorType === 'figma') {
                             name: variant.name || `Variant ${variant.key}`, // Fallback if no name provided
                             description: variant.description,
                             figmaLink: safeGetString(variant, 'figmaLink'),
-                            // Control baseline flag: determines which variant is the control in outcome card
                             isControl: finalIsControl,
                             traffic: variant.traffic,
                             metrics: variant.metrics,
@@ -2467,9 +2465,8 @@ if (figma.editorType === 'figma') {
                     });
                 }
             }
-            // Enforce constraint: AT MOST one control/baseline across all variants
-            // Multiple controls would be confusing for outcome card comparison
-            // If multiple marked as control, use first; if none, leave none (outcome card uses first as default)
+            // Enforce at most one explicit comparison anchor across all variants.
+            // If none is marked, leave all variants unanchored.
             if (allVariants.length > 0) {
                 const firstControlIndex = allVariants.findIndex(v => v.isControl === true);
                 const resolvedControlIndex = firstControlIndex >= 0 ? firstControlIndex : -1;
@@ -2536,7 +2533,7 @@ if (figma.editorType === 'figma') {
                     nodeType: 'ENTRY_NODE',
                 },
             });
-            // Position at baseline Y; will be vertically centered later in Stage 4f
+            // Position on the main flow axis; it will be vertically centered later in Stage 4f.
             entryCard.x = baseX;
             entryCard.y = baseY;
             figma.currentPage.appendChild(entryCard);
@@ -2700,7 +2697,7 @@ if (figma.editorType === 'figma') {
                     nodeType: 'EXIT_NODE',
                 },
             });
-            // Position exit at calculated X position (after all events), baseline Y
+            // Position exit at calculated X position after all events on the main flow axis.
             exitCard.x = currentX;
             exitCard.y = baseY;
             figma.currentPage.appendChild(exitCard);

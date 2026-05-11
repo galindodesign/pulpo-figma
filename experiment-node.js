@@ -13,6 +13,23 @@ import { TOKENS } from './design-tokens';
 import { hexToRgb, getFontStyle, createBadge } from './layout-utils';
 const THUMBNAIL_WIDTH = 368;
 const THUMBNAIL_HEIGHT = 260;
+const ROLLED_OUT_BADGE_BG = '#fffbb5';
+const ROLLED_OUT_BADGE_TEXT = '#484122';
+const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 22h16" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+function createRolledOutIcon() {
+    const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
+    icon.name = 'Rolled Out Icon';
+    icon.resize(10, 10);
+    icon.fills = [];
+    return icon;
+}
 function canCloneThumbnailSource(node) {
     return !!node && typeof node.clone === 'function';
 }
@@ -186,18 +203,17 @@ function createIconFromSVG(svgString_1) {
  *
  * Card layout:
  * - Thumbnail: 368×260px placeholder (ready for "Replace with" image)
- * - Header: Step number badge + Event name + Variant count badge
+ * - Header: Event name
  * - Body: Space for event metadata and notes (in v2 flows)
  *
  * Features:
  * - Supports optional thumbnail from current selection (Frame or Rectangle)
- * - Displays step number in circle badge (purple if variants, outlined if no variants)
- * - Shows variant count in micro badge when variants exist
+ * - Keeps the header compact by omitting visual badges
  * - Auto-fallback event name if not provided
  *
  * @param eventName - Display name for the event (e.g., "Purchase Button Click")
- * @param variantCount - Number of variants being tested at this event (optional)
- * @param eventIndex - Position in event sequence (used for step number, 0-indexed)
+ * @param variantCount - Number of variants being tested at this event (currently hidden in the UI)
+ * @param eventIndex - Position in event sequence (currently hidden in the UI)
  * @returns FrameNode containing the complete event card
  *
  * @example
@@ -206,7 +222,7 @@ function createIconFromSVG(svgString_1) {
  * eventCard.y = 200;
  * figma.currentPage.appendChild(eventCard);
  */
-export function createEventCard(eventName, variantCount, eventIndex, thumbnailSource, thumbnailMessage) {
+export function createEventCard(eventName, _variantCount, _eventIndex, thumbnailSource, thumbnailMessage) {
     const card = figma.createFrame();
     card.layoutMode = 'VERTICAL';
     card.counterAxisSizingMode = 'AUTO';
@@ -249,7 +265,7 @@ export function createEventCard(eventName, variantCount, eventIndex, thumbnailSo
         placeholderMessage: thumbnailMessage,
     });
     card.appendChild(thumb);
-    // Group Touchpoint Name Text and Number of Variants Badge
+    // Group touchpoint name text
     const eventDetailsContainer = figma.createFrame();
     eventDetailsContainer.layoutMode = 'HORIZONTAL';
     eventDetailsContainer.counterAxisSizingMode = 'AUTO';
@@ -264,47 +280,13 @@ export function createEventCard(eventName, variantCount, eventIndex, thumbnailSo
     eventDetailsContainer.resize(300 - 32, 32); // Match card width minus padding
     eventDetailsContainer.paddingBottom = 8;
     eventDetailsContainer.paddingTop = 8;
-    // Step badge: 20x20 circle with step number
-    const stepNumber = eventIndex !== undefined ? eventIndex + 1 : 1;
-    const hasVariants = (variantCount !== null && variantCount !== void 0 ? variantCount : 0) > 0;
-    const stepBadge = figma.createFrame();
-    stepBadge.layoutMode = 'HORIZONTAL';
-    stepBadge.primaryAxisSizingMode = 'FIXED';
-    stepBadge.counterAxisSizingMode = 'FIXED';
-    stepBadge.resize(20, 20);
-    stepBadge.cornerRadius = 10; // Circle
-    stepBadge.primaryAxisAlignItems = 'CENTER';
-    stepBadge.counterAxisAlignItems = 'CENTER';
-    stepBadge.name = 'Step Badge';
-    if (hasVariants) {
-        // Purple filled badge when touchpoint has variants
-        stepBadge.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.electricViolet500) }];
-        stepBadge.strokes = [];
-    }
-    else {
-        // Bordered badge when no variants
-        stepBadge.fills = [];
-        stepBadge.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
-        stepBadge.strokeWeight = 1;
-    }
-    const stepText = figma.createText();
-    stepText.fontName = getFontStyle("Bold");
-    stepText.fontSize = 10;
-    stepText.lineHeight = { value: 11, unit: "PIXELS" };
-    stepText.fills = [{ type: 'SOLID', color: hexToRgb(hasVariants ? TOKENS.white : TOKENS.textPrimary) }];
-    stepText.textAutoResize = 'WIDTH_AND_HEIGHT';
-    stepText.textAlignHorizontal = 'CENTER';
-    stepText.characters = String(stepNumber);
-    stepText.name = 'Step Number';
-    stepBadge.appendChild(stepText);
-    eventDetailsContainer.appendChild(stepBadge);
     const eventNameText = figma.createText();
     eventNameText.fontName = getFontStyle("Bold");
     eventNameText.fontSize = TOKENS.fontSizeBodyLg;
     eventNameText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
     eventNameText.textAutoResize = 'WIDTH_AND_HEIGHT';
     eventNameText.textAlignHorizontal = 'LEFT';
-    eventNameText.layoutGrow = 1; // Fill available space so badge is pushed right
+    eventNameText.layoutGrow = 1;
     // Auto-number fallback: if eventName is empty, use 'Touchpoint <n>'
     // Try to extract a number from the card name if possible
     let fallbackEventNumber = 1;
@@ -316,13 +298,6 @@ export function createEventCard(eventName, variantCount, eventIndex, thumbnailSo
     eventNameText.characters = eventName || `Touchpoint ${fallbackEventNumber}`;
     eventNameText.name = 'Touchpoint Name Text';
     eventDetailsContainer.appendChild(eventNameText);
-    const count = variantCount !== null && variantCount !== void 0 ? variantCount : 0;
-    if (count > 0) {
-        const variantsBadgeText = `${count} design variant${count !== 1 ? 's' : ''}`;
-        const variantsBadge = createBadge(variantsBadgeText, 'micro', TOKENS.azure100, TOKENS.azure700);
-        variantsBadge.name = 'Number of Variants Badge';
-        eventDetailsContainer.appendChild(variantsBadge);
-    }
     card.appendChild(eventDetailsContainer);
     return card;
 }
@@ -330,12 +305,12 @@ export function createEventCard(eventName, variantCount, eventIndex, thumbnailSo
  * Creates a Variant card displaying experiment variant details and performance metrics
  *
  * Card layout:
- * - Header: Variant name + status badges (Control, Rolled Out, Winner, Stat Sig)
+ * - Header: Variant name + rollout badge
  * - Metrics section: Chipset showing metric values and confidence indicators
  * - Description: Optional variant description text (hidden by default)
  *
  * Features:
- * - Status badges indicate: control baseline, rolled-out winner, statistical significance
+ * - Omits comparison badges while still indicating rollout status
  * - Color-coded border: Purple (2px) for rolled-out variants, standard gray for others
  * - Metrics display with compact chip layout
  * - Auto-height to fit content
@@ -398,7 +373,7 @@ export function createVariantCard(variant, variantIndex, options) {
             placeholderMessage: options === null || options === void 0 ? void 0 : options.thumbnailMessage,
         });
         card.appendChild(thumb);
-        // Variant details section: name row + control label + traffic
+        // Variant details section: name row and traffic
         const variantDetailsContainer = figma.createFrame();
         variantDetailsContainer.layoutMode = 'VERTICAL';
         variantDetailsContainer.counterAxisSizingMode = 'AUTO';
@@ -410,7 +385,7 @@ export function createVariantCard(variant, variantIndex, options) {
         variantDetailsContainer.layoutAlign = 'STRETCH';
         variantDetailsContainer.paddingBottom = 8;
         variantDetailsContainer.paddingTop = 8;
-        // Radio button + variant name row (with badges on the right)
+        // Radio button + variant name row
         const nameRow = figma.createFrame();
         nameRow.layoutMode = 'HORIZONTAL';
         nameRow.counterAxisSizingMode = 'AUTO';
@@ -455,28 +430,10 @@ export function createVariantCard(variant, variantIndex, options) {
         variantNameText.name = 'Variant Name';
         nameLeft.appendChild(variantNameText);
         nameRow.appendChild(nameLeft);
-        // Right: badges container
-        const nameBadges = figma.createFrame();
-        nameBadges.layoutMode = 'HORIZONTAL';
-        nameBadges.counterAxisSizingMode = 'AUTO';
-        nameBadges.primaryAxisSizingMode = 'AUTO';
-        nameBadges.itemSpacing = 6;
-        nameBadges.counterAxisAlignItems = 'CENTER';
-        nameBadges.fills = [];
-        nameBadges.strokes = [];
-        nameBadges.name = 'Header Badges';
-        // Baseline badge - shown when this variant is the control/baseline
-        const isControl = Boolean(variant.isControl);
-        if (isControl) {
-            const baselineBadge = createBadge('Control', 'micro', TOKENS.azure100, TOKENS.azure700);
-            nameBadges.appendChild(baselineBadge);
-        }
-        // Rolled out badge - micro style (deployment status)
         if (options === null || options === void 0 ? void 0 : options.rolledout) {
-            const rolledoutBadge = createBadge('Rolled out', 'micro', '#FFF420', TOKENS.textPrimary);
-            nameBadges.appendChild(rolledoutBadge);
+            const rolledoutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
+            nameRow.appendChild(rolledoutBadge);
         }
-        nameRow.appendChild(nameBadges);
         variantDetailsContainer.appendChild(nameRow);
         // Variant description is intentionally hidden on canvas nodes for now.
         // (We keep description in the data model / metadata; just don't render it.)
@@ -629,11 +586,11 @@ export function createVariantCard(variant, variantIndex, options) {
             linkRow.paddingTop = 16;
             // Figma outline icon, matching linked-frame indicators in the plugin UI
             const figmaIconSvg = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-      <path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z" stroke="#22272F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`;
             try {
                 const figmaIcon = figma.createNodeFromSvg(figmaIconSvg);

@@ -13,6 +13,23 @@ import { hexToRgb, createBadge, getFontStyle } from "./layout-utils";
 import { loadFonts, getLoadedFigtreeSemibold } from "./load-fonts";
 import { createOutcomeCardSections, mapExperimentDataToOutcomeData, } from "./experiment-outcome-card";
 import { EXPERIMENT_STATUS_STYLES, formatDateForDisplay, getExperimentTypeLabel, } from "./experiment-card-shared";
+const ROLLED_OUT_BADGE_BG = "#fffbb5";
+const ROLLED_OUT_BADGE_TEXT = "#484122";
+const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 22h16" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+function createRolledOutIcon() {
+    const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
+    icon.name = "Rolled Out Icon";
+    icon.resize(10, 10);
+    icon.fills = [];
+    return icon;
+}
 // Brand icon SVG markup (complete SVGs for figma.createNodeFromSvg)
 const BRAND_SVGS = {
     // Figma outline icon, matching linked-frame indicators in the plugin UI
@@ -251,7 +268,7 @@ function createBrandIconVector(brand, size = 14) {
  * @example
  * const infoCard = await createExperimentInfoCard(
  *   'Pricing Page Button Color Experiment',
- *   'Testing if a red button increases trial starts compared with the current blue button',
+ *   'Testing whether CTA color changes help more visitors start checkout',
  *   'https://figma.com/...',
  *   'https://jira.com/...',
  *   // ... other links
@@ -852,7 +869,7 @@ function appendVariantsSection(parent, variants) {
                 row.strokeRightWeight = 0;
             }
             row.name = `Row: ${variant.name}`;
-            // Name cell with color dot and optional baseline badge
+            // Name cell with color dot
             const nameCell = figma.createFrame();
             nameCell.layoutMode = "HORIZONTAL";
             nameCell.counterAxisSizingMode = "AUTO";
@@ -876,7 +893,7 @@ function appendVariantsSection(parent, variants) {
             nameText.characters = variant.name || `Variant ${variant.key}`;
             nameCell.appendChild(nameText);
             if (variant.isRolledOut) {
-                const rolledOutBadge = createBadge('Rolled Out', 'micro', '#FFF420', TOKENS.textPrimary);
+                const rolledOutBadge = createBadge('Rolled Out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
                 nameCell.appendChild(rolledOutBadge);
             }
             row.appendChild(nameCell);
@@ -1025,8 +1042,8 @@ function appendDetailsSection(parent, title, rowsData) {
         parent.appendChild(section);
     });
 }
-// SECTION 1: Header with badge row (card type + status) + title + description
-function createStoryHeaderWithBadges(experimentName, description, statusConfig, options) {
+// SECTION 1: Header with date + title + description
+function createStoryHeaderWithBadges(experimentName, description, _statusConfig, options) {
     return __awaiter(this, void 0, void 0, function* () {
         yield loadFonts();
         const section = figma.createFrame();
@@ -1040,7 +1057,7 @@ function createStoryHeaderWithBadges(experimentName, description, statusConfig, 
         section.fills = [];
         section.strokes = [];
         section.name = "Header Section";
-        // Status + date row
+        // Date row
         const dateCreated = (options === null || options === void 0 ? void 0 : options.dateCreated) || new Date().toISOString().split('T')[0];
         const dateFormatted = formatDateForDisplay(dateCreated);
         const statusRow = figma.createFrame();
@@ -1051,37 +1068,6 @@ function createStoryHeaderWithBadges(experimentName, description, statusConfig, 
         statusRow.itemSpacing = 8;
         statusRow.fills = [];
         statusRow.name = "Status Row";
-        // Status badge - filled for rolled_out, outlined for others
-        const statusBadge = figma.createFrame();
-        statusBadge.layoutMode = "HORIZONTAL";
-        statusBadge.counterAxisSizingMode = "FIXED";
-        statusBadge.primaryAxisSizingMode = "AUTO";
-        statusBadge.minHeight = 16;
-        statusBadge.maxHeight = 16;
-        statusBadge.paddingLeft = statusBadge.paddingRight = 4;
-        statusBadge.paddingTop = statusBadge.paddingBottom = 2;
-        statusBadge.cornerRadius = 4;
-        statusBadge.counterAxisAlignItems = "CENTER";
-        // Use filled style for rolled_out, outlined for others
-        if (statusConfig.bgColor === '#FFF420') {
-            statusBadge.fills = [{ type: "SOLID", color: hexToRgb(statusConfig.bgColor) }];
-            statusBadge.strokes = [];
-        }
-        else {
-            statusBadge.fills = [];
-            statusBadge.strokes = [{ type: "SOLID", color: hexToRgb(statusConfig.textColor) }];
-            statusBadge.strokeWeight = 1;
-        }
-        statusBadge.name = "Status Badge";
-        const statusText = figma.createText();
-        statusText.fontName = { family: "Figtree", style: "Medium" };
-        statusText.fontSize = 9;
-        statusText.lineHeight = { unit: "PIXELS", value: 10 };
-        statusText.fills = [{ type: "SOLID", color: hexToRgb(statusConfig.textColor) }];
-        statusText.textAutoResize = "WIDTH_AND_HEIGHT";
-        statusText.characters = statusConfig.label;
-        statusBadge.appendChild(statusText);
-        statusRow.appendChild(statusBadge);
         const dateLabel = figma.createText();
         dateLabel.fontName = { family: "Figtree", style: "Regular" };
         dateLabel.fontSize = TOKENS.fontSizeLabel;
@@ -1153,8 +1139,8 @@ function createStoryHypothesis(hypothesis) {
 // ============================================
 // LEGACY FUNCTIONS (keeping for compatibility)
 // ============================================
-// Card header with badges, title, and description
-function createCardHeader(experimentName, description, statusConfig, options) {
+// Card header with date, title, and description
+function createCardHeader(experimentName, description, _statusConfig, options) {
     return __awaiter(this, void 0, void 0, function* () {
         yield loadFonts();
         const section = figma.createFrame();
@@ -1179,37 +1165,6 @@ function createCardHeader(experimentName, description, statusConfig, options) {
         dateLabelCompact.characters = dateFormattedCompact;
         dateLabelCompact.name = "Date Created Label";
         section.appendChild(dateLabelCompact);
-        // Status badge - filled for rolled_out, outlined for others
-        const statusBadge = figma.createFrame();
-        statusBadge.layoutMode = "HORIZONTAL";
-        statusBadge.counterAxisSizingMode = "FIXED";
-        statusBadge.primaryAxisSizingMode = "AUTO";
-        statusBadge.minHeight = 16;
-        statusBadge.maxHeight = 16;
-        statusBadge.paddingLeft = statusBadge.paddingRight = 4;
-        statusBadge.paddingTop = statusBadge.paddingBottom = 2;
-        statusBadge.cornerRadius = 4;
-        statusBadge.counterAxisAlignItems = "CENTER";
-        // Use filled style for rolled_out, outlined for others
-        if (statusConfig.bgColor === '#FFF420') {
-            statusBadge.fills = [{ type: "SOLID", color: hexToRgb(statusConfig.bgColor) }];
-            statusBadge.strokes = [];
-        }
-        else {
-            statusBadge.fills = [];
-            statusBadge.strokes = [{ type: "SOLID", color: hexToRgb(statusConfig.textColor) }];
-            statusBadge.strokeWeight = 1;
-        }
-        statusBadge.name = "Status Badge";
-        const statusText = figma.createText();
-        statusText.fontName = { family: "Figtree", style: "Medium" };
-        statusText.fontSize = 9;
-        statusText.lineHeight = { unit: "PIXELS", value: 10 };
-        statusText.fills = [{ type: "SOLID", color: hexToRgb(statusConfig.textColor) }];
-        statusText.textAutoResize = "WIDTH_AND_HEIGHT";
-        statusText.characters = statusConfig.label;
-        statusBadge.appendChild(statusText);
-        section.appendChild(statusBadge);
         // Title (Bold, 24px)
         const titleText = figma.createText();
         titleText.fontName = { family: "Figtree", style: "Bold" };

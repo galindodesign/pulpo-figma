@@ -93,6 +93,13 @@ export interface VariantV2 {
   figmaLink?: string;
   traffic: number;
   metrics?: VariantMetrics;
+  /** When false, per-variant goal outcome fields stay hidden until the user opts in from the variant menu. */
+  showGoalOutcomes?: boolean;
+  /**
+   * Visibility of the inline "Linked design" Figma link block on the variant card.
+   * Explicit false hides; undefined defers to whether `figmaLink` is set (legacy grace).
+   */
+  showFigmaLink?: boolean;
   style?: {
     variantColor?: string;
   };
@@ -121,6 +128,11 @@ export interface EventNodeV2 {
   name: string;
   nodeType: 'EVENT_NODE';
   figmaLink?: string;
+  /**
+   * Visibility of the inline "Linked design" Figma link block on the touchpoint card.
+   * Explicit false hides; undefined defers to whether `figmaLink` is set (legacy grace).
+   */
+  showFigmaLink?: boolean;
   entryNote?: EntryNoteV2;
   variants?: VariantV2[];
 }

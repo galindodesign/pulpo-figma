@@ -12,6 +12,23 @@ import { TOKENS } from "./design-tokens";
 import { hexToRgb, getFontStyle, createBadge } from "./layout-utils";
 import { loadFonts } from "./load-fonts";
 import { EXPERIMENT_STATUS_STYLES, formatDateForDisplay, getExperimentTypeLabel, } from "./experiment-card-shared";
+const ROLLED_OUT_BADGE_BG = "#fffbb5";
+const ROLLED_OUT_BADGE_TEXT = "#484122";
+const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4 22h16" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+function createRolledOutIcon() {
+    const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
+    icon.name = "Rolled Out Icon";
+    icon.resize(10, 10);
+    icon.fills = [];
+    return icon;
+}
 /**
  * Format metric value with appropriate precision (always decimal)
  */
@@ -76,12 +93,13 @@ function classifyOutcomeState(data) {
     const rolledOutVariant = data.variants.find(v => v.isRolledOut);
     const primaryMetric = getPrimaryDecisionMetric(data);
     const leadingVariant = primaryMetric ? getLeadingVariant(data, primaryMetric) : undefined;
+    const comparisonVariant = getComparisonVariant(data);
     const primaryFact = primaryMetric && leadingVariant
-        ? formatPrimaryMetricFact(primaryMetric, leadingVariant, getComparisonVariant(data))
+        ? formatPrimaryMetricFact(primaryMetric, leadingVariant, comparisonVariant)
         : "Primary metric: not set";
     const facts = [
         primaryFact,
-        `${data.variants.length} variant${data.variants.length === 1 ? "" : "s"} compared`,
+        `${data.variants.length} variant${data.variants.length === 1 ? "" : "s"} evaluated`,
     ];
     if (data.totalSampleSize) {
         facts.push(`${data.totalSampleSize.toLocaleString()} users sampled`);
@@ -91,7 +109,7 @@ function classifyOutcomeState(data) {
             state: "running",
             headline: "Keep collecting evidence",
             detail: leadingVariant
-                ? `${leadingVariant.name} is currently leading on the primary metric, but results are still in progress.`
+                ? `${leadingVariant.name} is currently strongest on the primary metric, but results are still in progress.`
                 : "Results are still developing. Use the goal table to watch the primary metric and guardrails before deciding.",
             facts,
             nextStep: "Continue monitoring until the experiment reaches its planned sample size or decision threshold.",
@@ -122,7 +140,7 @@ function classifyOutcomeState(data) {
         return {
             state: "recommendation",
             headline: `Recommendation: review ${leadingVariant.name}`,
-            detail: `${leadingVariant.name} leads on ${getMetricDisplayName(primaryMetric)}. Confirm guardrails and qualitative context before rollout.`,
+            detail: `${leadingVariant.name} has the strongest observed ${getMetricDisplayName(primaryMetric)} result. Confirm guardrails and qualitative context before rollout.`,
             facts,
             nextStep: "Choose a rollout candidate only if the primary win is strong enough and no guardrails show meaningful regression.",
         };
@@ -171,7 +189,7 @@ function getPrimaryDecisionMetric(data) {
     return data.metrics.find(metric => metric.isPrimary) || data.metrics[0];
 }
 function getComparisonVariant(data) {
-    return data.variants.find(variant => variant.isControl === true) || data.variants[0];
+    return data.variants.find(variant => variant.isControl === true);
 }
 function getLeadingVariant(data, metric) {
     if (metric.direction === "neutral") {
@@ -199,14 +217,12 @@ function getLeadingVariant(data, metric) {
 function formatPrimaryMetricFact(metric, variant, comparisonVariant) {
     const metricData = variant.metrics[getMetricKey(metric)];
     const metricValue = formatMetricValue(metricData === null || metricData === void 0 ? void 0 : metricData.value, metric);
-    const deltaLabel = variant.id === (comparisonVariant === null || comparisonVariant === void 0 ? void 0 : comparisonVariant.id)
-        ? "baseline"
-        : (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined
-            ? `${formatUplift(metricData.uplift)} vs control`
-            : "no control delta";
+    const changeLabel = comparisonVariant && variant.id !== comparisonVariant.id && (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined
+        ? `, ${formatUplift(metricData.uplift)} change from ${comparisonVariant.name || `Variant ${comparisonVariant.key}`}`
+        : "";
     const goalPerformance = getGoalPerformance(metric, metricData === null || metricData === void 0 ? void 0 : metricData.value);
     const goalLabel = goalPerformance === undefined ? "goal not set" : goalPerformance ? "goal met" : "goal not met";
-    return `Primary metric: ${variant.name} at ${metricValue} (${deltaLabel}, ${goalLabel})`;
+    return `Primary metric: ${variant.name} at ${metricValue}${changeLabel} (${goalLabel})`;
 }
 const OUTCOME_SUMMARY_MIN_WIDTH = 728;
 const OUTCOME_SUMMARY_HORIZONTAL_PADDING = 16;
@@ -221,11 +237,11 @@ function setWrappedText(text, characters, width) {
  *
  * Card layout: Three-section vertical design
  * - Header: Experiment name, date, and status badge
- * - Metrics Table: Variant performance metrics with uplift percentages, rolled-out indicators
+ * - Metrics Table: Variant performance metrics with optional change percentages and rolled-out indicators
  * - Summary: Recommendation and decision summary
  *
  * Features:
- * - Variant comparison against control (baseline)
+ * - Variant performance comparison without requiring a preselected comparison variant
  * - Goal-level performance comparison
  * - Traffic/sample size annotations
  * - Rolled-out indicator badge for variants in production
@@ -242,7 +258,7 @@ function setWrappedText(text, characters, width) {
  *   experimentType: 'ab_test',
  *   status: 'completed',
  *   variants: [
- *     { key: 'A', name: 'Blue button', traffic: 50, metrics: { conversions: 1200 }, isControl: true },
+ *     { key: 'A', name: 'Blue button', traffic: 50, metrics: { conversions: 1200 } },
  *     { key: 'B', name: 'Red button', traffic: 50, metrics: { conversions: 1450 }, uplift: 20.8 }
  *   ],
  *   metrics: [
@@ -417,7 +433,7 @@ function createFlippedMetricsTable(data) {
         const headerRow = yield createFlippedTableHeaderRow(data.metrics);
         table.appendChild(headerRow);
         if (data.variants.length > 0) {
-            const comparisonVariant = data.variants.find(v => v.isControl === true) || data.variants[0];
+            const comparisonVariant = getComparisonVariant(data);
             for (let i = 0; i < data.variants.length; i++) {
                 const variant = data.variants[i];
                 const isLast = i === data.variants.length - 1;
@@ -463,7 +479,7 @@ function createTableHeaderRow(data, variantCount) {
         goalHeader.minWidth = 100;
         row.appendChild(goalHeader);
         // Variant headers: render in the SAME order as provided (do not move columns around).
-        // If a variant is explicitly marked as baseline/control, it will show the badge in its own header.
+        // Render headers in the same order as provided.
         if (data.variants.length > 0) {
             for (const variant of data.variants) {
                 const variantHeader = createVariantHeaderCell(variant);
@@ -520,13 +536,10 @@ function createFlippedTableHeaderRow(metrics) {
     });
 }
 /**
- * Create a variant header cell with name and optional badges
+ * Create a variant header cell with name
  */
 function createVariantHeaderCell(variant) {
     const variantName = variant.name || `Variant ${variant.key}`;
-    // STRICT CHECK: Only show badge if isControl is explicitly boolean true (checkbox checked)
-    // Must be boolean true, not just truthy
-    const isExplicitlyControl = variant.isControl === true && typeof variant.isControl === 'boolean';
     const cell = figma.createFrame();
     cell.layoutMode = "HORIZONTAL";
     cell.counterAxisSizingMode = "FIXED"; // Fixed height
@@ -656,10 +669,10 @@ function createGoalCell(metric) {
     return cell;
 }
 /**
- * Create a baseline cell showing just the control variant value
- * (Name and badge are shown in the header, so we don't repeat them here)
+ * Create a comparison cell showing just the comparison variant value.
+ * Name is shown in the header, so we don't repeat it here.
  */
-function createBaselineCell(metricData, variant) {
+function createComparisonCell(metricData, variant) {
     const cell = figma.createFrame();
     cell.layoutMode = "VERTICAL";
     cell.counterAxisSizingMode = "FIXED"; // Fixed height
@@ -672,7 +685,7 @@ function createBaselineCell(metricData, variant) {
     cell.itemSpacing = 2;
     cell.paddingLeft = cell.paddingRight = 8;
     cell.fills = [];
-    cell.name = "Baseline Cell";
+    cell.name = "Comparison Cell";
     // Main value only (name and badge are in header)
     const valueText = figma.createText();
     valueText.fontName = getFontStyle("Medium");
@@ -717,9 +730,9 @@ function createMetricRow(metric_1, variants_1) {
         goalCell.layoutGrow = 0; // Don't grow
         row.appendChild(goalCell);
         // Render variant value cells in the SAME order as provided.
-        // Treat the comparison variant (explicit baseline/control if set, otherwise first variant)
-        // as the "no-uplift" column, but do NOT move it.
-        const comparisonVariant = variants.find(v => v.isControl === true) || variants[0];
+        // Treat an explicitly selected comparison variant as the "no-change" column,
+        // but do not invent one when the experiment did not define it.
+        const comparisonVariant = variants.find(v => v.isControl === true);
         if (variants.length > 0) {
             for (const variant of variants) {
                 const metricData = variant.metrics[metricKey];
@@ -838,12 +851,8 @@ function createVariantNameCell(variant) {
     nameText.textAutoResize = "WIDTH_AND_HEIGHT";
     nameText.characters = variantName;
     nameRow.appendChild(nameText);
-    if (variant.isControl) {
-        const controlBadge = createBadge('Control', 'micro', TOKENS.royalBlue100, TOKENS.royalBlue700);
-        nameRow.appendChild(controlBadge);
-    }
     if (variant.isRolledOut) {
-        const rolledOutBadge = createBadge('Rolled Out', 'micro', '#FFF420', TOKENS.textPrimary);
+        const rolledOutBadge = createBadge('Rolled Out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
         nameRow.appendChild(rolledOutBadge);
     }
     cell.appendChild(nameRow);
@@ -910,7 +919,7 @@ function createMetricNameCell(metric) {
 /**
  * Create a metric value cell with uplift indicator
  */
-function createMetricValueCell(metricData, isControl = false, metric) {
+function createMetricValueCell(metricData, isComparisonVariant = false, metric) {
     const cell = figma.createFrame();
     cell.layoutMode = "VERTICAL";
     cell.counterAxisSizingMode = "FIXED"; // Fixed height
@@ -923,14 +932,14 @@ function createMetricValueCell(metricData, isControl = false, metric) {
     cell.itemSpacing = 2;
     cell.paddingLeft = cell.paddingRight = 8;
     const value = metricData === null || metricData === void 0 ? void 0 : metricData.value;
-    const controlPerformance = isControl ? getGoalPerformance(metric, value) : undefined;
-    // Add light background color based on variant uplift or control goal performance.
-    if (!isControl && (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined) {
+    const goalPerformance = getGoalPerformance(metric, value);
+    // Add light background color based on metric goal performance or available change.
+    if (!isComparisonVariant && (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined) {
         const isPositive = metricData.uplift >= 0;
         cell.fills = [{ type: "SOLID", color: hexToRgb(isPositive ? TOKENS.malachite50 : TOKENS.coralRed50) }];
     }
-    else if (isControl && controlPerformance !== undefined) {
-        cell.fills = [{ type: "SOLID", color: hexToRgb(controlPerformance ? TOKENS.malachite50 : TOKENS.coralRed50) }];
+    else if (goalPerformance !== undefined) {
+        cell.fills = [{ type: "SOLID", color: hexToRgb(goalPerformance ? TOKENS.malachite50 : TOKENS.coralRed50) }];
     }
     else {
         cell.fills = [];
@@ -945,10 +954,9 @@ function createMetricValueCell(metricData, isControl = false, metric) {
     valueText.characters = formatMetricValue(value, metric);
     valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
     cell.appendChild(valueText);
-    // Delta row (variants: uplift; control: baseline delta styling)
-    const showControlDelta = isControl && value !== undefined;
-    const showVariantDelta = !isControl && (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined;
-    if (showControlDelta || showVariantDelta) {
+    // Delta row (only shown when change is available from an explicit comparison variant)
+    const showVariantDelta = !isComparisonVariant && (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined;
+    if (showVariantDelta) {
         const upliftRow = figma.createFrame();
         upliftRow.layoutMode = "HORIZONTAL";
         upliftRow.counterAxisSizingMode = "AUTO";
@@ -963,9 +971,6 @@ function createMetricValueCell(metricData, isControl = false, metric) {
         if (showVariantDelta) {
             const isPositive = uplift >= 0;
             upliftColor = isPositive ? TOKENS.malachite600 : TOKENS.coralRed500;
-        }
-        else if (controlPerformance !== undefined) {
-            upliftColor = controlPerformance ? TOKENS.malachite600 : TOKENS.coralRed500;
         }
         const upliftText = figma.createText();
         upliftText.fontName = getFontStyle("Medium");
@@ -1096,7 +1101,7 @@ function createSummaryFactRow(fact, accentColor, width) {
     row.minWidth = width;
     const dot = figma.createEllipse();
     dot.resize(5, 5);
-    dot.fills = [{ type: "SOLID", color: hexToRgb(accentColor) }];
+    dot.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
     row.appendChild(dot);
     const factText = figma.createText();
     factText.fontName = getFontStyle("Regular");
@@ -1111,8 +1116,8 @@ function createSummaryFactRow(fact, accentColor, width) {
  *
  * Bridges the data structure used in experiment-info-card with the outcome card format.
  * Automatically:
- * - Identifies control variant (must be explicitly marked with isControl: true)
- * - Calculates uplift percentages for each metric vs control
+ * - Uses an explicit comparison variant only when saved data provides one
+ * - Calculates change percentages for each metric when that comparison exists
  * - Converts metric definitions to outcome format
  * - Handles missing data gracefully with defaults
  *
@@ -1127,7 +1132,7 @@ function createSummaryFactRow(fact, accentColor, width) {
  *   'Pricing Page Button Color Experiment',
  *   [{ id: 'conv', name: 'Conversions', isPrimary: true }],
  *   [
- *     { key: 'A', name: 'Blue button', traffic: 50, isControl: true, metrics: { conversions: 100 } },
+ *     { key: 'A', name: 'Blue button', traffic: 50, metrics: { conversions: 100 } },
  *     { key: 'B', name: 'Red button', traffic: 50, metrics: { conversions: 120 } }
  *   ],
  *   { status: 'completed' }
@@ -1140,26 +1145,24 @@ export function createOutcomeCardFromExperimentData(experimentName, metrics, var
     });
 }
 export function mapExperimentDataToOutcomeData(experimentName, metrics, variants, options) {
-    // Find control variant (only if explicitly marked as control, otherwise use first variant for comparison)
-    const trueControlVariant = variants.find(v => v.isControl === true);
-    const controlVariant = trueControlVariant || variants[0];
+    // Use a comparison anchor only when older saved data explicitly marks one.
+    const comparisonVariant = variants.find(v => v.isControl === true);
     // Convert variants to outcome format with uplift calculations
     const variantOutcomes = variants.map((v, index) => {
         var _a, _b, _c, _d;
-        // Only set isControl to true if explicitly marked as control (isControl === true)
-        // Don't set it to true just because it's the first variant
+        // Keep the internal flag explicit; do not create a fallback comparison variant.
         const isControl = v.isControl === true;
         const outcomeMetrics = {};
         for (const metric of metrics) {
             const metricKey = getMetricKey(metric);
             const rawValue = (_b = (_a = v.metrics) === null || _a === void 0 ? void 0 : _a[metricKey]) !== null && _b !== void 0 ? _b : 0;
-            const rawControlValue = (_d = (_c = controlVariant === null || controlVariant === void 0 ? void 0 : controlVariant.metrics) === null || _c === void 0 ? void 0 : _c[metricKey]) !== null && _d !== void 0 ? _d : 0;
+            const rawComparisonValue = (_d = (_c = comparisonVariant === null || comparisonVariant === void 0 ? void 0 : comparisonVariant.metrics) === null || _c === void 0 ? void 0 : _c[metricKey]) !== null && _d !== void 0 ? _d : 0;
             const value = normalizeMetricValueForComparison(metric, rawValue);
-            const controlValue = normalizeMetricValueForComparison(metric, rawControlValue);
-            // Calculate uplift vs control
+            const comparisonValue = normalizeMetricValueForComparison(metric, rawComparisonValue);
+            // Calculate change only when an explicit comparison variant exists.
             let uplift;
-            if (!isControl && controlValue > 0) {
-                uplift = ((value - controlValue) / controlValue) * 100;
+            if (comparisonVariant && !isControl && comparisonValue > 0) {
+                uplift = ((value - comparisonValue) / comparisonValue) * 100;
             }
             outcomeMetrics[metricKey] = {
                 value,
