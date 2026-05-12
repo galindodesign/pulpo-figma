@@ -2272,15 +2272,16 @@
     /* Experiment events (with variants) get purple background */
     .event-row.event-row--has-variants .step-drag-badge--journey {
       --step-badge-bg: var(--event-variants-step-bg);
-      --step-badge-br-w: 0px;
-      --step-badge-br-color: var(--event-variants-step-bg);
+      /* Thin ring matches spine color so the connector reads as meeting the node */
+      --step-badge-br-w: 1px;
+      --step-badge-br-color: var(--text-secondary);
       --step-badge-fg: var(--event-variants-step-text);
     }
 
-      /* Force same violet for badge in dark mode */
       :root[data-figma-theme="dark"] .event-row.event-row--has-variants .step-drag-badge--journey {
         --step-badge-bg: var(--color-electric-violet-500) !important;
-        --step-badge-br-color: var(--color-electric-violet-500) !important;
+        --step-badge-br-w: 1px !important;
+        --step-badge-br-color: var(--text-secondary) !important;
         --step-badge-fg: var(--color-white-100) !important;
       }
 
