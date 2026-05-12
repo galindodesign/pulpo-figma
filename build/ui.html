@@ -1119,16 +1119,40 @@
       margin-bottom: 8px;
     }
 
-    .goal-row.drag-active .goal-row-header,
-    .event-row.drag-active .event-row-main {
+    .goal-row.drag-active .goal-row-header {
       opacity: 1;
       background: var(--color-white-100);
       border-radius: var(--radius-md);
     }
 
-    .goal-row.is-selected .goal-row-header,
-    .event-row.is-selected .event-row-main {
+    /* Journey touchpoint: groove over the spine so .events-list::before stays visible (matches variant-row treatment). */
+    .event-row.drag-active:not(.system):not(.add-step-row) .event-row-main {
+      opacity: 1;
+      background: linear-gradient(
+        to right,
+        var(--color-white-100) 0,
+        var(--color-white-100) calc(var(--events-list-spine-left) - 1px),
+        transparent calc(var(--events-list-spine-left) - 1px),
+        transparent calc(var(--events-list-spine-left) + 2px),
+        var(--color-white-100) calc(var(--events-list-spine-left) + 2px)
+      );
+      border-radius: var(--radius-md);
+    }
+
+    .goal-row.is-selected .goal-row-header {
       background: var(--dropdown-selected-bg);
+      border-radius: var(--radius-md);
+    }
+
+    .event-row.is-selected:not(.system):not(.add-step-row) .event-row-main {
+      background: linear-gradient(
+        to right,
+        var(--dropdown-selected-bg) 0,
+        var(--dropdown-selected-bg) calc(var(--events-list-spine-left) - 1px),
+        transparent calc(var(--events-list-spine-left) - 1px),
+        transparent calc(var(--events-list-spine-left) + 2px),
+        var(--dropdown-selected-bg) calc(var(--events-list-spine-left) + 2px)
+      );
       border-radius: var(--radius-md);
     }
 
@@ -2243,7 +2267,7 @@
       position: relative;
       z-index: 1;
       transition: margin 0.12s ease;
-      gap: var(--space-8);
+      gap: var(--space-0);
       border-bottom: 0px dashed var(--border);
 
     }
@@ -3131,6 +3155,15 @@
       padding: 0;
     }
 
+    /* Touchpoint row: design variants (pairs with Figma / rolled-out chips) */
+    .variant-passive-chip--variants {
+      background: var(--event-variants-badge-bg);
+      border-color: var(--event-variants-badge-border);
+      color: var(--event-variants-badge-color);
+      width: 20px;
+      padding: 0;
+    }
+
     /* Variant subtree toggle button */
     .variant-tree-toggle {
       display: flex;
@@ -3268,8 +3301,7 @@
       flex: 0 0 auto;
     }
 
-    .variant-metrics-label,
-    .variant-section-heading {
+    .variant-metrics-label {
       font-size: var(--body-xs-size);
       font-weight: var(--font-weight-medium);
       line-height: 100%;
@@ -3277,14 +3309,7 @@
       color: var(--input-field-text-color);
       padding: 3px 0;
       margin-top: 3px;
-    }
-
-    .variant-metrics-label {
       display: none;
-    }
-
-    .variant-section-heading {
-      display: block;
     }
 
     /* Variant metrics row - stacked metric list */
@@ -3871,13 +3896,13 @@
       cursor: not-allowed;
     }
 
-    /* Destructive option (e.g. Remove variant). Subtle by default, red on hover. */
+    /* Destructive option (e.g. Remove). Same default emphasis as other items; red on hover/focus. */
     .CustomDropdown__option--danger {
-      color: var(--text-secondary);
+      color: var(--text-primary);
     }
 
     .CustomDropdown__option--danger .CustomDropdown__option-icon {
-      color: var(--text-secondary);
+      color: var(--text-primary);
     }
 
     .CustomDropdown__option--danger:hover,
@@ -3962,8 +3987,7 @@
       align-items: stretch;
       width: 100%;
       box-sizing: border-box;
-      padding: 0 var(--space-12) var(--space-12) calc(var(--space-12) + 20px + var(--space-8));
-      margin-top: calc(-1 * var(--space-8));
+      padding: var(--space-0) var(--space-12) var(--space-12) calc(var(--space-12) + 20px + var(--space-8));
     }
 
     .event-link-row .figma-link-input,
@@ -7247,7 +7271,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       removeVariantOption.type = 'button';
       removeVariantOption.className = 'CustomDropdown__option CustomDropdown__option--danger';
       removeVariantOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${getIcon('trash-2', { size: 14 })}</span>
+        <span class="CustomDropdown__option-icon">${getIcon('x', { size: 14 })}</span>
         <span class="CustomDropdown__option-text">Remove variant</span>
       `;
       removeVariantOption.onclick = (e) => {
@@ -7779,7 +7803,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       removeOption.type = 'button';
       removeOption.className = 'CustomDropdown__option CustomDropdown__option--danger';
       removeOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${getIcon('trash-2', { size: 14 })}</span>
+        <span class="CustomDropdown__option-icon">${getIcon('x', { size: 14 })}</span>
         <span class="CustomDropdown__option-text">Remove touchpoint</span>
       `;
       removeOption.addEventListener('click', (e) => {
@@ -7799,6 +7823,21 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       actionsDropdown.appendChild(actionsTrigger);
       actionsDropdown.appendChild(actionsMenu);
       setupCustomDropdown(actionsDropdown, { trigger: actionsTrigger });
+
+      if (variantCount > 0) {
+        const variantsChip = document.createElement('span');
+        variantsChip.className = 'variant-passive-chip variant-passive-chip--variants';
+        variantsChip.innerHTML = `<span aria-hidden="true">${getIcon('git-branch', { size: 12, strokeWidth: 2 })}</span>`;
+        const variantsTooltip =
+          variantCount === 1 ? '1 design variant' : `${variantCount} design variants`;
+        variantsChip.setAttribute('data-tooltip', variantsTooltip);
+        variantsChip.setAttribute('data-tooltip-position', 'bottom');
+        variantsChip.setAttribute('data-tooltip-align', 'center');
+        variantsChip.setAttribute('data-tooltip-cursor', 'default');
+        variantsChip.setAttribute('role', 'img');
+        variantsChip.setAttribute('aria-label', variantsTooltip);
+        actionsDiv.appendChild(variantsChip);
+      }
 
       if (event.figmaLink) {
         const figmaChip = document.createElement('span');
@@ -7868,14 +7907,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       variantsList.className = 'variants-list';
 
       const hasVariants = Array.isArray(event.variants) && event.variants.length > 0;
-
-      // Label the experiment branch area
-      if (hasVariants) {
-        const variantsLabel = document.createElement('div');
-        variantsLabel.className = 'variant-section-heading';
-        variantsLabel.append(`Design variants (${variantCount})`);
-        variantsList.appendChild(variantsLabel);
-      }
 
       // Render each variant card
       if (hasVariants) {
