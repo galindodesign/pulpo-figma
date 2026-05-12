@@ -2137,12 +2137,14 @@
       flex-direction: column;
       gap: 0;
       position: relative;
+      /* Shared with variant-row background so a gap can reveal the spine */
+      --events-list-spine-left: calc(var(--space-12) + 10px);
     }
 
     .events-list::before {
       content: '';
       position: absolute;
-      left: calc(var(--space-12) + 10px);
+      left: var(--events-list-spine-left);
       top: 18px;
       bottom: 18px;
       width: 1px;
@@ -2288,7 +2290,16 @@
 
     /* Experiment events (with variants) get purple background */
     .event-row.event-row--has-variants {
-        background: var(--figma-color-bg-selected-secondary, var(--color-royal-blue-50));
+        --event-variants-row-fill: var(--figma-color-bg-selected-secondary, var(--color-royal-blue-50));
+        /* Let the journey spine show through; badges/input still paint above the gap */
+        background: linear-gradient(
+          to right,
+          var(--event-variants-row-fill) 0,
+          var(--event-variants-row-fill) calc(var(--events-list-spine-left) - 1px),
+          transparent calc(var(--events-list-spine-left) - 1px),
+          transparent calc(var(--events-list-spine-left) + 2px),
+          var(--event-variants-row-fill) calc(var(--events-list-spine-left) + 2px)
+        );
         border-radius: var(--radius-md);
         gap: var(--space-0);
     }
