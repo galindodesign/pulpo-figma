@@ -2602,7 +2602,10 @@ if (figma.editorType === 'figma') {
                     : `Touchpoint ${eventIdx + 1}`;
                 const eventThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(event, 'figmaLink'), `touchpoint "${safeEventName}"`);
                 // Create event card
-                const eventCard = createEventCard(safeEventName, (_z = (_y = event.variants) === null || _y === void 0 ? void 0 : _y.length) !== null && _z !== void 0 ? _z : 0, eventIdx, eventThumbnail.node, eventThumbnail.message);
+                const eventCard = createEventCard(safeEventName, (_z = (_y = event.variants) === null || _y === void 0 ? void 0 : _y.length) !== null && _z !== void 0 ? _z : 0, eventIdx, eventThumbnail.node, eventThumbnail.message, {
+                    figmaLink: safeGetString(event, 'figmaLink'),
+                    showFigmaLink: event.showFigmaLink,
+                });
                 // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
                 eventCard.name = `Touchpoint`;
                 // eventCard.name = `Touchpoint: ${safeEventName}`;

@@ -2985,7 +2985,11 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
         event.variants?.length ?? 0,
         eventIdx,
         eventThumbnail.node,
-        eventThumbnail.message
+        eventThumbnail.message,
+        {
+          figmaLink: safeGetString(event, 'figmaLink'),
+          showFigmaLink: event.showFigmaLink,
+        }
       );
       // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
       eventCard.name = `Touchpoint`;

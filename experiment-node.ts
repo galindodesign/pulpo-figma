@@ -18,6 +18,57 @@ const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="n
   <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
+/** Official Figma multi-color mark (paths align with plugin UI `brandIcons.figma`) */
+const FIGMA_BRAND_LOGO_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4z" fill="#0ACF83"/>
+  <path d="M4 12c0-2.208 1.792-4 4-4h4v8H8c-2.208 0-4-1.792-4-4z" fill="#A259FF"/>
+  <path d="M4 4c0-2.208 1.792-4 4-4h4v8H8C5.792 8 4 6.208 4 4z" fill="#F24E1E"/>
+  <path d="M12 0h4c2.208 0 4 1.792 4 4s-1.792 4-4 4h-4V0z" fill="#FF7262"/>
+  <path d="M20 12c0 2.208-1.792 4-4 4s-4-1.792-4-4 1.792-4 4-4 4 1.792 4 4z" fill="#1ABCFE"/>
+</svg>`;
+
+/**
+ * Row with Figma brand icon + "Open in Figma" hyperlink (top border). Caller passes a non-empty URL string.
+ */
+function createOpenInFigmaLinkRow(figmaLink: string): FrameNode {
+  const trimmed = figmaLink.trim();
+  const linkRow = figma.createFrame();
+  linkRow.layoutMode = 'HORIZONTAL';
+  linkRow.counterAxisSizingMode = 'AUTO';
+  linkRow.primaryAxisSizingMode = 'FIXED';
+  linkRow.itemSpacing = 4;
+  linkRow.counterAxisAlignItems = 'CENTER';
+  linkRow.fills = [];
+  linkRow.name = 'Figma Link Row';
+  linkRow.layoutAlign = 'STRETCH';
+
+  try {
+    const figmaIcon = figma.createNodeFromSvg(FIGMA_BRAND_LOGO_SVG);
+    figmaIcon.name = 'Figma Icon';
+    figmaIcon.resize(14, 14);
+    figmaIcon.fills = [];
+    linkRow.appendChild(figmaIcon);
+  } catch {
+    const fallbackIcon = figma.createFrame();
+    fallbackIcon.name = 'Figma Icon (fallback)';
+    fallbackIcon.resize(14, 14);
+    fallbackIcon.fills = [];
+    linkRow.appendChild(fallbackIcon);
+  }
+
+  const linkText = figma.createText();
+  linkText.fontName = getFontStyle('Medium');
+  linkText.fontSize = TOKENS.fontSizeBodySm;
+  linkText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue600) }];
+  linkText.textAutoResize = 'WIDTH_AND_HEIGHT';
+  linkText.hyperlink = { type: 'URL', value: trimmed };
+  linkText.characters = 'Open in Figma';
+  linkText.name = 'Figma Link';
+  linkRow.appendChild(linkText);
+
+  return linkRow;
+}
+
 type ThumbnailSourceNode = SceneNode & {
   clone(): SceneNode;
   resize?: (width: number, height: number) => void;
@@ -240,14 +291,18 @@ async function createIconFromSVG(
  * - Supports optional thumbnail from current selection (Frame or Rectangle)
  * - Keeps the header compact by omitting visual badges
  * - Auto-fallback event name if not provided
+ * - Card height hugs content (same auto-layout behavior as variant canvas cards)
  * 
  * @param eventName - Display name for the event (e.g., "Purchase Button Click")
  * @param variantCount - Number of variants being tested at this event (currently hidden in the UI)
  * @param eventIndex - Position in event sequence (currently hidden in the UI)
+ * @param thumbnailSource - Optional node to clone for the card thumbnail
+ * @param thumbnailMessage - Optional placeholder text when no thumbnail is available
+ * @param options - Optional touchpoint Figma link row (`showFigmaLink: false` hides even when URL is set)
  * @returns FrameNode containing the complete event card
  * 
  * @example
- * const eventCard = createEventCard('Homepage Load', 3, 0);
+ * const eventCard = createEventCard('Homepage Load', 3, 0, null, undefined, { figmaLink: 'https://...' });
  * eventCard.x = 100;
  * eventCard.y = 200;
  * figma.currentPage.appendChild(eventCard);
@@ -257,7 +312,8 @@ export function createEventCard(
   _variantCount?: number,
   _eventIndex?: number,
   thumbnailSource?: SceneNode | null,
-  thumbnailMessage?: string
+  thumbnailMessage?: string,
+  options?: { figmaLink?: string; showFigmaLink?: boolean }
 ): FrameNode {
   const card = figma.createFrame();
   card.layoutMode = 'VERTICAL';
@@ -265,7 +321,7 @@ export function createEventCard(
   card.primaryAxisSizingMode = 'AUTO';
   card.minWidth = 300; // 18.75rem
   card.maxWidth = 400; // 25rem
-  card.resize(300, 340); // Default width 300px (18.75rem)
+  // No fixed height: primaryAxisSizingMode AUTO hugs thumbnail + header + optional Figma row (like variant cards)
   card.paddingLeft = 16;
   card.paddingRight = 16;
   card.paddingTop = 16; // 1rem
@@ -340,6 +396,13 @@ export function createEventCard(
   eventDetailsContainer.appendChild(eventNameText);
 
   card.appendChild(eventDetailsContainer);
+
+  const rawFigmaLink = options?.figmaLink;
+  const trimmedFigma =
+    typeof rawFigmaLink === 'string' && rawFigmaLink.trim().length > 0 ? rawFigmaLink.trim() : '';
+  if (trimmedFigma && options?.showFigmaLink !== false) {
+    card.appendChild(createOpenInFigmaLinkRow(trimmedFigma));
+  }
 
   return card;
 }
@@ -451,7 +514,8 @@ export async function createVariantCard(
   nameRow.counterAxisSizingMode = 'AUTO';
   nameRow.primaryAxisSizingMode = 'FIXED';
   nameRow.itemSpacing = 6;
-  nameRow.primaryAxisAlignItems = 'SPACE_BETWEEN';
+  // MIN: left-align like touchpoint cards. (SPACE_BETWEEN with a single child centers the row in Figma.)
+  nameRow.primaryAxisAlignItems = 'MIN';
   nameRow.counterAxisAlignItems = 'CENTER';
   nameRow.fills = [];
   nameRow.strokes = [];
@@ -465,10 +529,12 @@ export async function createVariantCard(
   nameLeft.counterAxisSizingMode = 'AUTO';
   nameLeft.primaryAxisSizingMode = 'AUTO';
   nameLeft.itemSpacing = 6;
+  nameLeft.primaryAxisAlignItems = 'MIN';
   nameLeft.counterAxisAlignItems = 'CENTER';
   nameLeft.fills = [];
   nameLeft.strokes = [];
   nameLeft.name = 'Name Left';
+  nameLeft.layoutGrow = 1;
 
   // Radio button indicator (uses variant color)
   const radioButton = figma.createEllipse();
@@ -520,57 +586,7 @@ export async function createVariantCard(
   // Figma link row — shows a clickable link to the variant's Figma design (above goals)
   const variantFigmaLink = (variant as Record<string, unknown>).figmaLink as string | undefined;
   if (variantFigmaLink && typeof variantFigmaLink === 'string' && variantFigmaLink.trim().length > 0) {
-    const linkRow = figma.createFrame();
-    linkRow.layoutMode = 'HORIZONTAL';
-    linkRow.counterAxisSizingMode = 'AUTO';
-    linkRow.primaryAxisSizingMode = 'FIXED';
-    linkRow.itemSpacing = 4;
-    linkRow.counterAxisAlignItems = 'CENTER';
-    linkRow.fills = [];
-    linkRow.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
-    linkRow.strokeWeight = 1;
-    linkRow.strokeTopWeight = 1;
-    linkRow.strokeBottomWeight = 0;
-    linkRow.strokeLeftWeight = 0;
-    linkRow.strokeRightWeight = 0;
-    linkRow.name = 'Figma Link Row';
-    linkRow.layoutAlign = 'STRETCH';
-    linkRow.paddingTop = 16;
-
-    // Figma outline icon, matching linked-frame indicators in the plugin UI
-    const figmaIconSvg = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-      <path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M12 12.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z" stroke="#22272F" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
-    try {
-      const figmaIcon = figma.createNodeFromSvg(figmaIconSvg);
-      figmaIcon.name = 'Figma Icon';
-      figmaIcon.resize(14, 14);
-      figmaIcon.fills = [];
-      linkRow.appendChild(figmaIcon);
-    } catch {
-      // Fallback: empty placeholder frame if SVG parsing fails
-      const fallbackIcon = figma.createFrame();
-      fallbackIcon.name = 'Figma Icon (fallback)';
-      fallbackIcon.resize(14, 14);
-      fallbackIcon.fills = [];
-      linkRow.appendChild(fallbackIcon);
-    }
-
-    const linkText = figma.createText();
-    linkText.fontName = getFontStyle('Medium');
-    linkText.fontSize = TOKENS.fontSizeBodySm;
-    linkText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue600) }];
-    linkText.textAutoResize = 'WIDTH_AND_HEIGHT';
-    linkText.hyperlink = { type: 'URL', value: variantFigmaLink.trim() };
-    linkText.characters = 'Open in Figma';
-    linkText.name = 'Figma Link';
-    linkRow.appendChild(linkText);
-
-    card.appendChild(linkRow);
+    card.appendChild(createOpenInFigmaLinkRow(variantFigmaLink));
 
     const linkGoalsSeparator = figma.createRectangle();
     linkGoalsSeparator.name = 'Variant Link Goals Separator';
