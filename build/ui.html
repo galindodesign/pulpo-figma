@@ -284,12 +284,13 @@
       --input-height: 40px;
       --button-height: 32px;
       --button-secondary-bg: var(--background-transparent);
-      --button-secondary-hover-bg: var(--color-azure-dark-alpha-50);
-      --button-secondary-selected-bg: var(--figma-color-bg-selected-secondary, var(--color-azure-dark-alpha-100));
+      /* Solid azure tints (replace alpha tokens) so hovers mask e.g. journey spine */
+      --button-secondary-hover-bg: var(--color-azure-50);
+      --button-secondary-selected-bg: var(--figma-color-bg-selected-secondary, var(--color-azure-100));
       --button-padding: 6px;
       --button-radius: var(--radius-md);
       --button-gap: var(--space-4);
-      --dropdown-hover-bg: var(--color-azure-dark-alpha-50);
+      --dropdown-hover-bg: var(--color-azure-50);
       --dropdown-selected-bg: var(--figma-color-bg-selected-secondary, var(--color-royal-blue-50));
       --container-gap: var(--space-4);
       --variant-card-bg: #ffffff;
@@ -407,6 +408,9 @@
       --variant-name-input-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 76%, white 24%);
       --variant-name-input-border-color: color-mix(in srgb, white 18%, transparent);
       --input-field-prefix-divider: color-mix(in srgb, white 44%, transparent);
+      --button-secondary-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 92%, white 8%);
+      --button-secondary-selected-bg: var(--figma-color-bg-selected-secondary, color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 84%, white 16%));
+      --dropdown-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 92%, white 8%);
     }
 
     /* 
@@ -2234,7 +2238,7 @@
     }
 
     .event-row.is-selected:not(.event-row--has-variants) .step-drag-badge--journey {
-      --step-badge-bg: color-mix(in srgb, var(--dropdown-selected-bg), var(--background-surface));
+      --step-badge-bg: var(--dropdown-selected-bg);
     }
 
     .event-row:not(.system):not(.add-step-row):not(.event-row--has-variants):hover .step-drag-badge--journey {
@@ -2243,7 +2247,7 @@
       --step-badge-pad-x: 4px;
       --step-badge-pad-y: 0;
       --step-badge-radius: var(--radius-xs);
-      --step-badge-bg: color-mix(in srgb, var(--button-secondary-hover-bg), var(--background-surface));
+      --step-badge-bg: var(--button-secondary-hover-bg);
       --step-badge-br-color: transparent;
       --step-badge-fg: var(--text-primary);
     }
@@ -2263,7 +2267,7 @@
       --step-badge-pad-x: 4px;
       --step-badge-pad-y: 0;
       --step-badge-radius: var(--radius-xs);
-      --step-badge-bg: color-mix(in srgb, var(--button-secondary-hover-bg), var(--background-surface));
+      --step-badge-bg: var(--button-secondary-hover-bg);
       --step-badge-br-color: var(--text-link);
       --step-badge-fg: var(--text-link);
     }
