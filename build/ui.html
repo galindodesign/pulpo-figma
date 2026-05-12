@@ -2242,13 +2242,8 @@
     }
 
     .event-row:not(.system):not(.add-step-row):not(.event-row--has-variants):hover .step-drag-badge--journey {
-      /* Same pill geometry as .step-drag-badge defaults / metrics row */
-      --step-badge-w: auto;
-      --step-badge-pad-x: 4px;
-      --step-badge-pad-y: 0;
-      --step-badge-radius: var(--radius-xs);
+      /* Keep circle geometry and border from .step-drag-badge--journey; only fill/text hover */
       --step-badge-bg: var(--button-secondary-hover-bg);
-      --step-badge-br-color: transparent;
       --step-badge-fg: var(--text-primary);
     }
 
@@ -2263,10 +2258,6 @@
     }
 
     .event-row.drag-active:not(.system):not(.add-step-row):not(.event-row--has-variants) .step-drag-badge--journey {
-      --step-badge-w: auto;
-      --step-badge-pad-x: 4px;
-      --step-badge-pad-y: 0;
-      --step-badge-radius: var(--radius-xs);
       --step-badge-bg: var(--button-secondary-hover-bg);
       --step-badge-br-color: var(--text-link);
       --step-badge-fg: var(--text-link);
