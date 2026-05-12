@@ -2543,12 +2543,7 @@
       transition: background 0.15s, border-color 0.15s;
     }
 
-    .event-input-container .InputField__input.touchpoint-name-input[readonly] {
-      cursor: default;
-      user-select: none;
-    }
-
-    .event-input-container .InputField__input.touchpoint-name-input:not([readonly]) {
+    .event-input-container .InputField__input.touchpoint-name-input {
       cursor: text;
       user-select: text;
     }
@@ -3245,16 +3240,6 @@
     }
 
     .variant-name-field .InputField__input.variant-name-input {
-      cursor: text;
-      user-select: text;
-    }
-
-    .variant-name-field .InputField__input.variant-name-input[readonly] {
-      cursor: default;
-      user-select: none;
-    }
-
-    .variant-name-field .InputField__input.variant-name-input:not([readonly]) {
       cursor: text;
       user-select: text;
     }
@@ -7131,58 +7116,9 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       });
 
       const variantNameInput = nameField.querySelector('.InputField__input');
-      const variantNameWrapper = nameField.querySelector('.InputField__wrapper');
       if (variantNameInput) {
         variantNameInput.classList.add('variant-name-input');
-        variantNameInput.title = 'Double-click to edit variant name';
-
-        const lockVariantNameEditing = () => {
-          variantNameInput.readOnly = true;
-          variantNameInput.setAttribute('aria-readonly', 'true');
-          card.classList.remove('is-editing-name');
-        };
-
-        const unlockVariantNameEditing = () => {
-          variantNameInput.readOnly = false;
-          variantNameInput.removeAttribute('aria-readonly');
-          card.classList.add('is-editing-name');
-          variantNameInput.focus();
-          const cursorPos = variantNameInput.value.length;
-          if (typeof variantNameInput.setSelectionRange === 'function') {
-            variantNameInput.setSelectionRange(cursorPos, cursorPos);
-          }
-        };
-
-        const handleVariantDoubleClickEdit = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          unlockVariantNameEditing();
-        };
-
-        lockVariantNameEditing();
-
-        if (variantNameWrapper) {
-          variantNameWrapper.addEventListener('dblclick', handleVariantDoubleClickEdit);
-        }
-        variantNameInput.addEventListener('dblclick', handleVariantDoubleClickEdit);
-
-        variantNameInput.addEventListener('mousedown', (e) => {
-          if (variantNameInput.readOnly) {
-            e.preventDefault();
-          }
-        });
-
-        variantNameInput.addEventListener('keydown', (e) => {
-          if (!variantNameInput.readOnly) return;
-          if (e.key === 'Enter' || e.key === 'F2') {
-            e.preventDefault();
-            unlockVariantNameEditing();
-          }
-        });
-
-        variantNameInput.addEventListener('blur', () => {
-          lockVariantNameEditing();
-        });
+        variantNameInput.title = 'Variant name';
       }
 
       const formatMetricValue = (rawMetricValue) => {
@@ -8019,57 +7955,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       // Sync input to event data
       const nameInput = eventInput.querySelector('.InputField__input');
-      const nameWrapper = eventInput.querySelector('.InputField__wrapper');
-
-      const lockNameEditing = () => {
-        nameInput.readOnly = true;
-        nameInput.setAttribute('aria-readonly', 'true');
-        row.classList.remove('is-editing-name');
-      };
-
-      const unlockNameEditing = () => {
-        nameInput.readOnly = false;
-        nameInput.removeAttribute('aria-readonly');
-        row.classList.add('is-editing-name');
-        nameInput.focus();
-        const cursorPos = nameInput.value.length;
-        if (typeof nameInput.setSelectionRange === 'function') {
-          nameInput.setSelectionRange(cursorPos, cursorPos);
-        }
-      };
-
       nameInput.classList.add('touchpoint-name-input');
-      nameInput.title = 'Double-click to edit touchpoint name';
-      lockNameEditing();
-
-      const handleDoubleClickEdit = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        unlockNameEditing();
-      };
-
-      if (nameWrapper) {
-        nameWrapper.addEventListener('dblclick', handleDoubleClickEdit);
-      }
-      nameInput.addEventListener('dblclick', handleDoubleClickEdit);
-
-      nameInput.addEventListener('mousedown', (e) => {
-        if (nameInput.readOnly) {
-          e.preventDefault();
-        }
-      });
-
-      nameInput.addEventListener('keydown', (e) => {
-        if (!nameInput.readOnly) return;
-        if (e.key === 'Enter' || e.key === 'F2') {
-          e.preventDefault();
-          unlockNameEditing();
-        }
-      });
-
-      nameInput.addEventListener('blur', () => {
-        lockNameEditing();
-      });
+      nameInput.title = 'Touchpoint name';
 
       nameInput.addEventListener('change', () => {
         event.name = nameInput.value.trim();
