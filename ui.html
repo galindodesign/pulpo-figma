@@ -2146,7 +2146,7 @@
       width: 1px;
       background: var(--text-secondary);
       pointer-events: none;
-      z-index: 1;
+      z-index: 0;
     }
 
     /* Individual Event Row */
@@ -2213,13 +2213,6 @@
       justify-content: center;
       width: 20px;
       flex-shrink: 0;
-      transition: width 0.15s ease;
-    }
-
-    /* Match goal-step column width on hover/drag so pill badge matches Goals */
-    .event-row:not(.system):not(.add-step-row):not(.event-row--has-variants):hover .event-step,
-    .event-row.drag-active:not(.system):not(.add-step-row):not(.event-row--has-variants) .event-step {
-      width: 28px;
     }
 
     /* Journey: circular step badge (token overrides) */
@@ -2236,7 +2229,7 @@
     }
 
     .event-row.is-selected:not(.event-row--has-variants) .step-drag-badge--journey {
-      --step-badge-bg: var(--dropdown-selected-bg);
+      --step-badge-bg: color-mix(in srgb, var(--dropdown-selected-bg), var(--background-surface));
     }
 
     .event-row:not(.system):not(.add-step-row):not(.event-row--has-variants):hover .step-drag-badge--journey {
@@ -2245,7 +2238,7 @@
       --step-badge-pad-x: 4px;
       --step-badge-pad-y: 0;
       --step-badge-radius: var(--radius-xs);
-      --step-badge-bg: var(--button-secondary-hover-bg);
+      --step-badge-bg: color-mix(in srgb, var(--button-secondary-hover-bg), var(--background-surface));
       --step-badge-br-color: transparent;
       --step-badge-fg: var(--text-primary);
     }
@@ -2265,7 +2258,7 @@
       --step-badge-pad-x: 4px;
       --step-badge-pad-y: 0;
       --step-badge-radius: var(--radius-xs);
-      --step-badge-bg: var(--button-secondary-hover-bg);
+      --step-badge-bg: color-mix(in srgb, var(--button-secondary-hover-bg), var(--background-surface));
       --step-badge-br-color: var(--text-link);
       --step-badge-fg: var(--text-link);
     }
