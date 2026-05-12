@@ -1068,6 +1068,10 @@
       background: var(--background-surface); */
     }
 
+    .metrics-list > .goal-row:has(.CustomDropdown.open) {
+      z-index: 50;
+    }
+
     .goal-row::before,
     .event-row::before {
       content: '';
@@ -2167,6 +2171,11 @@
       gap: var(--space-8);
       border-bottom: 0px dashed var(--border);
 
+    }
+
+    /* While a kebab/variant menu is open, stack above siblings (e.g. experiment row below). */
+    .events-list > .event-row:has(.CustomDropdown.open) {
+      z-index: 50;
     }
 
     .event-row-main {
