@@ -1149,12 +1149,36 @@
       cursor: grabbing;
     }
 
-    /* Shared drag/step badge: Goals (metrics) + Journey (touchpoints) */
+    /* Shared drag/step badge: Goals (metrics) + Journey (touchpoints).
+       Shape and colors are driven by CSS variables so modifiers only override tokens. */
     .step-drag-badge {
+      --step-badge-w: auto;
+      --step-badge-min-w: 20px;
+      --step-badge-h: 20px;
+      --step-badge-pad-x: 4px;
+      --step-badge-pad-y: 0;
+      --step-badge-radius: var(--radius-xs);
+      --step-badge-bg: transparent;
+      --step-badge-br-w: 1px;
+      --step-badge-br-style: solid;
+      --step-badge-br-color: transparent;
+      --step-badge-fg: var(--text-secondary);
+      --step-badge-z: 1;
+
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
+      box-sizing: border-box;
+      min-width: var(--step-badge-min-w);
+      width: var(--step-badge-w);
+      height: var(--step-badge-h);
+      padding: var(--step-badge-pad-y) var(--step-badge-pad-x);
+      border-radius: var(--step-badge-radius);
+      background: var(--step-badge-bg);
+      border: var(--step-badge-br-w) var(--step-badge-br-style) var(--step-badge-br-color);
+      color: var(--step-badge-fg);
+      z-index: var(--step-badge-z);
       font-size: 10px;
       font-weight: 600;
       transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -1187,28 +1211,18 @@
       height: 10px;
     }
 
-    /* Metrics list: pill, transparent default */
-    .step-drag-badge--metrics {
-      min-width: 20px;
-      height: 20px;
-      border-radius: var(--radius-xs);
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-secondary);
-      z-index: 1;
-      padding: 0 4px;
-    }
+    /* Modifier class hooks metrics rows (defaults already match base tokens). */
 
     .goal-row:hover .step-drag-badge--metrics {
-      background: var(--button-secondary-hover-bg);
-      border-color: transparent;
-      color: var(--text-primary);
+      --step-badge-bg: var(--button-secondary-hover-bg);
+      --step-badge-br-color: transparent;
+      --step-badge-fg: var(--text-primary);
     }
 
     .goal-row.drag-active .step-drag-badge--metrics {
-      background: var(--button-secondary-hover-bg);
-      border-color: transparent;
-      color: var(--text-link);
+      --step-badge-bg: var(--button-secondary-hover-bg);
+      --step-badge-br-color: transparent;
+      --step-badge-fg: var(--text-link);
     }
 
     .goal-row:hover .step-drag-badge--metrics .step-drag-badge__number,
@@ -2201,25 +2215,27 @@
       flex-shrink: 0;
     }
 
-    /* Journey: circular step badge */
+    /* Journey: circular step badge (token overrides) */
     .step-drag-badge--journey {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: var(--background-surface);
-      border: 1px solid var(--text-secondary);
-      color: var(--text-secondary);
-      z-index: 2;
+      --step-badge-w: 20px;
+      --step-badge-min-w: 20px;
+      --step-badge-h: 20px;
+      --step-badge-pad-x: 0;
+      --step-badge-radius: 50%;
+      --step-badge-bg: var(--background-surface);
+      --step-badge-br-color: var(--text-secondary);
+      --step-badge-fg: var(--text-secondary);
+      --step-badge-z: 2;
     }
 
     .event-row.is-selected:not(.event-row--has-variants) .step-drag-badge--journey {
-      background: var(--dropdown-selected-bg);
+      --step-badge-bg: var(--dropdown-selected-bg);
     }
 
     .event-row:not(.system):not(.add-step-row):not(.event-row--has-variants):hover .step-drag-badge--journey {
-      background: var(--button-secondary-hover-bg);
-      border-color: transparent;
-      color: var(--text-primary);
+      --step-badge-bg: var(--button-secondary-hover-bg);
+      --step-badge-br-color: transparent;
+      --step-badge-fg: var(--text-primary);
     }
 
     .event-row:not(.system):not(.add-step-row):hover .step-drag-badge--journey .step-drag-badge__number,
@@ -2233,22 +2249,23 @@
     }
 
     .event-row.drag-active .step-drag-badge--journey {
-      border-color: var(--text-link);
-      color: var(--text-link);
+      --step-badge-br-color: var(--text-link);
+      --step-badge-fg: var(--text-link);
     }
 
     /* Experiment events (with variants) get purple background */
     .event-row.event-row--has-variants .step-drag-badge--journey {
-      background: var(--event-variants-step-bg);
-      border: 0px solid var(--event-variants-step-bg);
-      color: var(--event-variants-step-text);
+      --step-badge-bg: var(--event-variants-step-bg);
+      --step-badge-br-w: 0px;
+      --step-badge-br-color: var(--event-variants-step-bg);
+      --step-badge-fg: var(--event-variants-step-text);
     }
 
       /* Force same violet for badge in dark mode */
       :root[data-figma-theme="dark"] .event-row.event-row--has-variants .step-drag-badge--journey {
-        background: var(--color-electric-violet-500) !important;
-        border: 0px solid var(--color-electric-violet-500) !important;
-        color: var(--color-white-100) !important;
+        --step-badge-bg: var(--color-electric-violet-500) !important;
+        --step-badge-br-color: var(--color-electric-violet-500) !important;
+        --step-badge-fg: var(--color-white-100) !important;
       }
 
     /* Experiment events (with variants) get purple background */
@@ -2370,15 +2387,17 @@
 
     .event-row.system .step-drag-badge--journey {
       /*background: var(--color-azure-100);*/
-      color: var(--text-secondary);
-      border: 1px dashed var(--text-secondary);
+      --step-badge-br-style: dashed;
+      --step-badge-br-color: var(--text-secondary);
+      --step-badge-fg: var(--text-secondary);
       font-weight: 600;
       font-size: 10px;
     }
 
     .event-row.add-step-row .step-drag-badge--journey {
-      color: var(--text-secondary);
-      border: 1px dashed var(--text-secondary);
+      --step-badge-br-style: dashed;
+      --step-badge-br-color: var(--text-secondary);
+      --step-badge-fg: var(--text-secondary);
     }
 
     .event-row.system .InputField__wrapper {
