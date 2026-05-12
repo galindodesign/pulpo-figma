@@ -293,6 +293,11 @@
       --dropdown-hover-bg: var(--color-azure-50);
       --dropdown-selected-bg: var(--figma-color-bg-selected-secondary, var(--color-royal-blue-50));
       --container-gap: var(--space-4);
+      /* Vertical list drag reorder (goals, journey rows, variant cards) */
+      --list-dnd-indicator-color: var(--brand);
+      --list-dnd-indicator-height: 2px;
+      --list-dnd-indicator-z-row: 4;
+      --list-dnd-indicator-z-card: 10;
       --variant-card-bg: #ffffff;
       --variant-card-hover-bg: color-mix(in srgb, #ffffff 92%, var(--brand) 8%);
       --variant-card-active-bg: color-mix(in srgb, #ffffff 90%, var(--background) 10%);
@@ -408,6 +413,7 @@
       --variant-name-input-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 76%, white 24%);
       --variant-name-input-border-color: color-mix(in srgb, white 18%, transparent);
       --input-field-prefix-divider: color-mix(in srgb, white 44%, transparent);
+      /* Opaque mixes: same family as light azure-50/100 on dark secondary */
       --button-secondary-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 92%, white 8%);
       --button-secondary-selected-bg: var(--figma-color-bg-selected-secondary, color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 84%, white 16%));
       --dropdown-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 92%, white 8%);
@@ -1078,34 +1084,38 @@
       position: absolute;
       left: 28px;
       right: 0;
-      height: 2px;
-      background: var(--brand);
-      z-index: 4;
+      height: var(--list-dnd-indicator-height);
+      background: var(--list-dnd-indicator-color);
+      z-index: var(--list-dnd-indicator-z-row);
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.08s ease;
     }
 
     .goal-row.drop-indicator-above::before,
-    .event-row.drop-indicator-above::before {
+    .event-row.drop-indicator-above::before,
+    .variant-card.drop-indicator-above::before {
       top: -4px;
       opacity: 1;
     }
 
     .goal-row.drop-indicator-below::before,
-    .event-row.drop-indicator-below::before {
+    .event-row.drop-indicator-below::before,
+    .variant-card.drop-indicator-below::before {
       top: auto;
       bottom: -4px;
       opacity: 1;
     }
 
     .goal-row.drop-indicator-above,
-    .event-row.drop-indicator-above {
+    .event-row.drop-indicator-above,
+    .variant-card.drop-indicator-above {
       margin-top: 8px;
     }
 
     .goal-row.drop-indicator-below,
-    .event-row.drop-indicator-below {
+    .event-row.drop-indicator-below,
+    .variant-card.drop-indicator-below {
       margin-bottom: 8px;
     }
 
@@ -1131,7 +1141,8 @@
       user-select: auto;
     }
 
-    .goal-step {
+    .goal-step,
+    .variant-card__drag-step {
       position: relative;
       display: flex;
       flex-direction: column;
@@ -1139,21 +1150,41 @@
       justify-content: center;
       width: 28px;
       flex-shrink: 0;
-      cursor: grab;
+      cursor: default;
+      pointer-events: none;
     }
 
     .goal-step::before,
-    .event-step::before {
+    .event-step::before,
+    .variant-card__drag-step::before {
       content: '';
       position: absolute;
       top: -6px;
       right: -6px;
       bottom: -6px;
       left: -6px;
+      pointer-events: none;
     }
 
-    .metrics-list.is-dragging .goal-step,
-    .events-list.is-dragging .event-row:not(.system):not(.add-step-row) .event-step {
+    /* Drag/reorder: only the step badge is interactive (matches pointer hit target). */
+    .metrics-list > .goal-row .step-drag-badge {
+      pointer-events: auto;
+      cursor: grab;
+    }
+
+    .events-list > .event-row:not(.system):not(.add-step-row) .step-drag-badge {
+      pointer-events: auto;
+      cursor: grab;
+    }
+
+    .variants-list > .variant-card .step-drag-badge {
+      pointer-events: auto;
+      cursor: grab;
+    }
+
+    .metrics-list.is-dragging,
+    .events-list.is-dragging,
+    .variants-list.is-dragging {
       cursor: grabbing;
     }
 
@@ -1211,7 +1242,7 @@
     .step-drag-badge__drag-icon {
       opacity: 0;
       color: inherit;
-      cursor: pointer;
+      cursor: inherit;
     }
 
     .step-drag-badge__drag-icon .lucide {
@@ -1241,6 +1272,46 @@
     .goal-row:hover .step-drag-badge--metrics .step-drag-badge__drag-icon,
     .goal-row.drag-active .step-drag-badge--metrics .step-drag-badge__drag-icon {
       opacity: 1;
+    }
+
+    /* Variant card drag handle badge (letter + menu icon on hover / drag) */
+    .variant-card:hover .step-drag-badge--variants {
+      --step-badge-bg: var(--button-secondary-hover-bg);
+      --step-badge-br-color: transparent;
+      --step-badge-fg: var(--text-primary);
+    }
+
+    .variant-card.drag-active .step-drag-badge--variants {
+      --step-badge-bg: var(--button-secondary-hover-bg);
+      --step-badge-br-color: transparent;
+      --step-badge-fg: var(--text-link);
+    }
+
+    .variant-card:hover .step-drag-badge--variants .step-drag-badge__number,
+    .variant-card.drag-active .step-drag-badge--variants .step-drag-badge__number {
+      opacity: 0;
+    }
+
+    .variant-card:hover .step-drag-badge--variants .step-drag-badge__drag-icon,
+    .variant-card.drag-active .step-drag-badge--variants .step-drag-badge__drag-icon {
+      opacity: 1;
+    }
+
+    .variant-card-main {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: var(--space-8);
+      width: 100%;
+      min-width: 0;
+    }
+
+    .variant-card-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
     }
 
     .goal-caret {
@@ -1973,6 +2044,10 @@
       cursor: default;
     }
 
+    [data-tooltip][data-tooltip-cursor="grab"] {
+      cursor: grab;
+    }
+
     /* ----------------------------------------
      * DISABLED STATE
      * ---------------------------------------- */
@@ -2186,10 +2261,6 @@
       border-bottom: 0px dashed var(--border);
     }
 
-    .event-row:not(.system):not(.add-step-row) .event-step {
-      cursor: grab;
-    }
-
     /* .event-row-main:not(:last-child) {
       border-bottom-color: var(--border);
     }*/
@@ -2231,6 +2302,8 @@
       justify-content: center;
       width: 20px;
       flex-shrink: 0;
+      cursor: default;
+      pointer-events: none;
     }
 
     /* Journey: circular step badge (token overrides) */
@@ -2254,7 +2327,6 @@
       /* Keep circle geometry and border from .step-drag-badge--journey; only fill/text hover */
       --step-badge-bg: var(--button-secondary-hover-bg);
       --step-badge-fg: var(--text-primary);
-      --step-badge-br-color: var(--button-secondary-hover-bg);
     }
 
     .event-row:not(.system):not(.add-step-row):hover .step-drag-badge--journey .step-drag-badge__number,
@@ -2625,29 +2697,17 @@
       cursor: default;
     }
 
-    /* Drop indicator - line above/below variant */
     .variant-card::before {
       content: '';
       position: absolute;
       left: -8px;
       right: -8px;
-      height: 2px;
-      background: var(--brand);
-      z-index: 10;
+      height: var(--list-dnd-indicator-height);
+      background: var(--list-dnd-indicator-color);
+      z-index: var(--list-dnd-indicator-z-card);
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.08s ease;
-    }
-
-    .variant-card.drop-indicator-above::before {
-      top: 0px;
-      opacity: 1;
-    }
-
-    .variant-card.drop-indicator-below::before {
-      bottom: 0px;
-      top: auto;
-      opacity: 1;
     }
 
     /* Active/pressed state */
@@ -4329,18 +4389,12 @@
       align-items: center;
       gap: var(--space-4);
       margin: 0;
-      cursor: pointer;
-      user-select: none;
     }
 
     .links-subsection {
       display: flex;
       flex-direction: column;
       gap: var(--input-field-label-gap);
-    }
-
-    .links-header:hover {
-      opacity: 0.8;
     }
 
     .links-header__label {
@@ -4350,30 +4404,6 @@
       letter-spacing: 0.09px;
       color: var(--input-field-text-color);
       padding: 3px 0;
-    }
-
-    .links-header__chevron {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 12px;
-      height: 12px;
-      color: var(--input-field-text-color);
-      transition: transform 0.2s ease;
-    }
-
-    .links-header__chevron svg {
-      width: 12px;
-      height: 12px;
-    }
-
-    /* Collapsed state */
-    .links-subsection.collapsed .links-header__chevron {
-      transform: rotate(-90deg);
-    }
-
-    .links-subsection.collapsed .links-content {
-      display: none;
     }
 
     .links-content {
@@ -5983,14 +6013,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       const stepDiv = document.createElement('div');
       stepDiv.className = 'goal-step';
-      stepDiv.setAttribute('aria-label', `Priority ${index + 1}. Drag to reorder priority`);
-      stepDiv.setAttribute('data-tooltip', 'Drag to reorder priority');
-      stepDiv.setAttribute('data-tooltip-position', 'bottom');
-      stepDiv.setAttribute('data-tooltip-align', 'start');
-      stepDiv.setAttribute('data-tooltip-cursor', 'pointer');
 
       const stepBadge = document.createElement('div');
       stepBadge.className = 'step-drag-badge step-drag-badge--metrics';
+      stepBadge.setAttribute('aria-label', `Priority ${index + 1}. Drag to reorder priority`);
+      stepBadge.setAttribute('data-tooltip', 'Drag to reorder priority');
+      stepBadge.setAttribute('data-tooltip-position', 'bottom');
+      stepBadge.setAttribute('data-tooltip-align', 'start');
+      stepBadge.setAttribute('data-tooltip-cursor', 'grab');
       const stepBadgeNumber = document.createElement('span');
       stepBadgeNumber.className = 'step-drag-badge__number';
       stepBadgeNumber.textContent = String(index + 1);
@@ -6216,22 +6246,57 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       strokeWidth: 2.25
     });
 
-    function initGoalDragReorder(metricsListEl) {
-      if (!metricsListEl || metricsListEl.dataset.goalDndInitialized === 'true') return;
-      metricsListEl.dataset.goalDndInitialized = 'true';
+    /**
+     * Shared vertical list reorder (pointer, threshold, half-row drop bands, optional edge auto-scroll).
+     * Works in the Figma plugin iframe without HTML5 drag-and-drop.
+     *
+     * @param {object} config
+     * @param {HTMLElement} config.listEl
+     * @param {string | null} config.onceDatasetProperty — camelCase dataset key; null = attach every call (ephemeral lists)
+     * @param {string} config.handleSelector — mousedown must start inside this (e.g. .step-drag-badge)
+     * @param {string} config.rowSelector — closest() from handle to row
+     * @param {(list: HTMLElement) => Element[]} config.getRows
+     * @param {(row: Element) => string} config.getRowId
+     * @param {HTMLElement | null} [config.scrollRoot]
+     * @param {boolean} [config.enableAutoScroll]
+     * @param {(target: Element) => boolean} [config.shouldBlockDragStart]
+     * @param {(row: Element) => void | null} [config.onActivateRow]
+     * @param {(args: { sourceId: string, targetId: string, position: 'above' | 'below' }) => void} config.onReorder
+     */
+    function initVerticalListDragReorder(config) {
+      const {
+        listEl,
+        onceDatasetProperty,
+        handleSelector,
+        rowSelector,
+        getRows,
+        getRowId,
+        scrollRoot = null,
+        enableAutoScroll = true,
+        shouldBlockDragStart = null,
+        onActivateRow = null,
+        onReorder
+      } = config;
+
+      if (!listEl) return;
+      if (onceDatasetProperty && listEl.dataset[onceDatasetProperty] === 'true') return;
+      if (onceDatasetProperty) listEl.dataset[onceDatasetProperty] = 'true';
 
       const DRAG_THRESHOLD = 4;
+      const AUTO_SCROLL_EDGE_PX = 56;
+      const AUTO_SCROLL_MAX_STEP = 14;
+
       let dragRow = null;
       let startY = 0;
       let isDragging = false;
       let targetInfo = null;
+      let lastPointerY = null;
+      let autoScrollRafId = null;
 
-      function getDraggableRows() {
-        return Array.from(metricsListEl.querySelectorAll(':scope > .goal-row'));
-      }
+      const scrollContainer = enableAutoScroll && scrollRoot ? scrollRoot : null;
 
       function clearIndicators() {
-        getDraggableRows().forEach((row) => {
+        getRows(listEl).forEach((row) => {
           row.classList.remove(DND_ROW_CLASSES.DROP_ABOVE, DND_ROW_CLASSES.DROP_BELOW);
         });
         targetInfo = null;
@@ -6241,13 +6306,50 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
         document.removeEventListener('mouseleave', onPointerCancel);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
         window.removeEventListener('blur', onPointerCancel);
+      }
+
+      function stopAutoScroll() {
+        if (autoScrollRafId !== null) {
+          cancelAnimationFrame(autoScrollRafId);
+          autoScrollRafId = null;
+        }
+      }
+
+      function maybeStartAutoScroll() {
+        if (autoScrollRafId !== null || !isDragging || !scrollContainer) return;
+        autoScrollRafId = requestAnimationFrame(autoScrollTick);
+      }
+
+      function getAutoScrollDelta(pointerY) {
+        if (!scrollContainer) return 0;
+
+        const rect = scrollContainer.getBoundingClientRect();
+        const nearTop = pointerY < rect.top + AUTO_SCROLL_EDGE_PX;
+        const nearBottom = pointerY > rect.bottom - AUTO_SCROLL_EDGE_PX;
+
+        const canScrollUp = scrollContainer.scrollTop > 0;
+        const maxScrollTop = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        const canScrollDown = scrollContainer.scrollTop < maxScrollTop;
+
+        if (nearTop && canScrollUp) {
+          const intensity = Math.min(1, (rect.top + AUTO_SCROLL_EDGE_PX - pointerY) / AUTO_SCROLL_EDGE_PX);
+          return -Math.max(1, Math.ceil(AUTO_SCROLL_MAX_STEP * intensity));
+        }
+
+        if (nearBottom && canScrollDown) {
+          const intensity = Math.min(1, (pointerY - (rect.bottom - AUTO_SCROLL_EDGE_PX)) / AUTO_SCROLL_EDGE_PX);
+          return Math.max(1, Math.ceil(AUTO_SCROLL_MAX_STEP * intensity));
+        }
+
+        return 0;
       }
 
       function updateDropTarget(pointerY) {
         clearIndicators();
 
-        const rows = getDraggableRows();
+        const rows = getRows(listEl);
         for (const row of rows) {
           if (row === dragRow) continue;
           const rect = row.getBoundingClientRect();
@@ -6256,35 +6358,51 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           const position = pointerY < rect.top + rect.height / 2 ? 'above' : 'below';
           row.classList.add(position === 'above' ? DND_ROW_CLASSES.DROP_ABOVE : DND_ROW_CLASSES.DROP_BELOW);
           targetInfo = {
-            targetMetricId: row.dataset.metricId,
+            targetId: getRowId(row),
             position
           };
           break;
         }
       }
 
+      function autoScrollTick() {
+        autoScrollRafId = null;
+        if (!isDragging || !dragRow || lastPointerY === null || !scrollContainer) return;
+
+        const delta = getAutoScrollDelta(lastPointerY);
+        if (delta !== 0) {
+          scrollContainer.scrollTop += delta;
+          updateDropTarget(lastPointerY);
+          autoScrollRafId = requestAnimationFrame(autoScrollTick);
+        }
+      }
+
       function cleanupDragState() {
+        stopAutoScroll();
         if (dragRow) {
           dragRow.classList.remove(DND_ROW_CLASSES.DRAG_ACTIVE);
         }
-        metricsListEl.classList.remove(DND_ROW_CLASSES.LIST_DRAGGING);
+        listEl.classList.remove(DND_ROW_CLASSES.LIST_DRAGGING);
         clearIndicators();
         dragRow = null;
         isDragging = false;
+        lastPointerY = null;
       }
 
       function onMouseMove(ev) {
         if (!dragRow) return;
+        lastPointerY = ev.clientY;
 
         if (!isDragging) {
           if (Math.abs(ev.clientY - startY) < DRAG_THRESHOLD) return;
           isDragging = true;
           dragRow.classList.add(DND_ROW_CLASSES.DRAG_ACTIVE);
-          metricsListEl.classList.add(DND_ROW_CLASSES.LIST_DRAGGING);
+          listEl.classList.add(DND_ROW_CLASSES.LIST_DRAGGING);
         }
 
         ev.preventDefault();
         updateDropTarget(ev.clientY);
+        maybeStartAutoScroll();
       }
 
       function onMouseUp() {
@@ -6292,28 +6410,20 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
         if (!dragRow) return;
 
-        const movedMetricId = dragRow.dataset.metricId;
+        const movedId = getRowId(dragRow);
         const didDrag = isDragging;
         const dropTarget = targetInfo;
 
         cleanupDragState();
 
-        if (!didDrag || !dropTarget || !movedMetricId) return;
+        if (!didDrag || !dropTarget || !movedId || !dropTarget.targetId) return;
+        if (movedId === dropTarget.targetId) return;
 
-        const sourceIndex = metrics.findIndex((metric) => metric.id === movedMetricId);
-        const targetIndex = metrics.findIndex((metric) => metric.id === dropTarget.targetMetricId);
-        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-
-        let insertIndex = targetIndex + (dropTarget.position === 'below' ? 1 : 0);
-        const [movedMetric] = metrics.splice(sourceIndex, 1);
-        if (!movedMetric) return;
-
-        if (sourceIndex < insertIndex) {
-          insertIndex -= 1;
-        }
-
-        metrics.splice(insertIndex, 0, movedMetric);
-        renderMetrics(metrics);
+        onReorder({
+          sourceId: movedId,
+          targetId: dropTarget.targetId,
+          position: dropTarget.position
+        });
       }
 
       function onPointerCancel() {
@@ -6321,31 +6431,78 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         cleanupDragState();
       }
 
-      metricsListEl.addEventListener('mousedown', (e) => {
+      function onVisibilityChange() {
+        if (document.hidden) {
+          onPointerCancel();
+        }
+      }
+
+      listEl.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return;
         if (!(e.target instanceof Element)) return;
+        if (shouldBlockDragStart && shouldBlockDragStart(e.target)) return;
 
-        const stepHandle = e.target.closest('.goal-step');
+        const stepHandle = e.target.closest(handleSelector);
         if (!stepHandle) return;
 
-        const row = stepHandle.closest('.goal-row');
-        if (!row || row.parentElement !== metricsListEl) return;
+        const row = stepHandle.closest(rowSelector);
+        if (!row || row.parentElement !== listEl) return;
 
-        metricsListEl.querySelectorAll(':scope > .goal-row.is-selected').forEach((el) => {
-          el.classList.remove('is-selected');
-        });
-        row.classList.add('is-selected');
-        selectedGoalId = row.dataset.metricId || null;
+        const draggableRows = getRows(listEl);
+        if (!draggableRows.includes(row)) return;
+
+        if (typeof onActivateRow === 'function') {
+          onActivateRow(row);
+        }
 
         dragRow = row;
         startY = e.clientY;
         isDragging = false;
         targetInfo = null;
+        lastPointerY = e.clientY;
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
         document.addEventListener('mouseleave', onPointerCancel);
+        document.addEventListener('visibilitychange', onVisibilityChange);
         window.addEventListener('blur', onPointerCancel);
+      });
+    }
+
+    function initGoalDragReorder(metricsListEl) {
+      initVerticalListDragReorder({
+        listEl: metricsListEl,
+        onceDatasetProperty: 'goalDndInitialized',
+        handleSelector: '.step-drag-badge',
+        rowSelector: '.goal-row',
+        getRows: (list) => Array.from(list.querySelectorAll(':scope > .goal-row')),
+        getRowId: (row) => row.dataset.metricId || '',
+        scrollRoot: metricsListEl.closest('.form-content') || document.querySelector('.form-content'),
+        enableAutoScroll: true,
+        shouldBlockDragStart: null,
+        onActivateRow: (row) => {
+          metricsListEl.querySelectorAll(':scope > .goal-row.is-selected').forEach((el) => {
+            el.classList.remove('is-selected');
+          });
+          row.classList.add('is-selected');
+          selectedGoalId = row.dataset.metricId || null;
+        },
+        onReorder: ({ sourceId, targetId, position }) => {
+          const sourceIndex = metrics.findIndex((metric) => metric.id === sourceId);
+          const targetIndex = metrics.findIndex((metric) => metric.id === targetId);
+          if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+
+          let insertIndex = targetIndex + (position === 'below' ? 1 : 0);
+          const [movedMetric] = metrics.splice(sourceIndex, 1);
+          if (!movedMetric) return;
+
+          if (sourceIndex < insertIndex) {
+            insertIndex -= 1;
+          }
+
+          metrics.splice(insertIndex, 0, movedMetric);
+          renderMetrics(metrics);
+        }
       });
     }
 
@@ -6892,6 +7049,37 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         if (variant.id === highlightedVariantId) card.classList.add('newly-added');
         card.id = variant.id;
 
+        const cardMain = document.createElement('div');
+        cardMain.className = 'variant-card-main';
+
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'variant-card__drag-step';
+
+        const stepBadge = document.createElement('div');
+        stepBadge.className = 'step-drag-badge step-drag-badge--variants';
+        stepBadge.setAttribute('aria-label', 'Drag to reorder variant');
+        stepBadge.setAttribute('data-tooltip', 'Drag to reorder variant');
+        stepBadge.setAttribute('data-tooltip-position', 'bottom');
+        stepBadge.setAttribute('data-tooltip-align', 'start');
+        stepBadge.setAttribute('data-tooltip-cursor', 'grab');
+        const stepBadgeNumber = document.createElement('span');
+        stepBadgeNumber.className = 'step-drag-badge__number';
+        const variantLetter =
+          (variant.label && String(variant.label).trim()) || String.fromCharCode(65 + variantIndex);
+        stepBadgeNumber.textContent = variantLetter;
+        const stepBadgeDragIcon = document.createElement('span');
+        stepBadgeDragIcon.className = 'step-drag-badge__drag-icon';
+        stepBadgeDragIcon.innerHTML = getIcon(ROW_DRAG_ICON.name, {
+          size: ROW_DRAG_ICON.size,
+          strokeWidth: ROW_DRAG_ICON.strokeWidth
+        });
+        stepBadge.appendChild(stepBadgeNumber);
+        stepBadge.appendChild(stepBadgeDragIcon);
+        stepDiv.appendChild(stepBadge);
+
+        const cardBody = document.createElement('div');
+        cardBody.className = 'variant-card-body';
+
         // Get default color based on index if not set
         const defaultColor = colorPalette[variantIndex % colorPalette.length].hex;
         const currentColor = variant.color || defaultColor;
@@ -7273,8 +7461,11 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       content.appendChild(row1);
       if (subtree) content.appendChild(subtree);
 
-      // Assemble card
-      card.appendChild(content);
+      // Assemble card (handle + body, same pattern as goal rows)
+      cardBody.appendChild(content);
+      cardMain.appendChild(stepDiv);
+      cardMain.appendChild(cardBody);
+      card.appendChild(cardMain);
 
       // Data for drag ordering
       card.dataset.eventIndex = eventIndex;
@@ -7530,6 +7721,11 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       
       const stepBadge = document.createElement('div');
       stepBadge.className = 'step-drag-badge step-drag-badge--journey';
+      stepBadge.setAttribute('aria-label', `Step ${eventIndex + 1}. Drag to reorder touchpoint`);
+      stepBadge.setAttribute('data-tooltip', 'Drag to reorder touchpoint');
+      stepBadge.setAttribute('data-tooltip-position', 'bottom');
+      stepBadge.setAttribute('data-tooltip-align', 'start');
+      stepBadge.setAttribute('data-tooltip-cursor', 'grab');
       const stepBadgeNumber = document.createElement('span');
       stepBadgeNumber.className = 'step-drag-badge__number';
       stepBadgeNumber.textContent = String(eventIndex + 1);
@@ -8027,321 +8223,83 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     /**
      * Renders the complete events/flow section
      */
-    /**
-     * Pure mouse-event drag reorder for variant cards.
-     * No external library needed — works inside Figma's sandboxed iframe.
-     */
     function initVariantDragReorder(variantsList, eventIndex) {
       if (!variantsList) return;
-
-      const DRAG_THRESHOLD = 4; // px before drag activates
-
-      variantsList.addEventListener('mousedown', (e) => {
-        // Don't drag when interacting with inputs, buttons, selects, textareas
-        const tag = e.target.tagName.toLowerCase();
-        if (tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'button') return;
-        if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea') || e.target.closest('select')) return;
-
-        const dragCard = e.target.closest('.variant-card');
-        if (!dragCard || dragCard.parentElement !== variantsList) return;
-
-        // Only left mouse button
-        if (e.button !== 0) return;
-
-        const startY = e.clientY;
-        let isDragging = false;
-
-        function getCards() {
-          return Array.from(variantsList.querySelectorAll(':scope > .variant-card'));
-        }
-
-        function clearIndicators() {
-          variantsList.querySelectorAll('.variant-card.drop-indicator-above, .variant-card.drop-indicator-below').forEach(c => {
-            c.classList.remove('drop-indicator-above', 'drop-indicator-below');
-          });
-        }
-
-        function onMouseMove(ev) {
-          ev.preventDefault();
-
-          // Activate drag only after threshold
-          if (!isDragging) {
-            if (Math.abs(ev.clientY - startY) < DRAG_THRESHOLD) return;
-            isDragging = true;
-            dragCard.classList.add('drag-active');
-            variantsList.classList.add('is-dragging');
-          }
-
-          clearIndicators();
-
-          // Find which card we're hovering over
-          const cards = getCards();
-          for (const card of cards) {
-            if (card === dragCard) continue;
-            const rect = card.getBoundingClientRect();
-            const midY = rect.top + rect.height / 2;
-            if (ev.clientY >= rect.top && ev.clientY <= rect.bottom) {
-              if (ev.clientY < midY) {
-                card.classList.add('drop-indicator-above');
-              } else {
-                card.classList.add('drop-indicator-below');
-              }
-              break;
-            }
-          }
-        }
-
-        function onMouseUp(ev) {
-          document.removeEventListener('mousemove', onMouseMove);
-          document.removeEventListener('mouseup', onMouseUp);
-
-          if (!isDragging) return;
-
-          // Find target card with indicator
-          const targetAbove = variantsList.querySelector('.variant-card.drop-indicator-above');
-          const targetBelow = variantsList.querySelector('.variant-card.drop-indicator-below');
-
-          clearIndicators();
-          dragCard.classList.remove('drag-active');
-          variantsList.classList.remove('is-dragging');
-
-          // Perform the DOM move
-          if (targetAbove && targetAbove !== dragCard) {
-            variantsList.insertBefore(dragCard, targetAbove);
-          } else if (targetBelow && targetBelow !== dragCard) {
-            // Insert after targetBelow
-            if (targetBelow.nextSibling) {
-              variantsList.insertBefore(dragCard, targetBelow.nextSibling);
-            } else {
-              variantsList.appendChild(dragCard);
-            }
-          } else {
-            return; // No valid drop target
-          }
-
-          // Sync data model with new DOM order
+      initVerticalListDragReorder({
+        listEl: variantsList,
+        onceDatasetProperty: null,
+        handleSelector: '.step-drag-badge',
+        rowSelector: '.variant-card',
+        getRows: (list) => Array.from(list.querySelectorAll(':scope > .variant-card')),
+        getRowId: (row) => row.id,
+        scrollRoot: variantsList.closest('.form-content') || document.querySelector('.form-content'),
+        enableAutoScroll: true,
+        shouldBlockDragStart: null,
+        onActivateRow: null,
+        onReorder: ({ sourceId, targetId, position }) => {
           const event = events?.[eventIndex];
           if (!event || !Array.isArray(event.variants)) return;
 
-          const orderedIds = Array.from(variantsList.querySelectorAll(':scope > .variant-card')).map(c => c.id);
-          const reordered = orderedIds
-            .map(id => event.variants.find(v => v.id === id))
-            .filter(Boolean);
+          const variants = event.variants;
+          const sourceIndex = variants.findIndex((v) => v.id === sourceId);
+          const targetIndex = variants.findIndex((v) => v.id === targetId);
+          if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
 
-          if (reordered.length === event.variants.length) {
-            event.variants = reordered;
-            renderEvents(events);
+          let insertIndex = targetIndex + (position === 'below' ? 1 : 0);
+          const [moved] = variants.splice(sourceIndex, 1);
+          if (!moved) return;
+
+          if (sourceIndex < insertIndex) {
+            insertIndex -= 1;
           }
-        }
 
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+          variants.splice(insertIndex, 0, moved);
+          renderEvents(events);
+        }
       });
     }
 
     function initEventDragReorder(eventsListEl) {
-      if (!eventsListEl || eventsListEl.dataset.touchpointDndInitialized === 'true') return;
-      eventsListEl.dataset.touchpointDndInitialized = 'true';
+      initVerticalListDragReorder({
+        listEl: eventsListEl,
+        onceDatasetProperty: 'touchpointDndInitialized',
+        handleSelector: '.step-drag-badge',
+        rowSelector: '.event-row',
+        getRows: (list) =>
+          Array.from(list.querySelectorAll(':scope > .event-row')).filter(
+            (row) => !row.classList.contains('system') && !row.classList.contains('add-step-row')
+          ),
+        getRowId: (row) => row.dataset.eventId || '',
+        scrollRoot: eventsListEl.closest('.form-content') || document.querySelector('.form-content'),
+        enableAutoScroll: true,
+        shouldBlockDragStart: (target) =>
+          !!target.closest(
+            'input, textarea, select, button, .CustomDropdown, .event-variants-container, .journey-insert, .inline-add-row'
+          ),
+        onActivateRow: (row) => {
+          eventsListEl.querySelectorAll(':scope > .event-row.is-selected').forEach((el) => {
+            el.classList.remove('is-selected');
+          });
+          row.classList.add('is-selected');
+          selectedEventId = row.dataset.eventId || null;
+        },
+        onReorder: ({ sourceId, targetId, position }) => {
+          const sourceIndex = events.findIndex((ev) => ev.id === sourceId);
+          const targetIndex = events.findIndex((ev) => ev.id === targetId);
+          if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
 
-      const DRAG_THRESHOLD = 4;
-      const AUTO_SCROLL_EDGE_PX = 56;
-      const AUTO_SCROLL_MAX_STEP = 14;
-      let dragRow = null;
-      let startY = 0;
-      let isDragging = false;
-      let targetInfo = null;
-      let lastPointerY = null;
-      let autoScrollRafId = null;
+          let insertIndex = targetIndex + (position === 'below' ? 1 : 0);
+          const [movedEvent] = events.splice(sourceIndex, 1);
+          if (!movedEvent) return;
 
-      const scrollContainer = eventsListEl.closest('.form-content') || document.querySelector('.form-content');
+          if (sourceIndex < insertIndex) {
+            insertIndex -= 1;
+          }
 
-      function isBlockedDragStart(target) {
-        if (!(target instanceof Element)) return false;
-        return !!target.closest('input, textarea, select, button, .CustomDropdown, .event-variants-container, .journey-insert, .inline-add-row');
-      }
-
-      function getDraggableRows() {
-        return Array.from(eventsListEl.querySelectorAll(':scope > .event-row')).filter((row) => {
-          return !row.classList.contains('system') && !row.classList.contains('add-step-row');
-        });
-      }
-
-      function clearIndicators() {
-        getDraggableRows().forEach((row) => {
-          row.classList.remove(DND_ROW_CLASSES.DROP_ABOVE, DND_ROW_CLASSES.DROP_BELOW);
-        });
-        targetInfo = null;
-      }
-
-      function removeDragListeners() {
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        document.removeEventListener('mouseleave', onPointerCancel);
-        document.removeEventListener('visibilitychange', onVisibilityChange);
-        window.removeEventListener('blur', onPointerCancel);
-      }
-
-      function stopAutoScroll() {
-        if (autoScrollRafId !== null) {
-          cancelAnimationFrame(autoScrollRafId);
-          autoScrollRafId = null;
+          events.splice(insertIndex, 0, movedEvent);
+          setPendingFocus('event', movedEvent.id);
+          renderEvents(events);
         }
-      }
-
-      function maybeStartAutoScroll() {
-        if (autoScrollRafId !== null || !isDragging || !scrollContainer) return;
-        autoScrollRafId = requestAnimationFrame(autoScrollTick);
-      }
-
-      function getAutoScrollDelta(pointerY) {
-        if (!scrollContainer) return 0;
-
-        const rect = scrollContainer.getBoundingClientRect();
-        const nearTop = pointerY < rect.top + AUTO_SCROLL_EDGE_PX;
-        const nearBottom = pointerY > rect.bottom - AUTO_SCROLL_EDGE_PX;
-
-        const canScrollUp = scrollContainer.scrollTop > 0;
-        const maxScrollTop = scrollContainer.scrollHeight - scrollContainer.clientHeight;
-        const canScrollDown = scrollContainer.scrollTop < maxScrollTop;
-
-        if (nearTop && canScrollUp) {
-          const intensity = Math.min(1, (rect.top + AUTO_SCROLL_EDGE_PX - pointerY) / AUTO_SCROLL_EDGE_PX);
-          return -Math.max(1, Math.ceil(AUTO_SCROLL_MAX_STEP * intensity));
-        }
-
-        if (nearBottom && canScrollDown) {
-          const intensity = Math.min(1, (pointerY - (rect.bottom - AUTO_SCROLL_EDGE_PX)) / AUTO_SCROLL_EDGE_PX);
-          return Math.max(1, Math.ceil(AUTO_SCROLL_MAX_STEP * intensity));
-        }
-
-        return 0;
-      }
-
-      function updateDropTarget(pointerY) {
-        clearIndicators();
-
-        const rows = getDraggableRows();
-        for (const row of rows) {
-          if (row === dragRow) continue;
-          const rect = row.getBoundingClientRect();
-          if (pointerY < rect.top || pointerY > rect.bottom) continue;
-
-          const position = pointerY < rect.top + rect.height / 2 ? 'above' : 'below';
-          row.classList.add(position === 'above' ? DND_ROW_CLASSES.DROP_ABOVE : DND_ROW_CLASSES.DROP_BELOW);
-          targetInfo = {
-            targetEventId: row.dataset.eventId,
-            position
-          };
-          break;
-        }
-      }
-
-      function autoScrollTick() {
-        autoScrollRafId = null;
-        if (!isDragging || !dragRow || lastPointerY === null || !scrollContainer) return;
-
-        const delta = getAutoScrollDelta(lastPointerY);
-        if (delta !== 0) {
-          scrollContainer.scrollTop += delta;
-          updateDropTarget(lastPointerY);
-          autoScrollRafId = requestAnimationFrame(autoScrollTick);
-        }
-      }
-
-      function cleanupDragState() {
-        stopAutoScroll();
-        if (dragRow) {
-          dragRow.classList.remove(DND_ROW_CLASSES.DRAG_ACTIVE);
-        }
-        eventsListEl.classList.remove(DND_ROW_CLASSES.LIST_DRAGGING);
-        clearIndicators();
-        dragRow = null;
-        isDragging = false;
-        lastPointerY = null;
-      }
-
-      function onMouseMove(ev) {
-        if (!dragRow) return;
-        lastPointerY = ev.clientY;
-
-        if (!isDragging) {
-          if (Math.abs(ev.clientY - startY) < DRAG_THRESHOLD) return;
-          isDragging = true;
-          dragRow.classList.add(DND_ROW_CLASSES.DRAG_ACTIVE);
-          eventsListEl.classList.add(DND_ROW_CLASSES.LIST_DRAGGING);
-        }
-
-        ev.preventDefault();
-        updateDropTarget(ev.clientY);
-        maybeStartAutoScroll();
-      }
-
-      function onMouseUp() {
-        removeDragListeners();
-
-        if (!dragRow) return;
-
-        const movedEventId = dragRow.dataset.eventId;
-        const didDrag = isDragging;
-        const dropTarget = targetInfo;
-
-        cleanupDragState();
-
-        if (!didDrag || !dropTarget || !movedEventId) return;
-
-        const sourceIndex = events.findIndex((event) => event.id === movedEventId);
-        const targetIndex = events.findIndex((event) => event.id === dropTarget.targetEventId);
-        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-
-        let insertIndex = targetIndex + (dropTarget.position === 'below' ? 1 : 0);
-        const [movedEvent] = events.splice(sourceIndex, 1);
-        if (!movedEvent) return;
-
-        if (sourceIndex < insertIndex) {
-          insertIndex -= 1;
-        }
-
-        events.splice(insertIndex, 0, movedEvent);
-        setPendingFocus('event', movedEvent.id);
-        renderEvents(events);
-      }
-
-      function onPointerCancel() {
-        removeDragListeners();
-        cleanupDragState();
-      }
-
-      function onVisibilityChange() {
-        if (document.hidden) {
-          onPointerCancel();
-        }
-      }
-
-      eventsListEl.addEventListener('mousedown', (e) => {
-        if (e.button !== 0 || isBlockedDragStart(e.target)) return;
-        if (!e.target.closest('.event-step')) return;
-
-        const row = e.target.closest('.event-row');
-        if (!row || row.parentElement !== eventsListEl) return;
-        if (row.classList.contains('system') || row.classList.contains('add-step-row')) return;
-
-        eventsListEl.querySelectorAll(':scope > .event-row.is-selected').forEach((el) => {
-          el.classList.remove('is-selected');
-        });
-        row.classList.add('is-selected');
-        selectedEventId = row.dataset.eventId || null;
-
-        dragRow = row;
-        startY = e.clientY;
-        isDragging = false;
-        targetInfo = null;
-        lastPointerY = e.clientY;
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-        document.addEventListener('mouseleave', onPointerCancel);
-        document.addEventListener('visibilitychange', onVisibilityChange);
-        window.addEventListener('blur', onPointerCancel);
       });
     }
 
@@ -9218,14 +9176,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         };
       }
 
-      // Links section expand/collapse
-      const linksHeader = document.getElementById('linksHeader');
-      if (linksHeader) {
-        linksHeader.onclick = () => {
-          const subsection = document.getElementById('linksSubsection');
-          if (subsection) subsection.classList.toggle('collapsed');
-        };
-      }
     }
 
     // ============================================
