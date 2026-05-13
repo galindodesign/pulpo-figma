@@ -305,12 +305,13 @@
       --variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);
       --variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);
       --event-variants-badge-bg: color-mix(in srgb, var(--brand) 12%, var(--background-surface));
-      --event-variants-badge-border: color-mix(in srgb, var(--brand) 16%, transparent);
+      --event-variants-badge-border: color-mix(in srgb, var(--brand) 4%, transparent);
       --event-variants-badge-color: color-mix(in srgb, var(--brand) 78%, var(--text-primary));
       --event-variants-row-bg: var(--color-royal-blue-alpha-50);
       --event-variants-step-bg: var(--color-electric-violet-500);
       --event-variants-step-text: var(--color-white-100);
       --rolledout-chip-bg: color-mix(in srgb, #FFF420 28%, var(--background-surface) 72%);
+      --rolledout-chip-border: color-mix(in srgb, #A88400 14%, transparent);  
       --rolledout-chip-text: color-mix(in srgb, #22272f 72%, #A88400 28%);
       --variant-name-input-bg: var(--color-white-alpha-700);
       --variant-name-input-hover-bg: var(--color-white-alpha-700);
@@ -3140,16 +3141,16 @@
     }
 
     .variant-passive-chip--rolledout {
-      background: var(--rolledout-chip-bg);
-      border-color: transparent;
+      /*background: var(--rolledout-chip-bg);
+      border-color: var(--rolledout-chip-border);;*/
       color: var(--rolledout-chip-text);
       width: 20px;
       padding: 0;
     }
 
     .variant-passive-chip--figma {
-      background: var(--color-azure-light-alpha-50);
-      border-color: var(--color-azure-light-alpha-100);
+      /*background: var(--color-azure-dark-alpha-50);
+      border-color: var(--color-azure-dark-alpha-50);*/
       color: var(--text-primary);
       width: 20px;
       padding: 0;
@@ -3157,8 +3158,8 @@
 
     /* Touchpoint row: design variants (pairs with Figma / rolled-out chips) */
     .variant-passive-chip--variants {
-      background: var(--event-variants-badge-bg);
-      border-color: var(--event-variants-badge-border);
+      /*background: var(--event-variants-badge-bg);
+      border-color: var(--event-variants-badge-border);*/
       color: var(--event-variants-badge-color);
       width: 20px;
       padding: 0;
