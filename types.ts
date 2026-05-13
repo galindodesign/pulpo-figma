@@ -308,12 +308,22 @@ export interface CanvasNodeOptions {
 
 // ===== Validation Types =====
 
+/** UI grouping for validation messages */
+export type ValidationIssueSection = 'experiment' | 'goals' | 'journey';
+
+/** Structured validation item for UI + dev logging */
+export interface ValidationIssue {
+  section: ValidationIssueSection;
+  field: string;
+  message: string;
+}
+
 /**
- * Validation result with errors and warnings
+ * Validation result with structured issues and warnings
  */
 export interface ValidationResult {
   isValid: boolean;
-  errors: string[];
+  issues: ValidationIssue[];
   warnings: string[];
 }
 

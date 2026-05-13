@@ -17,26 +17,29 @@ For TypeScript info: https://www.typescriptlang.org/
 **Feb 2026 - Code Cleanup & Optimization:**
 - ✅ Removed ~1.1 MB of build artifacts from root directory (source maps, compiled JS)
 - ✅ Archived 13 historical process documents to `_archive/` folder for cleaner root
-## Growthlab Builder Figma Plugin
+## Petri (Figma plugin)
 
+**Petri** is the customer-facing name in Figma (see [`manifest.json`](manifest.json)). The npm package may still be named `growthlab-flow-builder`.
 
-This plugin helps you quickly create clean, Growth Labs–style experiment flows in Figma.
+This plugin helps you quickly create clean, Growth Labs–style **experiment flows** on the Figma canvas: journey, goals, and variants in one diagram.
 
 **Font:** This plugin uses the [Figtree](https://fonts.google.com/specimen/Figtree) font for all UI and generated nodes. Make sure Figtree is available in your Figma environment for best results.
 
 ### Features
 
-#### Core Experiment Documentation
-- Experiment name, description, hypothesis, status, timeline, audience, sample size, and owner
+#### Core experiment documentation
+- Title, description, status, timeline, audience, sample size, owner
 - Status tracking: Draft, Planned, Running, Paused, Concluded
-- Advanced settings (collapsible) for detailed metadata
+- Collapsible **Details** for status, rolled-out variant (when concluded), owner, and resource links
+- Hypothesis is **not** shown in the current plugin form (field is reserved for examples / future use)
 
-#### Goals & Metrics
-- Multiple metrics with primary designation
-- Direction and threshold targets per metric
+#### Goals
+- Add multiple goals (each goal is a **metric** in the payload and on the canvas)
+- The **first** goal is the primary goal and drives the outcome summary
+- Direction and threshold targets per goal
 - Drag-and-drop reordering
 
-#### Journey Mapping
+#### Journey
 - Entry/exit nodes and touchpoint steps
 - Experiment-step designation for variants
 - Auto layout and connected flow spine
@@ -46,21 +49,20 @@ This plugin helps you quickly create clean, Growth Labs–style experiment flows
 - Control and winner badges
 - Traffic splits and color badges
 - Drag-and-drop ordering
-- Create from selection (use up to 3 selected frames as thumbnails)
 
-#### Resources & Links
+#### Resources and links
 - Smart link detection with service icons (Figma, Jira, Miro, Notion, Asana, Linear, GitHub, Slack, Trello, Confluence, Monday, ClickUp)
 - Multiple links per experiment
 
-#### UX & Design
+#### UX and design
 - Modern compact UI with Figtree font
 - Auto Layout for all generated frames
-- Refresh to update existing flows
+- **Refresh** (when shown) updates connector lines on an existing flow
 
 ### Usage
-1. Open your Figma file and run the plugin
-2. Fill in the experiment name and status
-3. Add goals/metrics and set the primary metric
+1. Open your Figma file and run **Petri**
+2. Fill in the experiment title and optional fields
+3. Add goals and set order (first = primary)
 4. Define journey touchpoints and mark the experiment step
 5. Configure variants and traffic splits
 6. Click **Create flow** to generate the diagram
@@ -68,11 +70,14 @@ This plugin helps you quickly create clean, Growth Labs–style experiment flows
 **Optional workflows**
 - Select **Concluded** and choose the rolled-out variant to show the winner
 - Add resource links (Figma, Jira, Miro, Notion, etc.)
-- Use **Refresh** to update an existing flow without recreating
-- Select up to 3 frames and use **Create from selection** for visual variants
+- Use **Refresh** when the plugin shows it to update connectors without recreating the whole flow
+
+**Note:** A legacy main-thread path exists for **create from selection** (frames as thumbnails), but the current UI does not expose it—build a flow from the form instead.
 
 ### Development
 This plugin uses TypeScript and NPM for development.
+
+**In-plugin feedback email:** set `FEEDBACK_EMAIL` in [`plugin-constants.ts`](plugin-constants.ts). Leave it empty to hide the mail button until configured.
 
 #### Setup
 1. Install Node.js (includes NPM): https://nodejs.org/en/download/

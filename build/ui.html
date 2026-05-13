@@ -633,6 +633,17 @@
       letter-spacing: -0.015em;
     }
 
+    .intro-screen__clarifier {
+      font-size: var(--body-md-size);
+      font-weight: 400;
+      line-height: 130%;
+      color: var(--text-secondary);
+      margin: 0;
+      padding: 0;
+      max-width: 480px;
+      letter-spacing: -0.01em;
+    }
+
     .intro-screen__features {
       display: flex;
       flex-direction: column;
@@ -4844,6 +4855,7 @@
         </svg>
 
         <p class="intro-screen__subtitle">Petri for Figma lets teams visually map experiments and design variants directly on the canvas, so everyone understands what’s being tested, where, and why. </p>
+        <p class="intro-screen__clarifier">An <strong>experiment flow</strong> is one diagram on the canvas: journey steps, goals, and design variants—so growth and product design share a single source of truth.</p>
         <div class="intro-screen__features">
           <ul>
             <li class="intro-screen__feature-text"><span style="font-weight: 600;">Make experiments visible</span> <br> Map flows and variants directly on the canvas.</li>
@@ -4879,7 +4891,7 @@
           <div class="header-content">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Experiment</h2>
-              <span class="section-info-icon" data-tooltip="Name, hypothesis, audience &amp; timeline for your test." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Experiment">
+              <span class="section-info-icon" data-tooltip="Title, description, audience, dates, status, owner, and resource links for your test." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Experiment">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -5075,7 +5087,7 @@
           <div class="section-block-left">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Goals</h2>
-              <span class="section-info-icon" data-tooltip="Metrics you’re optimizing for. The primary goal guides the outcome summary." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Goals">
+              <span class="section-info-icon" data-tooltip="Each goal is a metric you measure. The first goal is primary and guides the outcome summary." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Goals">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -5163,16 +5175,7 @@
   </div>
 
   <script>
-        window.onmessage = (event) => {
-          const msg = event.data.pluginMessage;
-          if (msg && msg.type === 'plugin-version') {
-            const versionEl = document.getElementById('pluginVersion');
-            if (versionEl) {
-              versionEl.textContent = msg.version ? `v${msg.version}` : 'v—';
-            }
-            return;
-          }
-        };
+        window.__petriFeedbackEmail = '';
 
         const FIGMA_THEME_ATTRIBUTE = 'data-figma-theme';
 
@@ -5336,12 +5339,14 @@
         };
 
         const emailMeBtn = document.getElementById('emailMeBtn');
-        if (emailMeBtn) emailMeBtn.addEventListener('click', () => {
-          const TO = 'YOUR_EMAIL@domain.com';
-          const pluginVersion = (document.getElementById('pluginVersion') || {}).textContent || '';
-          const expName = (document.getElementById('experimentName') || {}).value || '';
-          const subject = encodeURIComponent(`Petri for Figma – Feedback`);
-          const body = encodeURIComponent(
+        if (emailMeBtn) {
+          emailMeBtn.addEventListener('click', () => {
+            const TO = (typeof window.__petriFeedbackEmail === 'string' && window.__petriFeedbackEmail.trim()) || '';
+            if (!TO) return;
+            const pluginVersion = (document.getElementById('pluginVersion') || {}).textContent || '';
+            const expName = (document.getElementById('experimentName') || {}).value || '';
+            const subject = encodeURIComponent('Petri — Feedback');
+            const body = encodeURIComponent(
 `Hi,
 
 I have feedback about Petri for Figma.
@@ -5352,9 +5357,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
 [Write your feedback here]
 `
-          );
-          window.open(`mailto:${TO}?subject=${subject}&body=${body}`);
-  });
+            );
+            window.open(`mailto:${TO}?subject=${subject}&body=${body}`);
+          });
+        }
     /**
      * Lucide Icons - Centralized icon definitions
      * Official SVG paths from https://github.com/lucide-icons/lucide/tree/main/icons
@@ -6629,7 +6635,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 12h14"/><path d="M12 5v14"/>
         </svg>
-        <span>Add metric...</span>
+        <span>Add goal…</span>
       `;
       addRow.onclick = () => {
         const isFirstMetric = metrics.length === 0;
@@ -7554,11 +7560,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       return el;
     }
 
-    function showToast(message, actionLabel = null, actionFn = null) {
+    function showToast(message, actionLabel = null, actionFn = null, durationMs = 4500) {
       const el = ensureToast();
       const msgEl = el.querySelector('#toastMsg');
       const actionBtn = el.querySelector('#toastActionBtn');
-      if (msgEl) msgEl.textContent = message || '';
+      if (msgEl) {
+        msgEl.textContent = message || '';
+        msgEl.style.whiteSpace = 'pre-line';
+      }
 
       if (actionBtn) {
         if (actionLabel && typeof actionFn === 'function') {
@@ -7577,7 +7586,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       el.classList.add('open');
       if (toastHideTimer) clearTimeout(toastHideTimer);
-      toastHideTimer = setTimeout(() => hideToast(), 4500);
+      toastHideTimer = setTimeout(() => hideToast(), durationMs);
     }
 
     function hideToast() {
@@ -7587,6 +7596,52 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       if (toastHideTimer) clearTimeout(toastHideTimer);
       toastHideTimer = null;
     }
+
+    function validationSectionLabelUi(section) {
+      if (section === 'experiment') return 'Experiment';
+      if (section === 'goals') return 'Goals';
+      return 'Journey';
+    }
+
+    function showValidationToast(issues) {
+      if (!Array.isArray(issues) || issues.length === 0) return;
+      const lines = issues.slice(0, 5).map((i) => {
+        const sec = typeof i.section === 'string' ? validationSectionLabelUi(i.section) : 'Form';
+        return `${sec}: ${i.message || ''}`;
+      });
+      let body = "Can't create this flow yet\n\n" + lines.join('\n');
+      if (issues.length > 5) body += `\n(+${issues.length - 5} more)`;
+      showToast(body, null, null, 9000);
+    }
+
+    function applyPetriFeedbackButton() {
+      const btn = document.getElementById('emailMeBtn');
+      if (!btn) return;
+      const em = (typeof window.__petriFeedbackEmail === 'string' && window.__petriFeedbackEmail.trim()) || '';
+      btn.style.display = em ? '' : 'none';
+    }
+
+    function installPetriMainThreadMessageListener() {
+      window.addEventListener('message', (event) => {
+        const msg = event.data && event.data.pluginMessage;
+        if (!msg || typeof msg.type !== 'string') return;
+        if (msg.type === 'plugin-version') {
+          const versionEl = document.getElementById('pluginVersion');
+          if (versionEl) versionEl.textContent = msg.version ? `v${msg.version}` : 'v—';
+          return;
+        }
+        if (msg.type === 'plugin-config') {
+          window.__petriFeedbackEmail = typeof msg.feedbackEmail === 'string' ? msg.feedbackEmail : '';
+          applyPetriFeedbackButton();
+          return;
+        }
+        if (msg.type === 'validation-failed' && Array.isArray(msg.issues)) {
+          showValidationToast(msg.issues);
+        }
+      });
+    }
+
+    installPetriMainThreadMessageListener();
 
     function setPendingFocus(type, id, options = {}) {
       pendingFocusTarget = { type, id, ...options };
@@ -9796,6 +9851,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       initStatusDropdown();
       initRolledoutDropdown();
       initExpandButton();
+      applyPetriFeedbackButton();
     }
 
     if (document.readyState === 'loading') {

@@ -3,16 +3,16 @@
 Create a complete experiment flow in minutes.
 
 ## 1) Run the plugin
-Open your Figma file → Plugins → **Growthlab Builder**.
+Open your Figma file → Plugins → **Petri**.
 
 ## 2) Fill in the basics
 - **Experiment name** (required)
 - **Status** (Draft, Planned, Running, Paused, Concluded)
 - **Description** (optional)
 
-## 3) Add goals & metrics
-- Add one or more metrics
-- Mark one as **Primary**
+## 3) Add goals
+- Add one or more goals (each goal is a metric on the canvas)
+- The **first** goal is **primary**
 - Set direction/thresholds as needed
 
 ## 4) Define the journey

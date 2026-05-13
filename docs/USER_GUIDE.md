@@ -1,19 +1,20 @@
-# User Guide
+# User Guide — Petri
 
 ## Overview
-Growthlab Builder creates professional experiment flow diagrams with experiment metadata, goals, journey steps, variants, and outcomes.
+Petri creates professional **experiment flow** diagrams on the Figma canvas: experiment metadata, **goals** (each goal is a metric you measure), journey steps, variants, and outcomes.
 
 ## Experiment section
 Fields include:
-- Name (required)
+- **Title** (required)
 - Description
-- Status (Draft, Planned, Running, Paused, Concluded)
-- Rolled-out variant (when Concluded)
-- Advanced settings: hypothesis, dates, audience, sample size, owner, resources
+- Audience, sample size, dates
+- **Details** (collapsible): status (Draft, Planned, Running, Paused, Concluded), rolled-out variant when Concluded, owner, resource links
 
-## Goals (metrics)
-- Add multiple metrics
-- Mark one as **Primary**
+Hypothesis is **not** shown as a field in the current plugin UI (the load-example script may still set it for demos).
+
+## Goals
+- Add multiple goals; each goal corresponds to a **metric** in the generated flow
+- The **first** goal is **primary** and guides the outcome summary
 - Set increase/decrease direction and thresholds
 - Reorder via drag-and-drop
 
@@ -28,11 +29,13 @@ Fields include:
 - Set traffic splits
 - Set **Winner** for concluded experiments
 - Drag-and-drop to reorder
-- Create from selection (up to 3 frames)
 
 ## Resources
 Paste links to tools like Figma, Jira, Miro, Notion, Asana, Linear, GitHub, Slack, Trello, Confluence, Monday, and ClickUp. Icons are detected automatically.
 
 ## Refresh vs Create
-- **Create flow**: Generates a new diagram
-- **Refresh**: Updates the existing flow
+- **Create flow**: Generates a new diagram (and replaces existing frames with the same names for this experiment, per plugin behavior)
+- **Refresh**: When visible, updates connector lines on the current flow
+
+## Validation
+If something is wrong before the flow can be built, Petri shows a **toast in the plugin** with up to five issues grouped under **Experiment**, **Goals**, or **Journey**. Figma may also show a short notification.

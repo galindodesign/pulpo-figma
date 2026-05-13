@@ -137,3 +137,62 @@
 .Section:last-child {
   margin-bottom: 0;
 }
+
+/* Petri: validation toast (created in JS) */
+#toast.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-24, 24px);
+  transform: translateX(-50%) translateY(120%);
+  max-width: min(440px, 94vw);
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12, 12px);
+  padding: var(--space-12, 12px) var(--space-16, 16px);
+  background: var(--background-surface, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 8px 24px rgba(34, 39, 47, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.25s ease;
+}
+
+#toast.toast.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+#toast.toast .toast__msg {
+  font-size: var(--body-sm-size, 11px);
+  line-height: 1.45;
+  color: var(--text-primary, #222);
+  white-space: pre-line;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+#toast.toast .toast__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-8, 8px);
+  align-items: center;
+}
+
+#toast.toast .toast__btn {
+  font-family: inherit;
+  font-size: var(--body-sm-size, 11px);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 4px);
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--background, #f9fafb);
+  color: var(--text-primary, #222);
+  cursor: pointer;
+}
+
+#toast.toast .toast__btn:hover {
+  background: var(--button-secondary-hover-bg, #eceff2);
+}
