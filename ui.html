@@ -298,7 +298,7 @@
       --list-dnd-indicator-height: 2px;
       --list-dnd-indicator-z-row: 4;
       --list-dnd-indicator-z-card: 10;
-      --variant-card-bg: color-mix(in srgb, var(--background) 50%, var(--background-surface) 50%);
+      --variant-card-bg: color-mix(in srgb, var(--background) 80%, var(--background-surface) 20%);
       --variant-card-hover-bg: color-mix(in srgb, var(--background) 93%, var(--brand) 7%);
       --variant-card-active-bg: color-mix(in srgb, var(--background) 92%, var(--text-primary) 8%);
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
@@ -378,7 +378,7 @@
       --primary-button-text: var(--text-primary-inverse);
       --primary-button-shadow: none;
       --logo-wordmark-color: #0F1729;
-      --variant-card-bg: color-mix(in srgb, var(--background) 50%, var(--background-surface) 50%);
+      --variant-card-bg: color-mix(in srgb, var(--background) 80%, var(--background-surface) 20%);
       --variant-card-hover-bg: color-mix(in srgb, var(--background) 93%, var(--brand) 7%);
       --variant-card-active-bg: color-mix(in srgb, var(--background) 92%, var(--text-primary) 8%);
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
@@ -396,7 +396,7 @@
       --primary-button-text: #22272f;
       --primary-button-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 6px 16px rgba(0, 0, 0, 0.24);
       --logo-wordmark-color: #ffffff;
-      --variant-card-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 50%, var(--background-surface) 50%);
+      --variant-card-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 80%, var(--background-surface) 20%);
       --variant-card-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 88%, white 12%);
       --variant-card-active-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 82%, white 18%);
       --variant-card-border: 1px solid color-mix(in srgb, white 22%, transparent);
@@ -2626,7 +2626,7 @@
     .event-actions {
       display: flex;
       align-items: center;
-      gap: var(--space-2);
+      gap: var(--space-8);
       opacity: 1;
     }
 
@@ -3190,8 +3190,8 @@
     }
 
     .variant-passive-chip--rolledout {
-      /*background: var(--rolledout-chip-bg);
-      border-color: var(--rolledout-chip-border);;*/
+      background: var(--rolledout-chip-bg);
+      /*border-color: var(--rolledout-chip-border);*/
       color: var(--rolledout-chip-text);
       width: 20px;
       padding: 0;
