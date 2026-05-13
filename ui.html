@@ -6748,27 +6748,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       return displayName;
     }
 
-    /** True if variant.metrics has at least one finite number or non-empty string (legacy / saved outcomes). */
-    function variantHasStoredGoalOutcomeValues(variant) {
-      const m = variant?.metrics;
-      if (!m || typeof m !== 'object') return false;
-      return Object.values(m).some((v) => {
-        if (typeof v === 'number' && Number.isFinite(v)) return true;
-        if (typeof v === 'string' && String(v).trim() !== '') return true;
-        return false;
-      });
-    }
-
-    /**
-     * Whether to show per-variant metric fields (goal values) in the plugin UI.
-     * Explicit false hides even when metrics exist; undefined + saved values keeps legacy experiments visible.
-     */
-    function shouldShowVariantGoalOutcomesUI(variant) {
-      if (variant?.showGoalOutcomes === true) return true;
-      if (variant?.showGoalOutcomes === false) return false;
-      return variantHasStoredGoalOutcomeValues(variant);
-    }
-
     const CUSTOM_DROPDOWN_VIEWPORT_MARGIN = 8;
 
     function getCustomDropdownMenu(dropdown) {
@@ -7189,22 +7168,15 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     }
 
     function createVariantCard(variant, variantIndex, eventIndex) {
-        const showGoalOutcomesUI = shouldShowVariantGoalOutcomesUI(variant);
-        // Subtree is per-variant metrics only; Figma URL is edited in the ⋮ menu panel.
-        const showSubtree = showGoalOutcomesUI;
-
-        // Row 1: optional expand toggle + name + status chips
+        // Row 1: expand toggle (metrics subtree) + name + status chips
         const row1 = document.createElement('div');
         row1.className = 'variant-row';
 
-        let treeToggle = null;
-        if (showSubtree) {
-          treeToggle = document.createElement('button');
-          treeToggle.type = 'button';
-          treeToggle.className = 'variant-tree-toggle';
-          treeToggle.setAttribute('aria-label', 'Expand metrics');
-          treeToggle.innerHTML = '<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>';
-        }
+        const treeToggle = document.createElement('button');
+        treeToggle.type = 'button';
+        treeToggle.className = 'variant-tree-toggle';
+        treeToggle.setAttribute('aria-label', 'Expand metrics');
+        treeToggle.innerHTML = '<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>';
 
         const card = document.createElement('div');
         card.className = 'variant-card';
@@ -7310,7 +7282,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const content = document.createElement('div');
       content.className = 'variant-content';
 
-      if (treeToggle) row1.appendChild(treeToggle);
+      row1.appendChild(treeToggle);
       row1.appendChild(nameFieldDiv);
 
       // Preserve old saved comparison flags without assigning one by default.
@@ -7393,27 +7365,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       variantFigmaMenuDivider.className = 'figma-frame-menu-divider';
       variantFigmaMenuDivider.setAttribute('aria-hidden', 'true');
 
-      // Chevron expands the metrics block; Figma URL is edited in the panel above.
-      const goalOutcomesToggleOption = document.createElement('button');
-      goalOutcomesToggleOption.type = 'button';
-      goalOutcomesToggleOption.className = 'CustomDropdown__option';
-      goalOutcomesToggleOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${getIcon(showGoalOutcomesUI ? 'eye-off' : 'chart-column', { size: 14 })}</span>
-        <span class="CustomDropdown__option-text">${showGoalOutcomesUI ? 'Hide metrics' : 'Show metrics'}</span>
-      `;
-      goalOutcomesToggleOption.onclick = (e) => {
-        e.stopPropagation();
-        if (showGoalOutcomesUI) {
-          variant.showGoalOutcomes = false;
-        } else {
-          variant.showGoalOutcomes = true;
-          variant.collapsed = false;
-          setPendingFocus('variant', variant.id, { focus: 'first-metric' });
-        }
-        closeCustomDropdown(variantActionsDropdown);
-        renderEvents(events);
-      };
-
       // Trash icon + danger color on hover signals destructive intent and
       // clearly differentiates this from "Hide" / "Remove link" actions.
       const removeVariantOption = document.createElement('button');
@@ -7434,7 +7385,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       variantActionsMenu.appendChild(variantFigmaMenuPanel);
       variantActionsMenu.appendChild(variantFigmaMenuDivider);
-      variantActionsMenu.appendChild(goalOutcomesToggleOption);
       variantActionsMenu.appendChild(removeVariantOption);
       variantActionsDropdown.appendChild(variantActionsTrigger);
       variantActionsDropdown.appendChild(variantActionsMenu);
@@ -7453,99 +7403,93 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       actionsDiv.appendChild(variantActionsDropdown);
       row1.appendChild(actionsDiv);
 
-      let subtree = null;
-      if (showSubtree) {
-        // Subtree: collapsible per-variant metric fields only.
-        subtree = document.createElement('div');
-        subtree.className = 'variant-subtree';
+      // Subtree: collapsible per-variant metric fields only.
+      const subtree = document.createElement('div');
+      subtree.className = 'variant-subtree';
 
-        // Restore collapsed state from variant data
-        if (variant.collapsed && treeToggle) {
-          treeToggle.classList.add('collapsed');
-          subtree.classList.add('collapsed');
-        }
-
-        // Toggle subtree visibility on chevron click
-        const updateTreeToggleTooltip = () => {
-          if (!treeToggle) return;
-          const isCollapsed = treeToggle.classList.contains('collapsed');
-          treeToggle.setAttribute('aria-label', isCollapsed ? 'Expand metrics' : 'Collapse metrics');
-        };
-        treeToggle.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isCollapsed = treeToggle.classList.toggle('collapsed');
-          subtree.classList.toggle('collapsed', isCollapsed);
-          variant.collapsed = isCollapsed;
-          updateTreeToggleTooltip();
-        });
-        updateTreeToggleTooltip();
-
-        if (showGoalOutcomesUI) {
-          // Metrics section with label and inputs (inside subtree)
-          const metricsSection = document.createElement('div');
-          metricsSection.className = 'variant-metrics-section';
-
-          const metricsLabel = document.createElement('span');
-          metricsLabel.className = 'variant-metrics-label';
-          metricsLabel.textContent = 'Metrics';
-          metricsSection.appendChild(metricsLabel);
-
-          const row3 = document.createElement('div');
-          row3.className = 'variant-metrics-row';
-
-          metrics.forEach((metric, metricIndex) => {
-            if (!metric.name) return;
-
-            const metricKey = (metric.abbreviation || metric.name.replace(/\s+/g, '_')).toLowerCase();
-            const rawMetricValue = variant.metrics?.[metricKey];
-            const displayMetricValue = formatMetricValue(rawMetricValue);
-            const stackedMetricLabel = metric.abbreviation ? `${metric.name} (${metric.abbreviation})` : metric.name;
-
-            const metricFieldDiv = document.createElement('div');
-            metricFieldDiv.className = 'variant-metric-field';
-            const metricField = createInputField({
-              id: `variant-metric-${eventIndex}-${variantIndex}-${metricIndex}`,
-              label: stackedMetricLabel,
-              showLabel: true,
-              showLText: false,
-              smallText: metric.abbreviation || '',
-              showRText: true,
-              suffix: '%',
-              help: '0.00',
-              text: displayMetricValue,
-              variant: 'horizontal',
-              inputType: 'number',
-              onChange: (value) => {
-                if (!variant.metrics) variant.metrics = {};
-                const num = parseFloat(String(value));
-                variant.metrics[metricKey] = Number.isFinite(num) ? num : 0;
-              }
-            });
-            const metricInput = metricField.querySelector('.InputField__input');
-            if (metricInput) {
-              metricInput.classList.add('no-native-spinner');
-              metricInput.setAttribute('inputmode', 'decimal');
-              metricInput.step = '0.01';
-              metricInput.min = '0';
-            }
-            metricFieldDiv.appendChild(metricField);
-            row3.appendChild(metricFieldDiv);
-          });
-
-          if (metrics.length === 0) {
-            const emptyMetricsMessage = document.createElement('div');
-            emptyMetricsMessage.className = 'variant-metrics-empty-state';
-            emptyMetricsMessage.textContent = 'No metrics yet. Add one in the Goals section above.';
-            row3.appendChild(emptyMetricsMessage);
-          }
-
-          metricsSection.appendChild(row3);
-          subtree.appendChild(metricsSection);
-        }
+      // Restore collapsed state from variant data
+      if (variant.collapsed) {
+        treeToggle.classList.add('collapsed');
+        subtree.classList.add('collapsed');
       }
 
+      // Toggle subtree visibility on chevron click
+      const updateTreeToggleTooltip = () => {
+        const isCollapsed = treeToggle.classList.contains('collapsed');
+        treeToggle.setAttribute('aria-label', isCollapsed ? 'Expand metrics' : 'Collapse metrics');
+      };
+      treeToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isCollapsed = treeToggle.classList.toggle('collapsed');
+        subtree.classList.toggle('collapsed', isCollapsed);
+        variant.collapsed = isCollapsed;
+        updateTreeToggleTooltip();
+      });
+      updateTreeToggleTooltip();
+
+      // Metrics section with label and inputs (inside subtree)
+      const metricsSection = document.createElement('div');
+      metricsSection.className = 'variant-metrics-section';
+
+      const metricsLabel = document.createElement('span');
+      metricsLabel.className = 'variant-metrics-label';
+      metricsLabel.textContent = 'Metrics';
+      metricsSection.appendChild(metricsLabel);
+
+      const row3 = document.createElement('div');
+      row3.className = 'variant-metrics-row';
+
+      metrics.forEach((metric, metricIndex) => {
+        if (!metric.name) return;
+
+        const metricKey = (metric.abbreviation || metric.name.replace(/\s+/g, '_')).toLowerCase();
+        const rawMetricValue = variant.metrics?.[metricKey];
+        const displayMetricValue = formatMetricValue(rawMetricValue);
+        const stackedMetricLabel = metric.abbreviation ? `${metric.name} (${metric.abbreviation})` : metric.name;
+
+        const metricFieldDiv = document.createElement('div');
+        metricFieldDiv.className = 'variant-metric-field';
+        const metricField = createInputField({
+          id: `variant-metric-${eventIndex}-${variantIndex}-${metricIndex}`,
+          label: stackedMetricLabel,
+          showLabel: true,
+          showLText: false,
+          smallText: metric.abbreviation || '',
+          showRText: true,
+          suffix: '%',
+          help: '0.00',
+          text: displayMetricValue,
+          variant: 'horizontal',
+          inputType: 'number',
+          onChange: (value) => {
+            if (!variant.metrics) variant.metrics = {};
+            const num = parseFloat(String(value));
+            variant.metrics[metricKey] = Number.isFinite(num) ? num : 0;
+          }
+        });
+        const metricInput = metricField.querySelector('.InputField__input');
+        if (metricInput) {
+          metricInput.classList.add('no-native-spinner');
+          metricInput.setAttribute('inputmode', 'decimal');
+          metricInput.step = '0.01';
+          metricInput.min = '0';
+        }
+        metricFieldDiv.appendChild(metricField);
+        row3.appendChild(metricFieldDiv);
+      });
+
+      if (metrics.length === 0) {
+        const emptyMetricsMessage = document.createElement('div');
+        emptyMetricsMessage.className = 'variant-metrics-empty-state';
+        emptyMetricsMessage.textContent = 'No metrics yet. Add one in the Goals section above.';
+        row3.appendChild(emptyMetricsMessage);
+      }
+
+      metricsSection.appendChild(row3);
+      subtree.appendChild(metricsSection);
+
       content.appendChild(row1);
-      if (subtree) content.appendChild(subtree);
+      content.appendChild(subtree);
 
       // Assemble card (handle + body, same pattern as goal rows)
       cardBody.appendChild(content);
@@ -8012,8 +7956,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           label: String.fromCharCode(65 + variantIndex),
           color: defaultColor,
           isControl: false,
-          metrics: {},
-          showGoalOutcomes: false
+          metrics: {}
         };
         event.variants.push(newVariant);
         if (newVariant.id) {
