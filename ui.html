@@ -1174,6 +1174,7 @@
       align-items: center;
       justify-content: center;
       width: 28px;
+      min-height: 24px;
       flex-shrink: 0;
       cursor: default;
       pointer-events: none;
@@ -3843,6 +3844,12 @@
       gap: var(--space-4);
     }
 
+    /* Touchpoint + variant kebabs: more room for Figma field + actions */
+    .CustomDropdown__menu:has(.CustomDropdown__figma-panel) {
+      max-height: min(70vh, 480px);
+      overflow-y: auto;
+    }
+
     .CustomDropdown.open .CustomDropdown__menu {
       display: flex;
     }
@@ -4004,6 +4011,75 @@
       flex-shrink: 0;
     }
 
+    /* Figma URL editor at top of ⋮ menus — padding only (no extra chrome) */
+    .CustomDropdown__figma-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: var(--space-8) var(--space-8) var(--space-4);
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .CustomDropdown__figma-panel .figma-link-input,
+    .CustomDropdown__figma-panel .figma-link-row {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .figma-link-input__error {
+      font-size: var(--body-xs-size);
+      line-height: 1.3;
+      color: var(--danger);
+      display: none;
+    }
+
+    .figma-link-input__error.is-visible {
+      display: block;
+    }
+
+    .figma-link-input .figma-link-input__error {
+      padding-top: var(--space-4);
+    }
+
+    /* Stacked edit layout inside narrow menu (touchpoint + variant kebabs) */
+    .CustomDropdown__figma-panel .figma-link-row.link-row.editing {
+      height: auto;
+      min-height: 24px;
+      align-items: flex-start;
+    }
+
+    .CustomDropdown__figma-panel .figma-link-row.link-row.editing .link-row__edit-form {
+      flex-direction: column;
+      align-items: stretch;
+      align-self: stretch;
+    }
+
+    .CustomDropdown__figma-panel .figma-link-row .link-row__edit-input {
+      flex: none;
+      width: 100%;
+    }
+
+    .CustomDropdown__figma-panel .figma-link-row .link-row__edit-actions {
+      align-self: flex-end;
+    }
+
+    .CustomDropdown__figma-panel .figma-link-row .figma-link-input__error {
+      width: 100%;
+      padding-top: var(--space-4);
+    }
+
+    a.variant-passive-chip--figma {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    a.variant-passive-chip--figma:focus-visible {
+      outline: 2px solid var(--text-link);
+      outline-offset: 1px;
+    }
+
     /* Event actions dropdown (kebab menu) */
     .event-actions-dropdown {
       width: auto;
@@ -4021,7 +4097,13 @@
       min-width: 120px;
       overflow: visible;
     }
-    
+
+    /* Touchpoint kebab: width + scroll when Figma panel present (override overflow: visible) */
+    .event-actions-dropdown .CustomDropdown__menu:has(.CustomDropdown__figma-panel) {
+      min-width: 260px;
+      max-width: min(360px, calc(100vw - 20px));
+      overflow-y: auto;
+    }
 
     /* Variant actions */
     .variant-actions {
@@ -6635,23 +6717,13 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     }
 
     /**
-     * Whether to show per-variant goal outcome fields in the plugin UI.
+     * Whether to show per-variant metric fields (goal values) in the plugin UI.
      * Explicit false hides even when metrics exist; undefined + saved values keeps legacy experiments visible.
      */
     function shouldShowVariantGoalOutcomesUI(variant) {
       if (variant?.showGoalOutcomes === true) return true;
       if (variant?.showGoalOutcomes === false) return false;
       return variantHasStoredGoalOutcomeValues(variant);
-    }
-
-    /**
-     * Whether to show the inline "Linked design" Figma link block for a variant or touchpoint.
-     * Explicit false hides; undefined falls back to whether a URL exists (legacy grace).
-     */
-    function shouldShowFigmaLinkUI(item) {
-      if (item?.showFigmaLink === true) return true;
-      if (item?.showFigmaLink === false) return false;
-      return Boolean(item?.figmaLink);
     }
 
     const CUSTOM_DROPDOWN_VIEWPORT_MARGIN = 8;
@@ -6669,8 +6741,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       if (!menu) return [];
       return Array.from(menu.querySelectorAll('.CustomDropdown__option')).filter((option) => {
         if (option.disabled || option.classList.contains('disabled')) return false;
-        // Skip options that are hidden via CSS (e.g. the compact figma-link button while
-        // its input is expanded), so keyboard navigation never lands on an invisible target.
+        // Skip options that are hidden via CSS so keyboard navigation never lands on an invisible target.
         if (option.offsetParent === null) return false;
         return true;
       });
@@ -6821,10 +6892,13 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     }
 
     /**
-     * Inline Figma frame link.
+     * Figma frame link editor (empty input or saved link row with edit/remove).
+     * Used in the touchpoint / variant ⋮ menu panel and elsewhere.
      *
-     * Empty/add state intentionally uses the same component structure as the
-     * Resources add-link control:
+     * `onSave(rawValue)` must return `false` when the URL is rejected; any other
+     * return (including `undefined`) is treated as success. Use `saveFigmaFrameLink`.
+     *
+     * Empty state reuses the Resources add-link structure:
      *   .link-input-wrapper > .link-input-row > .InputField > .InputField__wrapper > input
      *
      * The only addition is the Figma brand icon inside the InputField wrapper.
@@ -6838,6 +6912,18 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       compactLabel = 'Link Figma frame',
       ariaLabel = 'Linked Figma design'
     }) {
+      const FIGMA_LINK_INVALID_MSG = 'Enter a valid figma.com frame or file link.';
+
+      const applySaveResult = (raw, errorEl) => {
+        if (typeof onSave !== 'function') return true;
+        const ok = onSave(raw) !== false;
+        if (errorEl) {
+          errorEl.textContent = FIGMA_LINK_INVALID_MSG;
+          errorEl.classList.toggle('is-visible', !ok);
+        }
+        return ok;
+      };
+
       if (!value) {
         const inputWrapper = document.createElement('div');
         inputWrapper.className = 'link-input-wrapper figma-link-input';
@@ -6867,17 +6953,27 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         input.placeholder = placeholder || compactLabel;
         input.setAttribute('aria-label', compactLabel);
 
+        const errorEl = document.createElement('div');
+        errorEl.className = 'figma-link-input__error';
+        errorEl.setAttribute('role', 'alert');
+
+        input.addEventListener('input', () => {
+          errorEl.classList.remove('is-visible');
+          input.title = input.value.trim() || '';
+        });
+
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            onSave(input.value);
+            applySaveResult(input.value, errorEl);
           }
         });
         input.addEventListener('paste', () => {
           setTimeout(() => {
             const pastedValue = input.value.trim();
+            input.title = pastedValue || '';
             if (pastedValue && /figma\.com/i.test(pastedValue)) {
-              onSave(pastedValue);
+              applySaveResult(pastedValue, errorEl);
             }
           }, 0);
         });
@@ -6886,6 +6982,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         inputField.appendChild(fieldWrapper);
         inputRow.appendChild(inputField);
         inputWrapper.appendChild(inputRow);
+        inputWrapper.appendChild(errorEl);
         return inputWrapper;
       }
 
@@ -6912,7 +7009,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       urlAnchor.rel = 'noopener noreferrer';
       urlAnchor.href = value;
       urlAnchor.textContent = value.replace(/^https?:\/\//, '');
-      urlAnchor.title = `Open ${value} in Figma`;
+      urlAnchor.title = value;
 
       infoEl.appendChild(urlAnchor);
       row.appendChild(infoEl);
@@ -6948,9 +7045,16 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       editInput.className = 'link-row__edit-input figma-link-row__input';
       editInput.value = value;
       editInput.placeholder = placeholder;
+      editInput.title = value;
+
+      const editErrorEl = document.createElement('div');
+      editErrorEl.className = 'figma-link-input__error';
+      editErrorEl.setAttribute('role', 'alert');
 
       const enterEditMode = () => {
         row.classList.add('editing');
+        editErrorEl.classList.remove('is-visible');
+        editInput.title = editInput.value.trim() || value;
         // Defer focus so the layout swap (info/actions hidden, form shown) settles first.
         requestAnimationFrame(() => {
           editInput.focus();
@@ -6961,8 +7065,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const cancelEdit = () => {
         row.classList.remove('editing');
         editInput.value = value;
+        editErrorEl.classList.remove('is-visible');
         editBtn.focus();
       };
+
+      editInput.addEventListener('input', () => {
+        editErrorEl.classList.remove('is-visible');
+        editInput.title = editInput.value.trim() || '';
+      });
 
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -6976,7 +7086,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       editInput.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter') {
           ev.preventDefault();
-          onSave(editInput.value);
+          applySaveResult(editInput.value, editErrorEl);
         } else if (ev.key === 'Escape') {
           ev.preventDefault();
           cancelEdit();
@@ -6986,8 +7096,9 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         // Auto-save on a clean Figma URL paste — no extra click needed.
         setTimeout(() => {
           const pastedValue = editInput.value.trim();
+          editInput.title = pastedValue || '';
           if (pastedValue && /figma\.com/i.test(pastedValue)) {
-            onSave(pastedValue);
+            applySaveResult(pastedValue, editErrorEl);
           }
         }, 0);
       });
@@ -7003,7 +7114,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       saveBtn.setAttribute('aria-label', 'Save Figma frame link');
       saveBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        onSave(editInput.value);
+        applySaveResult(editInput.value, editErrorEl);
       });
 
       const cancelBtn = document.createElement('button');
@@ -7020,6 +7131,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       editActions.appendChild(saveBtn);
       editActions.appendChild(cancelBtn);
       editForm.appendChild(editInput);
+      editForm.appendChild(editErrorEl);
       editForm.appendChild(editActions);
       row.appendChild(editForm);
 
@@ -7035,10 +7147,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
     function createVariantCard(variant, variantIndex, eventIndex) {
         const showGoalOutcomesUI = shouldShowVariantGoalOutcomesUI(variant);
-        const showFigmaLinkUI = shouldShowFigmaLinkUI(variant);
-        // Subtree appears when EITHER the goal outcomes section or the figma link section
-        // is enabled — one expand chevron controls all detail sections together.
-        const showSubtree = showGoalOutcomesUI || showFigmaLinkUI;
+        // Subtree is per-variant metrics only; Figma URL is edited in the ⋮ menu panel.
+        const showSubtree = showGoalOutcomesUI;
 
         // Row 1: optional expand toggle + name + status chips
         const row1 = document.createElement('div');
@@ -7049,7 +7159,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           treeToggle = document.createElement('button');
           treeToggle.type = 'button';
           treeToggle.className = 'variant-tree-toggle';
-          treeToggle.setAttribute('aria-label', 'Expand variant details');
+          treeToggle.setAttribute('aria-label', 'Expand metrics');
           treeToggle.innerHTML = '<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>';
         }
 
@@ -7187,15 +7297,18 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       }
 
       if (variant.figmaLink) {
-        const figmaChip = document.createElement('span');
+        const figmaChip = document.createElement('a');
         figmaChip.className = 'variant-passive-chip variant-passive-chip--figma';
+        figmaChip.href = variant.figmaLink;
+        figmaChip.target = '_blank';
+        figmaChip.rel = 'noopener noreferrer';
         figmaChip.innerHTML = `<span aria-hidden="true">${getBrandIcon('figma', { size: 12 })}</span>`;
-        figmaChip.setAttribute('data-tooltip', 'Linked Figma design');
+        figmaChip.setAttribute('data-tooltip', 'Open linked Figma design');
         figmaChip.setAttribute('data-tooltip-position', 'bottom');
         figmaChip.setAttribute('data-tooltip-align', 'center');
-        figmaChip.setAttribute('data-tooltip-cursor', 'default');
-        figmaChip.setAttribute('role', 'img');
-        figmaChip.setAttribute('aria-label', 'Linked Figma design');
+        figmaChip.setAttribute('data-tooltip-cursor', 'pointer');
+        figmaChip.setAttribute('aria-label', 'Open linked Figma design');
+        figmaChip.addEventListener('click', (e) => e.stopPropagation());
         row1.appendChild(figmaChip);
       }
 
@@ -7215,14 +7328,35 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const variantActionsMenu = document.createElement('div');
       variantActionsMenu.className = 'CustomDropdown__menu';
 
-      // Menu actions: add/manage optional variant details. The chevron owns
-      // expand/collapse; these rows only add or focus the inline detail surfaces.
+      const variantFigmaMenuPanel = document.createElement('div');
+      variantFigmaMenuPanel.className = 'CustomDropdown__figma-panel';
+      variantFigmaMenuPanel.addEventListener('click', (e) => e.stopPropagation());
+      variantFigmaMenuPanel.appendChild(createFigmaFrameLinkInlineBlock({
+        value: variant.figmaLink || '',
+        placeholder: 'Paste Figma link',
+        compactLabel: 'Paste Figma link',
+        ariaLabel: 'Linked Figma design for variant',
+        onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
+          variant.figmaLink = url;
+          renderEvents(events);
+        }),
+        onClear: () => {
+          variant.figmaLink = '';
+          renderEvents(events);
+        }
+      }));
+
+      const variantFigmaMenuDivider = document.createElement('div');
+      variantFigmaMenuDivider.className = 'figma-frame-menu-divider';
+      variantFigmaMenuDivider.setAttribute('aria-hidden', 'true');
+
+      // Chevron expands the metrics block; Figma URL is edited in the panel above.
       const goalOutcomesToggleOption = document.createElement('button');
       goalOutcomesToggleOption.type = 'button';
       goalOutcomesToggleOption.className = 'CustomDropdown__option';
       goalOutcomesToggleOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${getIcon(showGoalOutcomesUI ? 'eye-off' : 'trophy', { size: 14 })}</span>
-        <span class="CustomDropdown__option-text">${showGoalOutcomesUI ? 'Hide goal outcomes' : 'Add goal outcomes'}</span>
+        <span class="CustomDropdown__option-icon">${getIcon(showGoalOutcomesUI ? 'eye-off' : 'chart-column', { size: 14 })}</span>
+        <span class="CustomDropdown__option-text">${showGoalOutcomesUI ? 'Hide metrics' : 'Show metrics'}</span>
       `;
       goalOutcomesToggleOption.onclick = (e) => {
         e.stopPropagation();
@@ -7233,34 +7367,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           variant.collapsed = false;
           setPendingFocus('variant', variant.id, { focus: 'first-metric' });
         }
-        closeCustomDropdown(variantActionsDropdown);
-        renderEvents(events);
-      };
-
-      const figmaLinkToggleOption = document.createElement('button');
-      figmaLinkToggleOption.type = 'button';
-      figmaLinkToggleOption.className = 'CustomDropdown__option';
-      const variantHasFigmaLink = !!variant.figmaLink;
-      const variantFigmaActionLabel = variantHasFigmaLink
-        ? 'Edit Figma link'
-        : showFigmaLinkUI
-          ? 'Hide Figma link field'
-          : 'Add Figma link';
-      figmaLinkToggleOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${variantHasFigmaLink ? getBrandIcon('figma', { size: 14 }) : showFigmaLinkUI ? getIcon('eye-off', { size: 14 }) : getBrandIcon('figma', { size: 14 })}</span>
-        <span class="CustomDropdown__option-text">${variantFigmaActionLabel}</span>
-      `;
-      figmaLinkToggleOption.onclick = (e) => {
-        e.stopPropagation();
-        if (!variantHasFigmaLink && showFigmaLinkUI) {
-          variant.showFigmaLink = false;
-          closeCustomDropdown(variantActionsDropdown);
-          renderEvents(events);
-          return;
-        }
-        variant.showFigmaLink = true;
-        variant.collapsed = false;
-        setPendingFocus('variant', variant.id, { focus: variantHasFigmaLink ? 'figma-link-edit' : 'figma-link' });
         closeCustomDropdown(variantActionsDropdown);
         renderEvents(events);
       };
@@ -7283,22 +7389,30 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         renderEvents(events);
       };
 
-      const removeDivider = document.createElement('div');
-      removeDivider.className = 'figma-frame-menu-divider';
-
-      variantActionsMenu.appendChild(figmaLinkToggleOption);
+      variantActionsMenu.appendChild(variantFigmaMenuPanel);
+      variantActionsMenu.appendChild(variantFigmaMenuDivider);
       variantActionsMenu.appendChild(goalOutcomesToggleOption);
-      variantActionsMenu.appendChild(removeDivider);
       variantActionsMenu.appendChild(removeVariantOption);
       variantActionsDropdown.appendChild(variantActionsTrigger);
       variantActionsDropdown.appendChild(variantActionsMenu);
       setupCustomDropdown(variantActionsDropdown, { trigger: variantActionsTrigger });
+      variantActionsTrigger.addEventListener('click', () => {
+        requestAnimationFrame(() => {
+          if (!variantActionsDropdown.classList.contains('open')) return;
+          if (variant.figmaLink) return;
+          const field = variantActionsMenu.querySelector('.figma-link-input__field');
+          if (field && !field.disabled) {
+            field.focus();
+            if (typeof field.select === 'function') field.select();
+          }
+        });
+      });
       actionsDiv.appendChild(variantActionsDropdown);
       row1.appendChild(actionsDiv);
 
       let subtree = null;
       if (showSubtree) {
-        // Subtree container for collapsible detail sections (goals + linked design).
+        // Subtree: collapsible per-variant metric fields only.
         subtree = document.createElement('div');
         subtree.className = 'variant-subtree';
 
@@ -7312,7 +7426,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         const updateTreeToggleTooltip = () => {
           if (!treeToggle) return;
           const isCollapsed = treeToggle.classList.contains('collapsed');
-          treeToggle.setAttribute('aria-label', isCollapsed ? 'Expand variant details' : 'Collapse variant details');
+          treeToggle.setAttribute('aria-label', isCollapsed ? 'Expand metrics' : 'Collapse metrics');
         };
         treeToggle.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -7322,37 +7436,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           updateTreeToggleTooltip();
         });
         updateTreeToggleTooltip();
-
-        if (showFigmaLinkUI) {
-          // Linked design section. We intentionally don't render a visible heading here
-          // because the inline block's figma icon already identifies the section, and
-          // the sibling Metrics section follows the same hidden-label convention.
-          const linkSection = document.createElement('div');
-          linkSection.className = 'variant-link-section';
-
-          const linkBlock = createFigmaFrameLinkInlineBlock({
-            value: variant.figmaLink || '',
-            placeholder: 'Paste a Figma frame link for this variant',
-            ariaLabel: 'Linked Figma design for variant',
-            onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
-              variant.figmaLink = url;
-              renderEvents(events);
-            }),
-            onClear: () => {
-              variant.figmaLink = '';
-              renderEvents(events);
-            }
-          });
-          linkSection.appendChild(linkBlock);
-          subtree.appendChild(linkSection);
-
-          if (showGoalOutcomesUI) {
-            const separator = document.createElement('div');
-            separator.className = 'variant-section-separator';
-            separator.setAttribute('aria-hidden', 'true');
-            subtree.appendChild(separator);
-          }
-        }
 
         if (showGoalOutcomesUI) {
           // Metrics section with label and inputs (inside subtree)
@@ -7509,46 +7592,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       pendingFocusTarget = { type, id, ...options };
     }
 
-    /**
-     * Focus the right interactive target inside a freshly-rendered figma link surface.
-     * - Empty/add → focus the resource-link InputField.
-     * - Editing   → focus the URL input.
-     * - Edit mode → click the row's pencil action, then focus the edit input.
-     * - Filled    → focus the URL anchor so Enter opens Figma.
-     * Returns true if focus was applied.
-     */
-    function focusFigmaLinkBlock(scope, mode = 'default') {
-      if (!scope) return false;
-      const addInput = scope.querySelector('.figma-link-input__field');
-      if (addInput) {
-        addInput.focus();
-        if (typeof addInput.select === 'function') addInput.select();
-        return true;
-      }
-      const row = scope.querySelector('.figma-link-row');
-      if (!row) return false;
-      if (mode === 'edit' && !row.classList.contains('editing')) {
-        const editButton = row.querySelector('.figma-link-row__edit');
-        if (editButton) editButton.click();
-      }
-      if (row.classList.contains('editing')) {
-        const input = row.querySelector('.figma-link-row__input');
-        if (input) {
-          requestAnimationFrame(() => {
-            input.focus();
-            input.select();
-          });
-          return true;
-        }
-      }
-      const url = row.querySelector('.link-row__url');
-      if (url) {
-        url.focus();
-        return true;
-      }
-      return false;
-    }
-
     function applyPendingFocus() {
       if (!pendingFocusTarget) return;
       const target = pendingFocusTarget;
@@ -7559,10 +7602,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           if (target.type === 'event') {
             const row = document.getElementById(target.id);
             if (!row) return;
-            if (target.focus === 'figma-link' || target.focus === 'figma-link-edit') {
-              const linkRow = row.querySelector('.event-link-row');
-              if (focusFigmaLinkBlock(linkRow, target.focus === 'figma-link-edit' ? 'edit' : 'default')) return;
-            }
             const input = row.querySelector('.event-row-main .InputField__input');
             if (input && !input.disabled) {
               input.focus();
@@ -7580,10 +7619,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
                 if (typeof metricInput.select === 'function') metricInput.select();
               }
               return;
-            }
-            if (target.focus === 'figma-link' || target.focus === 'figma-link-edit') {
-              const linkSection = card.querySelector('.variant-link-section');
-              if (focusFigmaLinkBlock(linkSection, target.focus === 'figma-link-edit' ? 'edit' : 'default')) return;
             }
             const input = card.querySelector('.InputField__input');
             if (input && !input.disabled) {
@@ -7726,10 +7761,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const actionsDiv = document.createElement('div');
       actionsDiv.className = 'event-actions';
 
-      const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-      const showFigmaLinkUI = shouldShowFigmaLinkUI(event);
-
       const actionsDropdown = document.createElement('div');
       actionsDropdown.className = 'CustomDropdown event-actions-dropdown';
 
@@ -7742,61 +7773,27 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const actionsMenu = document.createElement('div');
       actionsMenu.className = 'CustomDropdown__menu';
 
-      // "Add variant" is an action (not a toggle). When variants already exist on
-      // a different touchpoint, it's disabled and explained via the tooltip wrapper.
-      const currentExpIndex = getExperimentTouchpointIndex(events);
-      const variantsExistElsewhere = currentExpIndex >= 0 && currentExpIndex !== eventIndex;
-      const touchpointWithVariantsNum = variantsExistElsewhere ? currentExpIndex + 1 : 0;
-
-      const addVariantsOption = document.createElement('button');
-      addVariantsOption.type = 'button';
-      addVariantsOption.className = 'CustomDropdown__option' + (variantsExistElsewhere ? ' disabled' : '');
-      addVariantsOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${getIcon('git-branch-plus', { size: 14 })}</span>
-        <span class="CustomDropdown__option-text">Add variant</span>
-      `;
-
-      let addVariantsMenuChild = addVariantsOption;
-      if (variantsExistElsewhere) {
-        addVariantsOption.style.pointerEvents = 'none';
-        const tooltipWrapper = document.createElement('span');
-        tooltipWrapper.className = 'CustomDropdown__option-tooltip-wrapper';
-        tooltipWrapper.setAttribute('data-tooltip', `Variants already exist on Touchpoint ${touchpointWithVariantsNum}`);
-        tooltipWrapper.setAttribute('data-tooltip-position', 'bottom');
-        tooltipWrapper.setAttribute('data-tooltip-align', 'start');
-        tooltipWrapper.setAttribute('data-tooltip-size', 'lg');
-        tooltipWrapper.setAttribute('data-tooltip-multiline', 'narrow');
-        tooltipWrapper.setAttribute('data-tooltip-delay', 'short');
-        tooltipWrapper.appendChild(addVariantsOption);
-        addVariantsMenuChild = tooltipWrapper;
-      }
-
-      const figmaLinkToggleOption = document.createElement('button');
-      figmaLinkToggleOption.type = 'button';
-      figmaLinkToggleOption.className = 'CustomDropdown__option';
-      const eventHasFigmaLink = !!event.figmaLink;
-      const eventFigmaActionLabel = eventHasFigmaLink
-        ? 'Edit Figma link'
-        : showFigmaLinkUI
-          ? 'Hide Figma link field'
-          : 'Add Figma link';
-      figmaLinkToggleOption.innerHTML = `
-        <span class="CustomDropdown__option-icon">${eventHasFigmaLink ? getBrandIcon('figma', { size: 14 }) : showFigmaLinkUI ? getIcon('eye-off', { size: 14 }) : getBrandIcon('figma', { size: 14 })}</span>
-        <span class="CustomDropdown__option-text">${eventFigmaActionLabel}</span>
-      `;
-      figmaLinkToggleOption.onclick = (e) => {
-        e.stopPropagation();
-        if (!eventHasFigmaLink && showFigmaLinkUI) {
-          event.showFigmaLink = false;
-          closeCustomDropdown(actionsDropdown);
+      const eventFigmaMenuPanel = document.createElement('div');
+      eventFigmaMenuPanel.className = 'CustomDropdown__figma-panel';
+      eventFigmaMenuPanel.addEventListener('click', (e) => e.stopPropagation());
+      eventFigmaMenuPanel.appendChild(createFigmaFrameLinkInlineBlock({
+        value: event.figmaLink || '',
+        placeholder: 'Paste Figma link',
+        compactLabel: 'Paste Figma link',
+        ariaLabel: 'Linked Figma design for touchpoint',
+        onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
+          event.figmaLink = url;
           renderEvents(events);
-          return;
+        }),
+        onClear: () => {
+          event.figmaLink = '';
+          renderEvents(events);
         }
-        event.showFigmaLink = true;
-        setPendingFocus('event', event.id, { focus: eventHasFigmaLink ? 'figma-link-edit' : 'figma-link' });
-        closeCustomDropdown(actionsDropdown);
-        renderEvents(events);
-      };
+      }));
+
+      const eventFigmaMenuDivider = document.createElement('div');
+      eventFigmaMenuDivider.className = 'figma-frame-menu-divider';
+      eventFigmaMenuDivider.setAttribute('aria-hidden', 'true');
 
       // Trash icon + danger color, last position. Mirrors the variant kebab.
       const removeOption = document.createElement('button');
@@ -7812,17 +7809,24 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         renderEvents(events);
       });
 
-      const removeDivider = document.createElement('div');
-      removeDivider.className = 'figma-frame-menu-divider';
-
-      actionsMenu.appendChild(figmaLinkToggleOption);
-      actionsMenu.appendChild(addVariantsMenuChild);
-      actionsMenu.appendChild(removeDivider);
+      actionsMenu.appendChild(eventFigmaMenuPanel);
+      actionsMenu.appendChild(eventFigmaMenuDivider);
       actionsMenu.appendChild(removeOption);
 
       actionsDropdown.appendChild(actionsTrigger);
       actionsDropdown.appendChild(actionsMenu);
       setupCustomDropdown(actionsDropdown, { trigger: actionsTrigger });
+      actionsTrigger.addEventListener('click', () => {
+        requestAnimationFrame(() => {
+          if (!actionsDropdown.classList.contains('open')) return;
+          if (event.figmaLink) return;
+          const field = actionsMenu.querySelector('.figma-link-input__field');
+          if (field && !field.disabled) {
+            field.focus();
+            if (typeof field.select === 'function') field.select();
+          }
+        });
+      });
 
       if (variantCount > 0) {
         const variantsChip = document.createElement('span');
@@ -7840,15 +7844,18 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       }
 
       if (event.figmaLink) {
-        const figmaChip = document.createElement('span');
+        const figmaChip = document.createElement('a');
         figmaChip.className = 'variant-passive-chip variant-passive-chip--figma';
+        figmaChip.href = event.figmaLink;
+        figmaChip.target = '_blank';
+        figmaChip.rel = 'noopener noreferrer';
         figmaChip.innerHTML = `<span aria-hidden="true">${getBrandIcon('figma', { size: 12 })}</span>`;
-        figmaChip.setAttribute('data-tooltip', 'Linked Figma design');
+        figmaChip.setAttribute('data-tooltip', 'Open linked Figma design');
         figmaChip.setAttribute('data-tooltip-position', 'bottom');
         figmaChip.setAttribute('data-tooltip-align', 'center');
-        figmaChip.setAttribute('data-tooltip-cursor', 'default');
-        figmaChip.setAttribute('role', 'img');
-        figmaChip.setAttribute('aria-label', 'Linked Figma design');
+        figmaChip.setAttribute('data-tooltip-cursor', 'pointer');
+        figmaChip.setAttribute('aria-label', 'Open linked Figma design');
+        figmaChip.addEventListener('click', (e) => e.stopPropagation());
         actionsDiv.appendChild(figmaChip);
       }
       actionsDiv.appendChild(actionsDropdown);
@@ -7857,29 +7864,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       mainRow.appendChild(inputContainer);
       mainRow.appendChild(actionsDiv);
       row.appendChild(mainRow);
-
-      // ── Inline Linked design row ─────────────────────────────
-      // Sits below the main row, indented to align with the event input. Contains
-      // the same inline figma block used in variant cards (CTA / rich card / input).
-      if (showFigmaLinkUI) {
-        const linkRow = document.createElement('div');
-        linkRow.className = 'event-link-row';
-        const linkBlock = createFigmaFrameLinkInlineBlock({
-          value: event.figmaLink || '',
-          placeholder: 'Paste a Figma frame link for this touchpoint',
-          ariaLabel: 'Linked Figma design for touchpoint',
-          onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
-            event.figmaLink = url;
-            renderEvents(events);
-          }),
-          onClear: () => {
-            event.figmaLink = '';
-            renderEvents(events);
-          }
-        });
-        linkRow.appendChild(linkBlock);
-        row.appendChild(linkRow);
-      }
 
       row.addEventListener('click', () => {
         const eventsListEl = document.getElementById('eventsList');
@@ -7962,17 +7946,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           updateRolledoutOptions();
         }
       };
-
-      // Hook the kebab-menu action to the same behavior as the inline add row
-      addVariantsOption.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (variantsExistElsewhere) {
-          closeCustomDropdown(actionsDropdown);
-          return;
-        }
-        if (typeof addVariantRow.onclick === 'function') addVariantRow.onclick();
-        closeCustomDropdown(actionsDropdown);
-      });
 
       if (hasVariants) {
         variantsList.appendChild(addVariantRow);
