@@ -298,9 +298,9 @@
       --list-dnd-indicator-height: 2px;
       --list-dnd-indicator-z-row: 4;
       --list-dnd-indicator-z-card: 10;
-      --variant-card-bg: #ffffff;
-      --variant-card-hover-bg: color-mix(in srgb, #ffffff 92%, var(--brand) 8%);
-      --variant-card-active-bg: color-mix(in srgb, #ffffff 90%, var(--background) 10%);
+      --variant-card-bg: color-mix(in srgb, var(--background) 50%, var(--background-surface) 50%);
+      --variant-card-hover-bg: color-mix(in srgb, var(--background) 93%, var(--brand) 7%);
+      --variant-card-active-bg: color-mix(in srgb, var(--background) 92%, var(--text-primary) 8%);
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
       --variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);
       --variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);
@@ -378,12 +378,12 @@
       --primary-button-text: var(--text-primary-inverse);
       --primary-button-shadow: none;
       --logo-wordmark-color: #0F1729;
-      --variant-card-bg: #ffffff;
-      --variant-card-hover-bg: color-mix(in srgb, #ffffff 92%, var(--brand) 8%);
-      --variant-card-active-bg: color-mix(in srgb, #ffffff 90%, var(--background) 10%);
+      --variant-card-bg: color-mix(in srgb, var(--background) 50%, var(--background-surface) 50%);
+      --variant-card-hover-bg: color-mix(in srgb, var(--background) 93%, var(--brand) 7%);
+      --variant-card-active-bg: color-mix(in srgb, var(--background) 92%, var(--text-primary) 8%);
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
-      --variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);
-      --variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);
+      /*--variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);*/
+      /*--variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);*/
       --input-field-prefix-divider: color-mix(in srgb, var(--text-primary) 24%, transparent);
     }
 
@@ -396,12 +396,12 @@
       --primary-button-text: #22272f;
       --primary-button-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 6px 16px rgba(0, 0, 0, 0.24);
       --logo-wordmark-color: #ffffff;
-      --variant-card-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 86%, white 14%);
-      --variant-card-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 78%, white 22%);
+      --variant-card-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 50%, var(--background-surface) 50%);
+      --variant-card-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 88%, white 12%);
       --variant-card-active-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 82%, white 18%);
       --variant-card-border: 1px solid color-mix(in srgb, white 22%, transparent);
-      --variant-card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.24);
-      --variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 10px 24px rgba(0, 0, 0, 0.28);
+      /*--variant-card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.24);*/
+      /*--variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 10px 24px rgba(0, 0, 0, 0.28);*/
       --event-variants-badge-bg: color-mix(in srgb, var(--brand) 24%, var(--background-surface));
       --event-variants-badge-border: color-mix(in srgb, var(--brand) 36%, transparent);
       --event-variants-badge-color: color-mix(in srgb, var(--brand) 86%, white);
@@ -1157,15 +1157,7 @@
     }
 
     .event-row.is-selected:not(.system):not(.add-step-row) .event-row-main {
-      background: linear-gradient(
-        to right,
-        var(--dropdown-selected-bg) 0,
-        var(--dropdown-selected-bg) calc(var(--events-list-spine-left) - 1px),
-        transparent calc(var(--events-list-spine-left) - 1px),
-        transparent calc(var(--events-list-spine-left) + 2px),
-        var(--dropdown-selected-bg) calc(var(--events-list-spine-left) + 2px)
-      );
-      border-radius: var(--radius-md);
+      background: transparent;
     }
 
     .goal-row-header {
@@ -1177,8 +1169,7 @@
       user-select: auto;
     }
 
-    .goal-step,
-    .variant-card__drag-step {
+    .goal-step {
       position: relative;
       display: flex;
       flex-direction: column;
@@ -1191,9 +1182,13 @@
       pointer-events: none;
     }
 
+    /* Variant letter / drag badge column — hidden per product UI */
+    .variant-card__drag-step {
+      display: none;
+    }
+
     .goal-step::before,
-    .event-step::before,
-    .variant-card__drag-step::before {
+    .event-step::before {
       content: '';
       position: absolute;
       top: -6px;
@@ -2387,7 +2382,7 @@
       --step-badge-fg: var(--text-link);
     }
 
-    /* Experiment events (with variants) get purple background */
+    /* Touchpoints with variants: distinct journey step badge (row uses default surface) */
     .event-row.event-row--has-variants .step-drag-badge--journey {
       --step-badge-bg: var(--event-variants-step-bg);
       /* Thin ring matches spine color so the connector reads as meeting the node */
@@ -2402,22 +2397,6 @@
         --step-badge-br-color: var(--text-secondary) !important;
         --step-badge-fg: var(--color-white-100) !important;
       }
-
-    /* Experiment events (with variants) get purple background */
-    .event-row.event-row--has-variants {
-        --event-variants-row-fill: var(--figma-color-bg-selected-secondary, var(--color-royal-blue-50));
-        /* Let the journey spine show through; badges/input still paint above the gap */
-        background: linear-gradient(
-          to right,
-          var(--event-variants-row-fill) 0,
-          var(--event-variants-row-fill) calc(var(--events-list-spine-left) - 1px),
-          transparent calc(var(--events-list-spine-left) - 1px),
-          transparent calc(var(--events-list-spine-left) + 2px),
-          var(--event-variants-row-fill) calc(var(--events-list-spine-left) + 2px)
-        );
-        border-radius: var(--radius-md);
-        gap: var(--space-0);
-    }
 
     .event-flow-line {
       position: absolute;
@@ -2440,7 +2419,7 @@
       display: none;
     }
 
-    /* Minimal insert affordance (shown on hover) */
+    /* Journey insert: dashed cross at rest; solid line + add button on hover/focus */
     .journey-insert {
       position: relative;
       z-index: 2;
@@ -2459,19 +2438,52 @@
       display: block;
     }
 
-    /* Keep the vertical spine continuous through the insert hotspot */
-    .journey-insert::before {
-      display: none;
-    }
-
+    /* Idle cross: 5px dash / 5px gap / round caps. Masks + bg-color so stroke uses var(--border)
+       (currentColor inside SVG background-image is unreliable in WebViews). */
     .journey-insert__line {
       position: absolute;
-      left: 10px; /* align to step badge center (20px / 2) */
+      left: 0;
       right: 0;
       top: 50%;
       transform: translateY(-50%);
-        border-top: 1px solid var(--text-link);
-      opacity: 0;
+      height: 3px;
+      border: none;
+      background-color: var(--border);
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='3' viewBox='0 0 10 3'%3E%3Cline x1='0' y1='1.5' x2='10' y2='1.5' fill='none' stroke='white' stroke-width='1' stroke-dasharray='5 5' stroke-linecap='round'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='3' viewBox='0 0 10 3'%3E%3Cline x1='0' y1='1.5' x2='10' y2='1.5' fill='none' stroke='white' stroke-width='1' stroke-dasharray='5 5' stroke-linecap='round'/%3E%3C/svg%3E");
+      -webkit-mask-repeat: repeat-x;
+      mask-repeat: repeat-x;
+      -webkit-mask-size: 10px 3px;
+      mask-size: 10px 3px;
+      -webkit-mask-position: 0 50%;
+      mask-position: 0 50%;
+      opacity: 1;
+      transition: opacity 0.12s ease, -webkit-mask-image 0.12s ease, mask-image 0.12s ease, background-color 0.12s ease;
+      z-index: 2;
+    }
+
+    /* Vertical stroke of idle cross (aligned to journey spine) */
+    .journey-insert::before {
+      content: '';
+      position: absolute;
+      display: block;
+      left: var(--events-list-spine-left);
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 3px;
+      height: 16px;
+      border: none;
+      background-color: var(--border);
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='16' viewBox='0 0 3 16'%3E%3Cline x1='1.5' y1='0' x2='1.5' y2='16' fill='none' stroke='white' stroke-width='1' stroke-dasharray='5 5' stroke-linecap='round'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='3' height='16' viewBox='0 0 3 16'%3E%3Cline x1='1.5' y1='0' x2='1.5' y2='16' fill='none' stroke='white' stroke-width='1' stroke-dasharray='5 5' stroke-linecap='round'/%3E%3C/svg%3E");
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 3px 16px;
+      mask-size: 3px 16px;
+      -webkit-mask-position: 50% 50%;
+      mask-position: 50% 50%;
+      opacity: 1;
+      pointer-events: none;
       transition: opacity 0.12s ease;
       z-index: 2;
     }
@@ -2496,15 +2508,28 @@
       z-index: 3;
     }
 
+    .journey-insert:hover::before,
+    .journey-insert:focus-visible::before {
+      opacity: 0;
+    }
+
     .journey-insert:hover .journey-insert__line,
-    .journey-insert:hover .journey-insert__btn,
-    .journey-insert:focus-visible .journey-insert__line,
-    .journey-insert:focus-visible .journey-insert__btn {
+    .journey-insert:focus-visible .journey-insert__line {
+      /* Full width like idle; solid brand line (clear mask so bg gradient shows) */
+      -webkit-mask-image: none;
+      mask-image: none;
+      background-color: transparent;
+      background-image: linear-gradient(var(--text-link), var(--text-link));
+      background-size: 100% 1px;
+      background-position: center;
+      background-repeat: no-repeat;
+      border: none;
       opacity: 1;
     }
 
     .journey-insert:hover .journey-insert__btn,
     .journey-insert:focus-visible .journey-insert__btn {
+      opacity: 1;
       transform: translate(-50%, -50%) scale(1.02);
     }
 
@@ -2519,7 +2544,8 @@
     }
 
     .events-list.is-dragging .journey-insert__line,
-    .events-list.is-dragging .journey-insert__btn {
+    .events-list.is-dragging .journey-insert__btn,
+    .events-list.is-dragging .journey-insert::before {
       opacity: 0 !important;
     }
 
@@ -2572,12 +2598,23 @@
       min-width: 0;
     }
 
+    /* Event input: match default InputField surface (visible bg like other form fields) */
     .event-input-container .InputField__wrapper {
-      background: var(--color-transparent);
-      border: 1px solid var(--color-transparent);
-      border-radius: var(--radius-sm);
-      padding: var(--space-4) var(--space-8);
-      transition: background 0.15s, border-color 0.15s;
+      background: var(--input-field-bg);
+      border: var(--input-field-border);
+      border-color: var(--input-field-border-no-color);
+      border-radius: var(--input-field-radius);
+      padding: var(--input-field-padding-y) var(--input-field-padding-x);
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .event-input-container .InputField__wrapper:hover {
+      border-color: var(--input-field-hover-border);
+    }
+
+    .event-input-container .InputField__wrapper:focus-within {
+      border-color: var(--input-field-focus-border);
+      box-shadow: var(--input-field-focus-shadow);
     }
 
     .event-input-container .InputField__input.touchpoint-name-input {
@@ -2690,7 +2727,7 @@
 
     .variant-card:hover {
       border-color: var(--color-royal-blue-alpha-200);
-      box-shadow: 0 6px 18px rgba(40, 60, 90, 0.1);
+      box-shadow: none;
       transform: translateY(-1px);
       z-index: 20;
     }
@@ -5119,7 +5156,7 @@
           <div class="section-block-left">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Journey</h2>
-              <span class="section-info-icon" data-tooltip="User steps through your flow. Variants live at the experiment touchpoint." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Journey">
+              <span class="section-info-icon" data-tooltip="User steps through your flow. Each touchpoint can have its own design variants for that step." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Journey">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -7524,7 +7561,9 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     }
 
     /**
-     * Creates an event row with optional variants
+     * Index of the first touchpoint with at least one design variant, or -1 if none.
+     * Used by {@link switchExperimentTouchpoint} when moving all variants between steps.
+     * Multiple touchpoints may each have variants; variant UI is not gated on this.
      */
     function getExperimentTouchpointIndex(list = events) {
       if (!Array.isArray(list)) return -1;
@@ -7930,11 +7969,11 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         selectedEventId = event.id || null;
       });
 
-      // Variants container (always show to allow adding variants)
+      const hasVariants = Array.isArray(event.variants) && event.variants.length > 0;
+
       const variantsContainer = document.createElement('div');
       variantsContainer.className = 'event-variants-container';
 
-      // Step indicator for variants (mirrors event-step structure)
       const variantsStep = document.createElement('div');
       variantsStep.className = 'event-variants-step';
 
@@ -7945,9 +7984,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const variantsList = document.createElement('div');
       variantsList.className = 'variants-list';
 
-      const hasVariants = Array.isArray(event.variants) && event.variants.length > 0;
-
-      // Render each variant card
       if (hasVariants) {
         event.variants.forEach((variant, vIndex) => {
           const variantCard = createVariantCard(variant, vIndex, eventIndex);
@@ -7955,13 +7991,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         });
       }
 
-      // Add inline "Add variant" row
       const addVariantRow = document.createElement('div');
       addVariantRow.className = 'inline-add-row';
       addVariantRow.style.marginLeft = '0';
-      const addVariantsLabel = (event.variants && event.variants.length > 0)
-        ? 'Add variant'
-        : 'Add variant (make this the experiment)';
+      const addVariantsLabel = 'Add design variant';
       addVariantRow.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M5 12h14"/><path d="M12 5v14"/>
@@ -7969,12 +8002,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         <span>${addVariantsLabel}</span>
       `;
       addVariantRow.onclick = () => {
-        // Creating the experiment touchpoint:
-        // First time user adds variants anywhere → that step becomes the experiment touchpoint.
-        // (Adding variants on other touchpoints is disabled when an experiment already exists.)
-        const expIndex = getExperimentTouchpointIndex(events);
-        if (expIndex >= 0 && expIndex !== eventIndex) return;
-
         event.hasVariants = true;
         if (!Array.isArray(event.variants)) event.variants = [];
         const variantIndex = event.variants.length;
@@ -7995,22 +8022,21 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         }
         renderEvents(events);
 
-        // Keep rolled-out variant dropdown in sync if Concluded
         const statusInput = document.getElementById('experimentStatus');
         if (statusInput && statusInput.value === 'completed') {
           updateRolledoutOptions();
         }
       };
 
+      variantsList.appendChild(addVariantRow);
+
       if (hasVariants) {
-        variantsList.appendChild(addVariantRow);
-
         initVariantDragReorder(variantsList, eventIndex);
-
-        variantsContainer.appendChild(variantsStep);
-        variantsContainer.appendChild(variantsList);
-        row.appendChild(variantsContainer);
       }
+
+      variantsContainer.appendChild(variantsStep);
+      variantsContainer.appendChild(variantsList);
+      row.appendChild(variantsContainer);
 
       // Sync input to event data
       const nameInput = eventInput.querySelector('.InputField__input');
@@ -8259,8 +8285,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       list.style.display = 'flex';
 
       const hasSteps = !!(eventsList && eventsList.length > 0);
-      const expIndex = getExperimentTouchpointIndex(eventsList);
-      const hasExperimentTouchpoint = expIndex >= 0;
 
       const createInsertHotspot = (label, onClick) => {
         const btn = document.createElement('button');
@@ -9134,6 +9158,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
      */
     function getAllVariants() {
       const allVariants = [];
+      const touchpointsWithVariants = events.filter((e) => (e.variants?.length ?? 0) > 0).length;
       events.forEach((event, eventIndex) => {
         if (event.variants && event.variants.length > 0) {
           event.variants.forEach((variant, variantIndex) => {
@@ -9142,11 +9167,15 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
             if (!displayName || (/^[A-Z]$/i).test(displayName)) {
               displayName = `Variant ${variantIndex + 1}`;
             }
+            const touchLabel = event.name?.trim() || `Touchpoint ${eventIndex + 1}`;
+            if (touchpointsWithVariants > 1) {
+              displayName = `${touchLabel} · ${displayName}`;
+            }
             allVariants.push({
               ...variant,
               eventIndex,
               variantIndex,
-              eventName: event.name || `Touchpoint ${eventIndex + 1}`,
+              eventName: touchLabel,
               displayName
             });
           });
