@@ -77,7 +77,7 @@ type ThumbnailSourceNode = SceneNode & {
 
 function createRolledOutIcon(): FrameNode {
   const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
-  icon.name = 'Rolled out Icon';
+  icon.name = 'Rolled Out Icon';
   icon.resize(10, 10);
   icon.fills = [];
   return icon;

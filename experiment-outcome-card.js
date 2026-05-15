@@ -24,7 +24,7 @@ const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="n
 </svg>`;
 function createRolledOutIcon() {
     const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
-    icon.name = "Rolled out Icon";
+    icon.name = "Rolled Out Icon";
     icon.resize(10, 10);
     icon.fills = [];
     return icon;
@@ -852,7 +852,7 @@ function createVariantNameCell(variant) {
     nameText.characters = variantName;
     nameRow.appendChild(nameText);
     if (variant.isRolledOut) {
-        const rolledOutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
+        const rolledOutBadge = createBadge('Rolled Out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
         nameRow.appendChild(rolledOutBadge);
     }
     cell.appendChild(nameRow);
