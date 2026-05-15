@@ -1063,7 +1063,7 @@ function createSummarySection(data) {
         const outcomeDetail = figma.createText();
         outcomeDetail.fontName = getFontStyle("Regular");
         outcomeDetail.fontSize = TOKENS.fontSizeBodyMd;
-        outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+        outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
         setWrappedText(outcomeDetail, outcome.detail, contentWidth);
         section.appendChild(outcomeDetail);
         const factsFrame = figma.createFrame();

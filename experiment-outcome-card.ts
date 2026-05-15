@@ -1249,7 +1249,7 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   const outcomeDetail = figma.createText();
   outcomeDetail.fontName = getFontStyle("Regular");
   outcomeDetail.fontSize = TOKENS.fontSizeBodyMd;
-  outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+  outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   setWrappedText(outcomeDetail, outcome.detail, contentWidth);
   section.appendChild(outcomeDetail);
 
@@ -1292,13 +1292,13 @@ function createSummaryFactRow(fact: string, accentColor: string, width: number):
 
   const dot = figma.createEllipse();
   dot.resize(5, 5);
-  dot.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+  dot.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   row.appendChild(dot);
 
   const factText = figma.createText();
   factText.fontName = getFontStyle("Regular");
   factText.fontSize = TOKENS.fontSizeBodySm;
-  factText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+  factText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   setWrappedText(factText, fact, width - 11);
   row.appendChild(factText);
 
