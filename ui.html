@@ -298,9 +298,9 @@
       --list-dnd-indicator-height: 2px;
       --list-dnd-indicator-z-row: 4;
       --list-dnd-indicator-z-card: 10;
-      --variant-card-bg: color-mix(in srgb, var(--background) 80%, var(--background-surface) 20%);
-      --variant-card-hover-bg: color-mix(in srgb, var(--background) 93%, var(--brand) 7%);
-      --variant-card-active-bg: color-mix(in srgb, var(--background) 92%, var(--text-primary) 8%);
+      --variant-card-bg: var(--color-azure-dark-alpha-25);
+      --variant-card-hover-bg: color-mix(in srgb, var(--color-azure-dark-alpha-25) 93%, var(--brand) 7%);
+      --variant-card-active-bg: color-mix(in srgb, var(--color-azure-dark-alpha-25) 92%, var(--text-primary) 8%);
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
       --variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);
       --variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);
@@ -317,8 +317,8 @@
       --variant-name-input-hover-bg: var(--color-white-alpha-700);
       --variant-name-input-border-color: var(--color-azure-light-alpha-100);
       /* === Input Field Component (from Figma node 353-7322) === */
-      --input-field-bg: var(--figma-color-bg-secondary, var(--color-azure-dark-alpha-50)); 
-      --input-field-hover-bg: var(--color-azure-dark-alpha-50); 
+      --input-field-bg: var(--color-azure-dark-alpha-50);
+      --input-field-hover-bg: var(--color-azure-dark-alpha-50);
       --input-field-dropdown-bg: var(--background-surface);
       --input-field-hover-border: var(--input-field-border-color);
       --input-field-focus-border: var(--color-electric-violet-500);
@@ -378,13 +378,15 @@
       --primary-button-text: var(--text-primary-inverse);
       --primary-button-shadow: none;
       --logo-wordmark-color: #0F1729;
-      --variant-card-bg: color-mix(in srgb, var(--background) 80%, var(--background-surface) 20%);
-      --variant-card-hover-bg: color-mix(in srgb, var(--background) 93%, var(--brand) 7%);
-      --variant-card-active-bg: color-mix(in srgb, var(--background) 92%, var(--text-primary) 8%);
+      --variant-card-bg: var(--color-azure-dark-alpha-25);
+      --variant-card-hover-bg: color-mix(in srgb, var(--color-azure-dark-alpha-25) 93%, var(--brand) 7%);
+      --variant-card-active-bg: color-mix(in srgb, var(--color-azure-dark-alpha-25) 92%, var(--text-primary) 8%);
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
       /*--variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);*/
       /*--variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);*/
       --input-field-prefix-divider: color-mix(in srgb, var(--text-primary) 24%, transparent);
+      --input-field-bg: var(--color-azure-dark-alpha-50);
+      --input-field-hover-bg: var(--color-azure-dark-alpha-50);
     }
 
     :root[data-figma-theme="dark"] {
@@ -396,9 +398,9 @@
       --primary-button-text: #22272f;
       --primary-button-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 6px 16px rgba(0, 0, 0, 0.24);
       --logo-wordmark-color: #ffffff;
-      --variant-card-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 80%, var(--background-surface) 20%);
-      --variant-card-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 88%, white 12%);
-      --variant-card-active-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 82%, white 18%);
+      --variant-card-bg: var(--color-azure-light-alpha-25);
+      --variant-card-hover-bg: color-mix(in srgb, var(--color-azure-light-alpha-25) 93%, var(--brand) 7%);
+      --variant-card-active-bg: color-mix(in srgb, var(--color-azure-light-alpha-25) 92%, var(--text-primary) 8%);
       --variant-card-border: 1px solid color-mix(in srgb, white 22%, transparent);
       /*--variant-card-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.24);*/
       /*--variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 10px 24px rgba(0, 0, 0, 0.28);*/
@@ -414,6 +416,8 @@
       --variant-name-input-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 76%, white 24%);
       --variant-name-input-border-color: color-mix(in srgb, white 18%, transparent);
       --input-field-prefix-divider: color-mix(in srgb, white 44%, transparent);
+      --input-field-bg: var(--color-azure-light-alpha-50);
+      --input-field-hover-bg: var(--color-azure-light-alpha-50);
       /* Opaque mixes: same family as light azure-50/100 on dark secondary */
       --button-secondary-hover-bg: color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 92%, white 8%);
       --button-secondary-selected-bg: var(--figma-color-bg-selected-secondary, color-mix(in srgb, var(--figma-color-bg-secondary, #2c2c30) 84%, white 16%));
@@ -1420,7 +1424,7 @@
       flex: 0 0 96px;
     }
 
-    /* Direction badge prefix (inside metric InputField, like color-indicator in variant name) */
+    /* Direction badge prefix (inside metric threshold InputField, like color-indicator in variant name) */
     .direction-badge {
       position: relative;
       z-index: 10;
@@ -3191,15 +3195,15 @@
 
     .variant-passive-chip--rolledout {
       background: var(--rolledout-chip-bg);
-      /*border-color: var(--rolledout-chip-border);*/
+      border-color: var(--rolledout-chip-border);
       color: var(--rolledout-chip-text);
       width: 20px;
       padding: 0;
     }
 
     .variant-passive-chip--figma {
-      /*background: var(--color-azure-dark-alpha-50);
-      border-color: var(--color-azure-dark-alpha-50);*/
+      background: var(--color-azure-light-alpha-500);
+      border-color: var(--color-azure-dark-alpha-100);
       color: var(--text-primary);
       width: 20px;
       padding: 0;
@@ -4364,7 +4368,7 @@
       /* background-color: var(--input-field-bg);*/
     }
 
-    /* Left text (prefix like "(CR)") */
+    /* Left text (prefix like "(CR)") — used by createInputField */
     .InputField__prefix {
       font-size: var(--body-sm-size);
       font-weight: 400;
@@ -4379,10 +4383,30 @@
       padding-right: var(--space-8);
       height: 100%;
       align-content: center;
-
     }
 
     .InputField__prefix.hidden {
+      display: none;
+    }
+
+    /* Goal title metric name only: abbreviation after input */
+    .InputField__suffix-addon {
+      font-size: var(--body-sm-size);
+      font-weight: 400;
+      line-height: 100%;
+      color: var(--text-secondary);
+      opacity: var(--input-field-suffix-opacity);
+      letter-spacing: 0.175px;
+      flex-shrink: 0;
+      width: 30px;
+      text-align: right;
+      border-left: 1px solid var(--input-field-prefix-divider);
+      padding-left: var(--space-8);
+      height: 100%;
+      align-content: center;
+    }
+
+    .InputField__suffix-addon.hidden {
       display: none;
     }
 
@@ -4891,13 +4915,13 @@
           <path d="M14.958 12.296C20.1588 12.296 25.8198 15.9319 25.8198 23.434C25.8198 30.7059 20.6651 35.3083 14.958 35.3083C13.025 35.3083 11.5062 34.8481 10.2635 33.9736V39.5426C10.2635 41.6597 12.3346 42.212 12.3346 43.5007V43.6848C12.3346 44.2371 11.8744 44.5593 11.23 44.5593H1.47279C0.828444 44.5593 0.368197 44.2371 0.368197 43.6848V43.5007C0.368197 42.212 2.20918 41.6597 2.20918 39.5426V20.6725C2.20918 18.6934 0 18.4633 0 17.1286V16.8985C0 16.3462 0.414222 15.9319 1.05857 15.5637L7.13382 12.5721C8.51456 11.9278 9.06686 12.5721 9.06686 13.4926V14.8273C10.2175 13.2165 12.3346 12.296 14.958 12.296ZM14.2216 33.0531C16.5689 33.0531 17.7195 31.028 17.7195 27.254C17.7195 22.2833 16.3848 14.5512 13.025 14.5512C11.3681 14.5512 10.2635 16.024 10.2635 18.1871V26.5176C10.2635 30.4297 12.1965 33.0531 14.2216 33.0531ZM51.5476 29.7854C51.5476 33.5134 53.5267 31.7184 53.5267 33.6054C53.5267 34.8481 51.7317 35.1242 48.7861 35.1242C45.9326 35.1242 44.69 34.4338 44.4598 32.4548C43.2632 34.2958 41.1 35.3083 37.9703 35.3083C33.3219 35.3083 29.3637 32.1326 29.3637 26.2415V18.5553C29.3637 16.3922 27.5228 15.8399 27.5228 14.6893V14.5052C27.5228 13.9989 27.937 13.5387 28.5813 13.4466L35.439 12.5261C36.7737 12.342 37.6022 12.6182 37.6022 13.4466L37.4641 27.0699C37.4181 30.8439 38.3846 32.2707 40.4097 32.2707C42.1126 32.2707 43.4473 30.4757 43.4473 27.6682V18.5553C43.4473 16.3922 41.6063 15.8399 41.6063 14.6893V14.5052C41.6063 13.9989 42.0205 13.5387 42.6649 13.4466L49.5225 12.5261C50.8573 12.342 51.5476 12.6182 51.5476 13.4466V29.7854ZM56.3342 34.8481C55.6898 34.8481 55.2756 34.5259 55.2756 33.9736V33.7895C55.2756 32.4548 57.0706 31.9485 57.0706 29.8314V8.79811C57.0706 6.63495 55.2756 6.03663 55.2756 4.88601V4.70191C55.2756 4.19564 55.6898 3.96552 56.2882 3.64335L63.2379 0.237522C64.5266 -0.406823 65.355 0.375596 65.355 1.20404V29.8314C65.355 31.9485 67.3801 32.4548 67.3801 33.7895V33.9736C67.3801 34.5259 66.9199 34.8481 66.2755 34.8481H56.3342ZM83.7189 12.296C88.9196 12.296 94.5807 15.9319 94.5807 23.434C94.5807 30.7059 89.4259 35.3083 83.7189 35.3083C81.7858 35.3083 80.267 34.8481 79.0244 33.9736V39.5426C79.0244 41.6597 81.0955 42.212 81.0955 43.5007V43.6848C81.0955 44.2371 80.6352 44.5593 79.9909 44.5593H70.2336C69.5893 44.5593 69.1291 44.2371 69.1291 43.6848V43.5007C69.1291 42.212 70.97 41.6597 70.97 39.5426V20.6725C70.97 18.6934 68.7609 18.4633 68.7609 17.1286V16.8985C68.7609 16.3462 69.1751 15.9319 69.8194 15.5637L75.8947 12.5721C77.2754 11.9278 77.8277 12.5721 77.8277 13.4926V14.8273C78.9783 13.2165 81.0955 12.296 83.7189 12.296ZM82.9825 33.0531C85.3297 33.0531 86.4803 31.028 86.4803 27.254C86.4803 22.2833 85.1456 14.5512 81.7858 14.5512C80.1289 14.5512 79.0244 16.024 79.0244 18.1871V26.5176C79.0244 30.4297 80.9574 33.0531 82.9825 33.0531ZM109.355 35.3083C102.313 35.3083 96.6058 30.4297 96.6058 23.7561C96.6058 16.9445 102.451 12.296 109.032 12.296C115.936 12.296 121.643 17.0826 121.643 23.8482C121.643 30.5678 116.074 35.3083 109.355 35.3083ZM110.321 33.0531C112.484 33.0531 113.267 30.8439 113.267 27.3921C113.267 23.8022 111.38 14.5512 107.744 14.5512C105.535 14.5512 104.752 16.5763 104.752 20.3043C104.752 24.0323 106.593 33.0531 110.321 33.0531Z" fill="#333B47"/>
         </svg>
 
-        <p class="intro-screen__subtitle">Petri for Figma lets teams visually map experiments and design variants directly on the canvas, so everyone understands what’s being tested, where, and why. </p>
-        <p class="intro-screen__clarifier">An <strong>experiment flow</strong> is one diagram on the canvas: journey steps, goals, and design variants—so growth and product design share a single source of truth.</p>
+        <p class="intro-screen__subtitle">Petri for Figma helps teams map experiments and design variants directly on the canvas, so everyone can see what’s being tested, where it happens, and why it matters.</p>
+        <p class="intro-screen__subtitle">An experiment flow connects journeys, goals, and variants into one shared source of truth.</p>
         <div class="intro-screen__features">
           <ul>
-            <li class="intro-screen__feature-text"><span style="font-weight: 600;">Make experiments visible</span> <br> Map flows and variants directly on the canvas.</li>
-            <li class="intro-screen__feature-text"><span style="font-weight: 600;">Experiment clarity</span> <br>Standardize how experiments are defined and connected.</li>
-            <li class="intro-screen__feature-text"><span style="font-weight: 600;">Align decisions across teams</span> <br>Maintain a single source of truth from idea to rollout.</li>
+            <li class="intro-screen__feature-text"><span style="font-weight: 600;">See the full experiment</span> <br>Visualize user flows, variants, and outcomes in one place.</li>
+            <li class="intro-screen__feature-text"><span style="font-weight: 600;">Bring structure to testing</span> <br>Create a consistent system for experiments across teams.</li>
+            <li class="intro-screen__feature-text"><span style="font-weight: 600;">Keep teams aligned</span> <br>Share a single source of truth from planning to rollout.</li>
           </ul>
         
         </div>
@@ -4928,7 +4952,7 @@
           <div class="header-content">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Experiment</h2>
-              <span class="section-info-icon" data-tooltip="Title, description, audience, dates, status, owner, and resource links for your test." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Experiment">
+              <span class="section-info-icon" data-tooltip="Define the experiment details" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Define the experiment details">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -5124,7 +5148,7 @@
           <div class="section-block-left">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Goals</h2>
-              <span class="section-info-icon" data-tooltip="Each goal is a metric you measure. The first goal is primary and guides the outcome summary." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Goals">
+              <span class="section-info-icon" data-tooltip="Track the metrics that define success and shape your experiment outcome." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Track the metrics that define success and shape your experiment outcome.">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -5156,7 +5180,7 @@
           <div class="section-block-left">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Journey</h2>
-              <span class="section-info-icon" data-tooltip="User steps through your flow. Each touchpoint can have its own design variants for that step." data-tooltip-position="right" data-tooltip-cursor="default" aria-label="About Journey">
+              <span class="section-info-icon" data-tooltip="Map the user flow step-by-step to visualize the experiment experience." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Map the user flow step-by-step to visualize the experiment experience.">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -6200,21 +6224,21 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         toggleDirection();
       });
 
-      // Metric name field — plain InputField, no prefix
+      // Metric name field — plain InputField; abbreviation follows input
       const metricInline = document.createElement('div');
       metricInline.className = 'goal-title-field goal-title-field--metric InputField';
       metricInline.dataset.variant = 'horizontal';
       metricInline.dataset.state = 'default';
       const metricInlineWrap = document.createElement('div');
       metricInlineWrap.className = 'InputField__wrapper';
-      const metricInlinePrefix = document.createElement('span');
-      metricInlinePrefix.className = 'InputField__prefix hidden';
       const metricInlineInput = document.createElement('input');
       metricInlineInput.className = 'InputField__input';
       metricInlineInput.type = 'text';
       metricInlineInput.placeholder = 'Metric name';
-      metricInlineWrap.appendChild(metricInlinePrefix);
+      const metricInlineSuffixAddon = document.createElement('span');
+      metricInlineSuffixAddon.className = 'InputField__suffix-addon hidden';
       metricInlineWrap.appendChild(metricInlineInput);
+      metricInlineWrap.appendChild(metricInlineSuffixAddon);
       metricInline.appendChild(metricInlineWrap);
 
       const willText = document.createElement('span');
@@ -6285,8 +6309,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         metricInline.dataset.state = metricInline.classList.contains('entered') ? 'entered' : 'default';
 
         const abbr = (typeof metric.abbreviation === 'string') ? metric.abbreviation.trim() : '';
-        metricInlinePrefix.textContent = abbr;
-        metricInlinePrefix.classList.toggle('hidden', abbr.length === 0);
+        metricInlineSuffixAddon.textContent = abbr;
+        metricInlineSuffixAddon.classList.toggle('hidden', abbr.length === 0);
 
         // Direction badge: update arrow + color + tooltip
         directionBadge.textContent = DIR_ARROWS[dir];
@@ -6333,8 +6357,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           metric.abbreviation = words.map(w => w[0]).join('').toUpperCase().slice(0, 3);
         }
         const abbr = (typeof metric.abbreviation === 'string') ? metric.abbreviation.trim() : '';
-        metricInlinePrefix.textContent = abbr;
-        metricInlinePrefix.classList.toggle('hidden', abbr.length === 0);
+        metricInlineSuffixAddon.textContent = abbr;
+        metricInlineSuffixAddon.classList.toggle('hidden', abbr.length === 0);
         updateMetricsCount();
         if (typeof events !== 'undefined') {
           renderEvents(events);
@@ -8930,14 +8954,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       // Entry node
       const entryNode = {
         id: `entry-${experimentId}`,
-        label: 'Entry',
+        label: 'Start',
         note: '',
         nodeType: 'ENTRY_NODE'
       };
       // Exit node
       const exitNode = {
         id: `exit-${experimentId}`,
-        label: 'Exit',
+        label: 'End',
         nodeType: 'EXIT_NODE'
       };
       // Events and variants
