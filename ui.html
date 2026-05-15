@@ -8271,7 +8271,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       // Start (auto) row
       list.appendChild(createSystemEventRow({
-        label: 'Start',
+        label: 'Entry',
         badgeIcon: 'asterisk',
         showLineAbove: false,
         // Always true because there is always content below (steps or add-step row)
@@ -8391,7 +8391,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       // End (auto) row
       list.appendChild(createSystemEventRow({
-        label: 'End',
+        label: 'Exit',
         badgeIcon: 'asterisk',
         // Always true because there is always a row above (steps or add-step row)
         showLineAbove: true,
@@ -8954,14 +8954,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       // Entry node
       const entryNode = {
         id: `entry-${experimentId}`,
-        label: 'Start',
+        label: 'Entry',
         note: '',
         nodeType: 'ENTRY_NODE'
       };
       // Exit node
       const exitNode = {
         id: `exit-${experimentId}`,
-        label: 'End',
+        label: 'Exit',
         nodeType: 'EXIT_NODE'
       };
       // Events and variants

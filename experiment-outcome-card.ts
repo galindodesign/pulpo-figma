@@ -995,7 +995,7 @@ function createVariantNameCell(variant: VariantOutcome): FrameNode {
   nameRow.appendChild(nameText);
 
   if (variant.isRolledOut) {
-    const rolledOutBadge = createBadge('Rolled Out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
+    const rolledOutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
     nameRow.appendChild(rolledOutBadge);
   }
 
