@@ -2521,7 +2521,7 @@ if (figma.editorType === 'figma') {
             // Entry node is leftmost on horizontal spine - represents where users enter the experiment
             const entry = flow.entry;
             const entryCard = createNodeCard(entry.label, undefined, undefined, entry.note);
-            entryCard.name = 'Entry';
+            entryCard.name = 'Start';
             attachNodeMeta(entryCard, {
                 name: entry.label,
                 type: 'frame',
@@ -2688,7 +2688,7 @@ if (figma.editorType === 'figma') {
             // Exit node is rightmost on horizontal spine - represents where users exit the experiment
             const exit = flow.exit;
             const exitCard = createNodeCard(exit.label);
-            exitCard.name = 'Exit';
+            exitCard.name = 'End';
             attachNodeMeta(exitCard, {
                 name: exit.label,
                 type: 'frame',

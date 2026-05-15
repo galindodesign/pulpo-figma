@@ -28,7 +28,7 @@ const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="n
 
 function createRolledOutIcon(): FrameNode {
   const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
-  icon.name = "Rolled Out Icon";
+  icon.name = "Rolled out Icon";
   icon.resize(10, 10);
   icon.fills = [];
   return icon;
@@ -1115,7 +1115,7 @@ async function appendVariantsSection(
     nameCell.appendChild(nameText);
 
     if (variant.isRolledOut) {
-      const rolledOutBadge = createBadge('Rolled Out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
+      const rolledOutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
       nameCell.appendChild(rolledOutBadge);
     }
     
@@ -1636,7 +1636,7 @@ async function createOutcomeRow(statusConfig: ExperimentStatusConfig, variantNam
   rolledOutCol.itemSpacing = 4;
   rolledOutCol.fills = [];
   rolledOutCol.strokes = [];
-  rolledOutCol.name = "Rolled Out Column";
+  rolledOutCol.name = "Rolled out Column";
 
   const rolledOutLabel = figma.createText();
   rolledOutLabel.fontName = { family: "Figtree", style: "Medium" };
