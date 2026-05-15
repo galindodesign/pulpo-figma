@@ -512,14 +512,15 @@ export function createVariantCard(variant, variantIndex, options) {
         const variantFigmaLink = variant.figmaLink;
         if (variantFigmaLink && typeof variantFigmaLink === 'string' && variantFigmaLink.trim().length > 0) {
             card.appendChild(createOpenInFigmaLinkRow(variantFigmaLink));
-            const linkGoalsSeparator = figma.createRectangle();
-            linkGoalsSeparator.name = 'Variant Link Goals Separator';
-            linkGoalsSeparator.resize(268, 1);
-            linkGoalsSeparator.layoutAlign = 'STRETCH';
-            linkGoalsSeparator.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
-            linkGoalsSeparator.strokes = [];
-            card.appendChild(linkGoalsSeparator);
         }
+        // Always show the rule between the variant-link area and Goals (same as when a link row is present).
+        const linkGoalsSeparator = figma.createRectangle();
+        linkGoalsSeparator.name = 'Variant Link Goals Separator';
+        linkGoalsSeparator.resize(268, 1);
+        linkGoalsSeparator.layoutAlign = 'STRETCH';
+        linkGoalsSeparator.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+        linkGoalsSeparator.strokes = [];
+        card.appendChild(linkGoalsSeparator);
         // Metrics section - displays available metrics for this variant (e.g. conversion rate, click-through rate)
         const metricsSection = figma.createFrame();
         metricsSection.layoutMode = 'VERTICAL';
