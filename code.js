@@ -13,6 +13,7 @@ import { createExperimentInfoCard } from './experiment-info-card';
 import { TOKENS } from './design-tokens';
 import { hexToRgb } from './layout-utils';
 import { createEventCard, createVariantCard } from './experiment-node';
+import { FEEDBACK_EMAIL } from './plugin-constants';
 // ===== Error Handling System =====
 /**
  * Displays a structured error/info message to the user
@@ -112,7 +113,7 @@ const ERRORS = {
         type: 'error',
         title: '❌ Flow data validation failed',
         detail: `Flow contains ${errorCount} validation error${errorCount !== 1 ? 's' : ''}.`,
-        actionHint: 'Check the console for details and verify all required fields are present.'
+        actionHint: 'See the detailed list in the plugin panel.'
     })
 };
 // ===== Performance Utilities =====
@@ -280,31 +281,41 @@ function safeGetProperty(obj, key) {
     return obj[key];
 }
 // ===== Flow Data Validation System =====
+function validationIssue(section, field, message) {
+    return { section, field, message };
+}
+function validationSectionLabel(section) {
+    if (section === 'experiment')
+        return 'Experiment';
+    if (section === 'goals')
+        return 'Goals';
+    return 'Journey';
+}
+function postValidationFailedToUi(issues) {
+    figma.ui.postMessage({ type: 'validation-failed', issues });
+}
 /**
  * Validates ExperimentV2 structure for required fields and data integrity
  * @param experiment The experiment object to validate
- * @returns ValidationResult with any errors or warnings found
+ * @returns ValidationResult with any issues or warnings found
  */
 function validateExperiment(experiment) {
     var _a;
-    const errors = [];
+    const issues = [];
     const warnings = [];
     if (!experiment) {
-        errors.push('Experiment object is missing');
-        return { isValid: false, errors, warnings };
+        issues.push(validationIssue('experiment', 'experiment', 'Experiment data is missing.'));
+        return { isValid: false, issues, warnings };
     }
-    // Required fields
     if (!experiment.id || typeof experiment.id !== 'string') {
-        errors.push('Experiment must have a valid id (string)');
+        issues.push(validationIssue('experiment', 'id', 'Internal experiment id is invalid—try again from the form.'));
     }
-    if (!experiment.name || typeof experiment.name !== 'string') {
-        errors.push('Experiment must have a valid name (string)');
+    if (!experiment.name || typeof experiment.name !== 'string' || !String(experiment.name).trim()) {
+        issues.push(validationIssue('experiment', 'title', 'Add a title for this experiment.'));
     }
-    // Optional but recommended
     if (!experiment.description) {
         warnings.push('Experiment has no description');
     }
-    // Outcomes validation (optional)
     if (experiment.outcomes && typeof experiment.outcomes === 'object') {
         const rolledOutVariantId = (_a = experiment.outcomes.rolledOutVariantId) !== null && _a !== void 0 ? _a : experiment.outcomes.rolledoutVariantId;
         if (rolledOutVariantId && typeof rolledOutVariantId !== 'string') {
@@ -312,104 +323,98 @@ function validateExperiment(experiment) {
         }
     }
     return {
-        isValid: errors.length === 0,
-        errors,
+        isValid: issues.length === 0,
+        issues,
         warnings
     };
 }
 /**
  * Validates FlowV2 structure for required fields and data integrity
  * @param flow The flow object to validate
- * @returns ValidationResult with any errors or warnings found
+ * @returns ValidationResult with any issues or warnings found
  */
 function validateFlow(flow) {
-    const errors = [];
+    const issues = [];
     const warnings = [];
     if (!flow) {
-        errors.push('Flow object is missing');
-        return { isValid: false, errors, warnings };
+        issues.push(validationIssue('journey', 'flow', 'Journey flow data is missing.'));
+        return { isValid: false, issues, warnings };
     }
-    // Entry node validation
     if (!flow.entry || typeof flow.entry !== 'object') {
-        errors.push('Flow must have an entry node');
+        issues.push(validationIssue('journey', 'entry', 'Journey is missing the start (entry) node.'));
     }
     else {
         if (!flow.entry.id || typeof flow.entry.id !== 'string') {
-            errors.push('Entry node must have a valid id (string)');
+            issues.push(validationIssue('journey', 'entry', 'Start node is invalid—try creating the flow again.'));
         }
         if (!flow.entry.label || typeof flow.entry.label !== 'string') {
-            errors.push('Entry node must have a valid label (string)');
+            issues.push(validationIssue('journey', 'entry', 'Start node needs a label.'));
         }
     }
-    // Exit node validation
     if (!flow.exit || typeof flow.exit !== 'object') {
-        errors.push('Flow must have an exit node');
+        issues.push(validationIssue('journey', 'exit', 'Journey is missing the end (exit) node.'));
     }
     else {
         if (!flow.exit.id || typeof flow.exit.id !== 'string') {
-            errors.push('Exit node must have a valid id (string)');
+            issues.push(validationIssue('journey', 'exit', 'End node is invalid—try creating the flow again.'));
         }
         if (!flow.exit.label || typeof flow.exit.label !== 'string') {
-            errors.push('Exit node must have a valid label (string)');
+            issues.push(validationIssue('journey', 'exit', 'End node needs a label.'));
         }
     }
-    // Events validation
     if (!Array.isArray(flow.events)) {
-        errors.push('Flow must have an events array');
+        issues.push(validationIssue('journey', 'events', 'Journey must include touchpoints.'));
     }
     else {
         if (flow.events.length === 0) {
             warnings.push('Flow has no events');
         }
-        // Validate each event
         for (let i = 0; i < flow.events.length; i++) {
             const event = flow.events[i];
+            const stepLabel = `Touchpoint ${i + 1}`;
             if (!event.id || typeof event.id !== 'string') {
-                errors.push(`Event ${i} must have a valid id (string)`);
+                issues.push(validationIssue('journey', `event-${i}`, `${stepLabel} is missing an id—try adding the step again.`));
             }
             if (!event.name || typeof event.name !== 'string') {
-                warnings.push(`Event ${i} has no name`);
+                warnings.push(`${stepLabel} has no name`);
             }
-            // Validate variants in this event
             if (!Array.isArray(event.variants)) {
-                warnings.push(`Event ${i} has no variants array`);
+                warnings.push(`${stepLabel} has no variants list`);
             }
             else if (event.variants.length > 0) {
                 for (let vIdx = 0; vIdx < event.variants.length; vIdx++) {
                     const variant = event.variants[vIdx];
+                    const vLabel = `${stepLabel}, variant ${vIdx + 1}`;
                     if (!variant.id || typeof variant.id !== 'string') {
-                        errors.push(`Event ${i}, Variant ${vIdx} must have a valid id (string)`);
+                        issues.push(validationIssue('journey', `variant-${i}-${vIdx}`, `${vLabel}: missing id.`));
                     }
                     if (!variant.key || typeof variant.key !== 'string') {
-                        errors.push(`Event ${i}, Variant ${vIdx} must have a valid key (string)`);
+                        issues.push(validationIssue('journey', `variant-${i}-${vIdx}`, `${vLabel}: missing variant key.`));
                     }
                     if (typeof variant.traffic !== 'number' || variant.traffic < 0) {
-                        errors.push(`Event ${i}, Variant ${vIdx} must have a valid traffic value (number >= 0)`);
+                        issues.push(validationIssue('journey', `variant-${i}-${vIdx}`, `${vLabel}: traffic must be zero or a positive number.`));
                     }
                 }
             }
         }
     }
-    // Connectors validation (optional)
     if (flow.connectors && !Array.isArray(flow.connectors)) {
-        errors.push('Flow connectors must be an array if provided');
+        issues.push(validationIssue('journey', 'connectors', 'Connectors must be a list when provided.'));
     }
     else if (Array.isArray(flow.connectors) && flow.connectors.length > 0) {
-        // Basic connector structure check
         for (let i = 0; i < flow.connectors.length; i++) {
             const connector = flow.connectors[i];
             if (!connector.from || !connector.from.id) {
-                errors.push(`Connector ${i} missing from.id`);
+                issues.push(validationIssue('journey', `connector-${i}`, `Connector ${i + 1} is missing its start anchor.`));
             }
             if (!connector.to || !connector.to.id) {
-                errors.push(`Connector ${i} missing to.id`);
+                issues.push(validationIssue('journey', `connector-${i}`, `Connector ${i + 1} is missing its end anchor.`));
             }
             if (!connector.type || typeof connector.type !== 'string') {
-                errors.push(`Connector ${i} must have a valid type (string)`);
+                issues.push(validationIssue('journey', `connector-${i}`, `Connector ${i + 1} has an invalid type.`));
             }
         }
     }
-    // Layout configuration (optional)
     if (flow.layout && typeof flow.layout === 'object') {
         if (flow.layout.eventSpacing && typeof flow.layout.eventSpacing !== 'number') {
             warnings.push('Layout eventSpacing should be a number if provided');
@@ -419,8 +424,8 @@ function validateFlow(flow) {
         }
     }
     return {
-        isValid: errors.length === 0,
-        errors,
+        isValid: issues.length === 0,
+        issues,
         warnings
     };
 }
@@ -435,7 +440,7 @@ function validateFlowData(experiment, flow) {
     const flowResult = validateFlow(flow);
     return {
         isValid: experimentResult.isValid && flowResult.isValid,
-        errors: [...experimentResult.errors, ...flowResult.errors],
+        issues: [...experimentResult.issues, ...flowResult.issues],
         warnings: [...experimentResult.warnings, ...flowResult.warnings]
     };
 }
@@ -2193,10 +2198,11 @@ if (figma.editorType === 'figma') {
     figma.showUI(__html__, {
         width: MIN_UI_WIDTH,
         height: 720,
-        title: 'Growthlab Builder',
+        title: 'Petri',
         themeColors: true,
     });
     figma.ui.postMessage({ type: 'plugin-version', version: PLUGIN_VERSION });
+    figma.ui.postMessage({ type: 'plugin-config', feedbackEmail: FEEDBACK_EMAIL });
     figma.ui.postMessage({
         type: 'current-file-context',
         fileKey: figma.fileKey || ''
@@ -2405,15 +2411,16 @@ if (figma.editorType === 'figma') {
             // Early validation prevents cryptic errors later in the pipeline
             const validation = validateFlowData(experiment, flow);
             if (!validation.isValid) {
-                const errorDetail = validation.errors.slice(0, 3).join('\n');
-                const additionalErrors = validation.errors.length > 3 ? `\n(+${validation.errors.length - 3} more errors)` : '';
+                postValidationFailedToUi(validation.issues);
+                console.error('[Petri] createFlowV2FromData validation', validation.issues);
+                const preview = validation.issues.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
                 notifyUser({
                     type: 'error',
-                    title: '❌ Flow data validation failed',
-                    detail: `Flow contains invalid data:\n${errorDetail}${additionalErrors}`,
-                    actionHint: 'Check the console for details and fix the flow structure.'
+                    title: 'Fix a few things before creating the flow',
+                    detail: preview + (validation.issues.length > 3 ? `\n(+${validation.issues.length - 3} more in the plugin panel)` : ''),
+                    actionHint: 'Details are listed in the plugin toast.',
                 });
-                return; // Stop processing if data is invalid
+                return;
             }
             // Log warnings if any (non-blocking)
             if (validation.warnings.length > 0) {
@@ -2501,6 +2508,16 @@ if (figma.editorType === 'figma') {
                 description: experiment.description || 'e.g., Testing if new CTA increases conversions.',
                 extra: { experimentId: experiment.id, role: 'experiment-info' },
             });
+            const center = figma.viewport.center;
+            // Mount the overview card before reading its size for the flow spine. Auto-layout frames
+            // that are not on the page often report width ≈ 0, so the spine was placed on top of the
+            // card and connectors pointed at the wrong bounds.
+            if (infoCard && infoCard.parent === null) {
+                infoCard.x = 100;
+                infoCard.y = center.y;
+                figma.currentPage.appendChild(infoCard);
+                yield new Promise((resolve) => setTimeout(resolve, 100));
+            }
             // --- STAGE 4: LAYOUT POSITIONING & NODE PLACEMENT ---
             // All nodes positioned directly on page (not in container frame) for ConnectorNode magnetic anchors
             //
@@ -2509,7 +2526,6 @@ if (figma.editorType === 'figma') {
             //   - Variants: Below their parent event, in horizontal row
             //   - All positioned with precise X,Y coordinates for deterministic output
             //
-            const center = figma.viewport.center;
             const eventSpacing = (_r = (_q = flow.layout) === null || _q === void 0 ? void 0 : _q.eventSpacing) !== null && _r !== void 0 ? _r : 80; // Horizontal space between events (configurable)
             const variantSpacing = (_t = (_s = flow.layout) === null || _s === void 0 ? void 0 : _s.variantSpacing) !== null && _t !== void 0 ? _t : 40; // Horizontal space between variants in a row
             const eventToVariantSpacing = 100; // Vertical space from event to variant row
@@ -2743,302 +2759,294 @@ if (figma.editorType === 'figma') {
             for (const { node, id } of allNodes) {
                 nodeMap[id] = node;
             }
-            // Position info card (sidebar with experiment metadata)
-            // Info card appears to the left of the main flow spine
+            // Overview frame is mounted before spine layout so width is real; settle once more before connectors.
             if (infoCard) {
-                if (infoCard.parent === null) {
-                    infoCard.x = 100;
-                    infoCard.y = center.y;
-                    figma.currentPage.appendChild(infoCard);
+                yield new Promise(resolve => setTimeout(resolve, 50));
+            }
+            // --- STAGE 5a: Dynamic Connector Rendering ---
+            // Creates connectors between nodes using the smart dynamic system:
+            //   1. Tries native ConnectorNode first (FigJam): automatic updates when nodes move! ✨
+            //   2. Falls back to VectorNode (regular Figma): manual refresh via refreshConnectors()
+            // For VectorNode connectors, call refreshConnectors() or send 'refresh-connectors' message when nodes move
+            const createdConnectors = [];
+            const connectorErrors = []; // Track errors for reporting
+            if (flow.connectors && Array.isArray(flow.connectors) && flow.connectors.length > 0) {
+                // Categorize connectors into two groups based on their structure:
+                //   1. Merge connectors (MERGE_LINE): Multiple sources → single target, uses merge+trunk pattern
+                //   2. Direct connectors (PRIMARY_FLOW_LINE, BRANCH_LINE): Simple one-to-one or one-to-many connections
+                const mergeGroups = new Map(); // Group merges by target ID
+                const directConnectors = []; // PRIMARY_FLOW_LINE and BRANCH_LINE connectors
+                for (const connector of flow.connectors) {
+                    if (connector.type === 'MERGE_LINE') {
+                        const toId = connector.to.id;
+                        if (!mergeGroups.has(toId)) {
+                            mergeGroups.set(toId, []);
+                        }
+                        mergeGroups.get(toId).push(connector);
+                    }
+                    else {
+                        // PRIMARY_FLOW_LINE and BRANCH_LINE use direct connections (no grouping)
+                        directConnectors.push(connector);
+                    }
                 }
-                // Wait briefly for Figma's layout engine to settle before drawing connectors
-                // This ensures accurate node positions for connector calculations
-                yield new Promise(resolve => setTimeout(resolve, 100));
-                // --- STAGE 5a: Dynamic Connector Rendering ---
-                // Creates connectors between nodes using the smart dynamic system:
-                //   1. Tries native ConnectorNode first (FigJam): automatic updates when nodes move! ✨
-                //   2. Falls back to VectorNode (regular Figma): manual refresh via refreshConnectors()
-                // For VectorNode connectors, call refreshConnectors() or send 'refresh-connectors' message when nodes move
-                const createdConnectors = [];
-                const connectorErrors = []; // Track errors for reporting
-                if (flow.connectors && Array.isArray(flow.connectors) && flow.connectors.length > 0) {
-                    // Categorize connectors into two groups based on their structure:
-                    //   1. Merge connectors (MERGE_LINE): Multiple sources → single target, uses merge+trunk pattern
-                    //   2. Direct connectors (PRIMARY_FLOW_LINE, BRANCH_LINE): Simple one-to-one or one-to-many connections
-                    const mergeGroups = new Map(); // Group merges by target ID
-                    const directConnectors = []; // PRIMARY_FLOW_LINE and BRANCH_LINE connectors
-                    for (const connector of flow.connectors) {
-                        if (connector.type === 'MERGE_LINE') {
-                            const toId = connector.to.id;
-                            if (!mergeGroups.has(toId)) {
-                                mergeGroups.set(toId, []);
+                // Render direct connectors (PRIMARY_FLOW_LINE: spine connections; BRANCH_LINE: event to variant)
+                // Direct connectors use simple one-to-one paths without merging
+                for (const connector of directConnectors) {
+                    const fromNode = nodeMap[connector.from.id];
+                    const toNode = nodeMap[connector.to.id];
+                    if (!fromNode || !toNode) {
+                        // Skip: one or both endpoints missing (normal for optional connectors)
+                        connectorErrors.push({
+                            connectorId: connector.id,
+                            from: connector.from.id,
+                            to: connector.to.id,
+                            error: `Missing node endpoint: ${fromNode ? 'to' : 'from'} node not found`
+                        });
+                        continue;
+                    }
+                    try {
+                        // Determine connector styling: is one endpoint a rolled-out (winning) variant?
+                        // Rolled-out variants get special styling to highlight the chosen path
+                        const fromNodeId = connector.from.id;
+                        const toNodeId = connector.to.id;
+                        const rolledOutVariantId = (_5 = (_4 = experiment.outcomes) === null || _4 === void 0 ? void 0 : _4.rolledOutVariantId) !== null && _5 !== void 0 ? _5 : (_6 = experiment.outcomes) === null || _6 === void 0 ? void 0 : _6.rolledoutVariantId;
+                        // Check if either endpoint is the rolled-out variant
+                        const isRolledout = rolledOutVariantId && (fromNodeId === rolledOutVariantId || toNodeId === rolledOutVariantId);
+                        // Rolled-out styling takes priority over generic winner styling
+                        const isWinner = isRolledout || false;
+                        // Create connector using dynamic system (tries native → VectorNode fallback)
+                        // Native connectors in FigJam will automatically update when nodes move!
+                        const connectorNode = createDynamicConnector(fromNode, toNode, connector.type, {
+                            label: connector.label,
+                            winner: isWinner, // Rolled-out variant is the winner
+                            variantColor: undefined,
+                            index: 0,
+                            rolledout: isRolledout || false, // Rollout styling takes priority over winner
+                            useNativeConnector: true, // Try native connectors for automatic updates
+                        });
+                        if (connectorNode) {
+                            // Store additional metadata on the connector
+                            try {
+                                const existingMeta = connectorNode.getPluginData('connectorMeta');
+                                let meta = existingMeta ? JSON.parse(existingMeta) : {};
+                                meta = Object.assign(Object.assign({}, meta), { connectorId: connector.id, fromNodeType: connector.from.nodeType, toNodeType: connector.to.nodeType, experimentId: experiment.id });
+                                connectorNode.setPluginData('connectorMeta', JSON.stringify(meta));
                             }
-                            mergeGroups.get(toId).push(connector);
+                            catch (metaError) {
+                                // Non-critical: metadata storage failed, but connector was created
+                            }
+                            // Name the connector for easy identification
+                            try {
+                                if (!connectorNode.name.includes('Dynamic') && !connectorNode.name.includes('Static')) {
+                                    connectorNode.name = `${connector.type}: ${connector.from.nodeType} → ${connector.to.nodeType}`;
+                                }
+                            }
+                            catch (nameError) {
+                                // Non-critical: naming failed, but connector was created
+                            }
+                            createdConnectors.push(connectorNode);
                         }
                         else {
-                            // PRIMARY_FLOW_LINE and BRANCH_LINE use direct connections (no grouping)
-                            directConnectors.push(connector);
-                        }
-                    }
-                    // Render direct connectors (PRIMARY_FLOW_LINE: spine connections; BRANCH_LINE: event to variant)
-                    // Direct connectors use simple one-to-one paths without merging
-                    for (const connector of directConnectors) {
-                        const fromNode = nodeMap[connector.from.id];
-                        const toNode = nodeMap[connector.to.id];
-                        if (!fromNode || !toNode) {
-                            // Skip: one or both endpoints missing (normal for optional connectors)
-                            connectorErrors.push({
-                                connectorId: connector.id,
-                                from: connector.from.id,
-                                to: connector.to.id,
-                                error: `Missing node endpoint: ${fromNode ? 'to' : 'from'} node not found`
-                            });
-                            continue;
-                        }
-                        try {
-                            // Determine connector styling: is one endpoint a rolled-out (winning) variant?
-                            // Rolled-out variants get special styling to highlight the chosen path
-                            const fromNodeId = connector.from.id;
-                            const toNodeId = connector.to.id;
-                            const rolledOutVariantId = (_5 = (_4 = experiment.outcomes) === null || _4 === void 0 ? void 0 : _4.rolledOutVariantId) !== null && _5 !== void 0 ? _5 : (_6 = experiment.outcomes) === null || _6 === void 0 ? void 0 : _6.rolledoutVariantId;
-                            // Check if either endpoint is the rolled-out variant
-                            const isRolledout = rolledOutVariantId && (fromNodeId === rolledOutVariantId || toNodeId === rolledOutVariantId);
-                            // Rolled-out styling takes priority over generic winner styling
-                            const isWinner = isRolledout || false;
-                            // Create connector using dynamic system (tries native → VectorNode fallback)
-                            // Native connectors in FigJam will automatically update when nodes move!
-                            const connectorNode = createDynamicConnector(fromNode, toNode, connector.type, {
-                                label: connector.label,
-                                winner: isWinner, // Rolled-out variant is the winner
-                                variantColor: undefined,
-                                index: 0,
-                                rolledout: isRolledout || false, // Rollout styling takes priority over winner
-                                useNativeConnector: true, // Try native connectors for automatic updates
-                            });
-                            if (connectorNode) {
-                                // Store additional metadata on the connector
-                                try {
-                                    const existingMeta = connectorNode.getPluginData('connectorMeta');
-                                    let meta = existingMeta ? JSON.parse(existingMeta) : {};
-                                    meta = Object.assign(Object.assign({}, meta), { connectorId: connector.id, fromNodeType: connector.from.nodeType, toNodeType: connector.to.nodeType, experimentId: experiment.id });
-                                    connectorNode.setPluginData('connectorMeta', JSON.stringify(meta));
-                                }
-                                catch (metaError) {
-                                    // Non-critical: metadata storage failed, but connector was created
-                                }
-                                // Name the connector for easy identification
-                                try {
-                                    if (!connectorNode.name.includes('Dynamic') && !connectorNode.name.includes('Static')) {
-                                        connectorNode.name = `${connector.type}: ${connector.from.nodeType} → ${connector.to.nodeType}`;
-                                    }
-                                }
-                                catch (nameError) {
-                                    // Non-critical: naming failed, but connector was created
-                                }
-                                createdConnectors.push(connectorNode);
-                            }
-                            else {
-                                // Connector creation returned null (likely FigJam unavailable or VectorNode creation failed)
-                                connectorErrors.push({
-                                    connectorId: connector.id,
-                                    from: connector.from.nodeType,
-                                    to: connector.to.nodeType,
-                                    error: 'Failed to create connector (likely environment incompatibility)'
-                                });
-                            }
-                        }
-                        catch (error) {
-                            // Connector creation threw an error: log but continue with remaining connectors
-                            // This prevents one bad connector from breaking the entire flow
+                            // Connector creation returned null (likely FigJam unavailable or VectorNode creation failed)
                             connectorErrors.push({
                                 connectorId: connector.id,
                                 from: connector.from.nodeType,
                                 to: connector.to.nodeType,
-                                error: `Connector creation failed: ${error instanceof Error ? error.message : 'unknown error'}`
+                                error: 'Failed to create connector (likely environment incompatibility)'
                             });
                         }
                     }
-                    // Render merge connectors as merge+trunk patterns
-                    // Merge pattern: Multiple variants connect via branches to a common trunk, then trunk to target
-                    // This creates cleaner visualization than many separate connectors
-                    for (const [targetId, merges] of mergeGroups.entries()) {
-                        const targetNode = nodeMap[targetId];
-                        if (!targetNode) {
-                            // Skip: target node missing (unlikely, but handle gracefully)
-                            connectorErrors.push({
-                                from: `${merges.length} variant(s)`,
-                                to: targetId,
-                                error: 'Target node not found - merge cannot be created'
-                            });
-                            continue;
-                        }
-                        // Collect all variant source nodes for this merge group
-                        const variantNodes = merges
-                            .map(m => ({ connector: m, node: nodeMap[m.from.id] }))
-                            .filter(v => v.node !== undefined);
-                        if (variantNodes.length === 0) {
-                            // Skip: no valid source nodes (all missing)
-                            connectorErrors.push({
-                                from: `${merges.length} variant(s)`,
-                                to: targetId,
-                                error: 'All source nodes missing - merge cannot be created'
-                            });
-                            continue;
-                        }
-                        // Log if some variants were filtered out
-                        if (variantNodes.length < merges.length) {
-                            const missingCount = merges.length - variantNodes.length;
-                            connectorErrors.push({
-                                error: `Merge group: ${missingCount} of ${merges.length} source nodes missing, creating merge with ${variantNodes.length} available node(s)`
-                            });
-                        }
-                        try {
-                            // Create merge+trunk structure: branches from variants converge on trunk, then to target
-                            // This produces cleaner visualization than many separate connectors
-                            const mergeConnectors = createMergingTree(variantNodes, targetNode, experiment.id);
-                            createdConnectors.push(...mergeConnectors);
-                        }
-                        catch (error) {
-                            // Merge tree creation failed: log but continue with remaining connectors
-                            // Partial failure doesn't prevent the flow from rendering
-                            connectorErrors.push({
-                                from: `${variantNodes.length} variant(s)`,
-                                to: targetId,
-                                error: `Merge tree creation failed: ${error instanceof Error ? error.message : 'unknown error'}`
-                            });
-                            // Continue to next merge group instead of stopping
-                        }
-                    }
-                }
-                else {
-                }
-                // Notify user about connector creation results
-                // Report success, partial failure, or complete failure with detailed information
-                if (createdConnectors.length > 0) {
-                    const nativeCount = createdConnectors.filter(c => c.type === 'CONNECTOR').length;
-                    const vectorCount = createdConnectors.length - nativeCount;
-                    let message = `Created ${createdConnectors.length} connector${createdConnectors.length !== 1 ? 's' : ''}`;
-                    if (nativeCount > 0) {
-                        message += ` (${nativeCount} dynamic${nativeCount !== 1 ? 's' : ''} - auto-update when cards move)`;
-                    }
-                    if (vectorCount > 0) {
-                        if (isFigJam()) {
-                            message += `. ${vectorCount} static connector${vectorCount !== 1 ? 's' : ''} - use "Refresh Connectors" to update`;
-                        }
-                        else {
-                            message += `. ${vectorCount} connector${vectorCount !== 1 ? 's' : ''} - auto-refreshing when cards move`;
-                        }
-                    }
-                    // If there were errors during connector creation, report them as a warning
-                    if (connectorErrors.length > 0) {
-                        notifyUser({
-                            type: 'warning',
-                            title: `⚠️ ${message}`,
-                            detail: `However, ${connectorErrors.length} connector(s) failed to create.`,
-                            actionHint: 'The flow is complete, but some connections are missing. Check console for details.'
+                    catch (error) {
+                        // Connector creation threw an error: log but continue with remaining connectors
+                        // This prevents one bad connector from breaking the entire flow
+                        connectorErrors.push({
+                            connectorId: connector.id,
+                            from: connector.from.nodeType,
+                            to: connector.to.nodeType,
+                            error: `Connector creation failed: ${error instanceof Error ? error.message : 'unknown error'}`
                         });
                     }
-                    else {
-                        notifyUser({ type: 'success', title: `✓ ${message}` });
-                    }
                 }
-                else {
-                    // No connectors created at all
-                    if (connectorErrors.length > 0) {
-                        notifyUser({
-                            type: 'error',
-                            title: '❌ No connectors created',
-                            detail: `All ${connectorErrors.length} connector creation attempt(s) failed.`,
-                            actionHint: 'Flow structure is intact. Check console for detailed error information.'
+                // Render merge connectors as merge+trunk patterns
+                // Merge pattern: Multiple variants connect via branches to a common trunk, then trunk to target
+                // This creates cleaner visualization than many separate connectors
+                for (const [targetId, merges] of mergeGroups.entries()) {
+                    const targetNode = nodeMap[targetId];
+                    if (!targetNode) {
+                        // Skip: target node missing (unlikely, but handle gracefully)
+                        connectorErrors.push({
+                            from: `${merges.length} variant(s)`,
+                            to: targetId,
+                            error: 'Target node not found - merge cannot be created'
+                        });
+                        continue;
+                    }
+                    // Collect all variant source nodes for this merge group
+                    const variantNodes = merges
+                        .map(m => ({ connector: m, node: nodeMap[m.from.id] }))
+                        .filter(v => v.node !== undefined);
+                    if (variantNodes.length === 0) {
+                        // Skip: no valid source nodes (all missing)
+                        connectorErrors.push({
+                            from: `${merges.length} variant(s)`,
+                            to: targetId,
+                            error: 'All source nodes missing - merge cannot be created'
+                        });
+                        continue;
+                    }
+                    // Log if some variants were filtered out
+                    if (variantNodes.length < merges.length) {
+                        const missingCount = merges.length - variantNodes.length;
+                        connectorErrors.push({
+                            error: `Merge group: ${missingCount} of ${merges.length} source nodes missing, creating merge with ${variantNodes.length} available node(s)`
                         });
                     }
-                    else {
-                        notifyUser(ERRORS.NO_CONNECTORS_CREATED);
+                    try {
+                        // Create merge+trunk structure: branches from variants converge on trunk, then to target
+                        // This produces cleaner visualization than many separate connectors
+                        const mergeConnectors = createMergingTree(variantNodes, targetNode, experiment.id);
+                        createdConnectors.push(...mergeConnectors);
                     }
-                }
-                // Select info card and zoom to view all nodes
-                if (infoCard) {
-                    const allPageNodes = allNodes.map(n => n.node);
-                    figma.viewport.scrollAndZoomIntoView([infoCard, ...allPageNodes]);
-                }
-                // --- Entry Notes Rendering ---
-                // In v2 schema, entry notes may be on flow.entryNotes or experiment.flow.entryNotes or not present
-                const entryNotesV2 = flow.entryNotes || experiment.entryNotes || [];
-                // Reuse nodeMap for anchor lookup (already built above for connectors)
-                // nodeMap is already populated with all nodes from connector rendering
-                if (Array.isArray(entryNotesV2)) {
-                    for (const note of entryNotesV2) {
-                        // Create a sticky note frame
-                        const noteFrame = figma.createFrame();
-                        noteFrame.layoutMode = 'VERTICAL';
-                        noteFrame.counterAxisSizingMode = 'AUTO';
-                        noteFrame.primaryAxisSizingMode = 'AUTO';
-                        noteFrame.paddingLeft = noteFrame.paddingRight = TOKENS.space12;
-                        noteFrame.paddingTop = noteFrame.paddingBottom = TOKENS.space8;
-                        noteFrame.cornerRadius = TOKENS.radiusSM;
-                        noteFrame.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow50) }];
-                        noteFrame.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow300) }];
-                        noteFrame.strokeWeight = 1;
-                        noteFrame.name = `EntryNote: ${note.text}`;
-                        const noteText = figma.createText();
-                        noteText.fontName = { family: 'Figtree', style: 'Regular' };
-                        noteText.fontSize = TOKENS.fontSizeBodySm;
-                        noteText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow900) }];
-                        noteText.characters = note.text;
-                        noteText.textAutoResize = 'WIDTH_AND_HEIGHT';
-                        noteFrame.appendChild(noteText);
-                        attachNodeMeta(noteFrame, {
-                            name: note.text,
-                            type: 'frame',
-                            description: 'Entry Note',
-                            extra: {
-                                role: 'entry-note',
-                                entryNoteId: note.id,
-                                anchor: note.attachTo,
-                                experimentId: experiment.id,
-                            },
+                    catch (error) {
+                        // Merge tree creation failed: log but continue with remaining connectors
+                        // Partial failure doesn't prevent the flow from rendering
+                        connectorErrors.push({
+                            from: `${variantNodes.length} variant(s)`,
+                            to: targetId,
+                            error: `Merge tree creation failed: ${error instanceof Error ? error.message : 'unknown error'}`
                         });
-                        // Position note based on attachTo
-                        let anchorNode = undefined;
-                        const anchorType = (_7 = note.attachTo) === null || _7 === void 0 ? void 0 : _7.target;
-                        const anchorId = (_8 = note.attachTo) === null || _8 === void 0 ? void 0 : _8.targetId;
-                        if (anchorType === 'EVENT_NODE' && anchorId) {
-                            anchorNode = nodeMap[anchorId];
-                        }
-                        if (anchorNode) {
-                            // Place note above or to the left of anchor node, depending on layout
-                            // For horizontal spine, place above; for vertical, place left
-                            if (((_9 = flow.layout) === null || _9 === void 0 ? void 0 : _9.direction) === 'VERTICAL') {
-                                noteFrame.x = ((_10 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _10 !== void 0 ? _10 : 0) - noteFrame.width - 24;
-                                noteFrame.y = ((_11 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _11 !== void 0 ? _11 : 0) + ((_12 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.height) !== null && _12 !== void 0 ? _12 : 0) / 2 - noteFrame.height / 2;
-                            }
-                            else {
-                                noteFrame.x = ((_13 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _13 !== void 0 ? _13 : 0) + ((_14 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.width) !== null && _14 !== void 0 ? _14 : 0) / 2 - noteFrame.width / 2;
-                                noteFrame.y = ((_15 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _15 !== void 0 ? _15 : 0) - noteFrame.height - 24;
-                            }
-                        }
-                        else {
-                            // Default: place near first event
-                            const firstNode = allNodes[0];
-                            if (firstNode) {
-                                noteFrame.x = firstNode.node.x - noteFrame.width - 24;
-                                noteFrame.y = firstNode.node.y;
-                            }
-                            else {
-                                noteFrame.x = baseX - 60;
-                                noteFrame.y = baseY - 60;
-                            }
-                        }
-                        figma.currentPage.appendChild(noteFrame);
+                        // Continue to next merge group instead of stopping
                     }
                 }
-                // Outcome Note removed
-                notifyUser(ERRORS.FLOW_CREATED_SUCCESSFULLY);
-                // Set up auto-refresh for connectors in regular Figma
-                // (In FigJam, native connectors auto-update, so this isn't needed)
-                setupAutoRefreshConnectors().catch(err => {
-                });
             }
+            else {
+            }
+            // Notify user about connector creation results
+            // Report success, partial failure, or complete failure with detailed information
+            if (createdConnectors.length > 0) {
+                const nativeCount = createdConnectors.filter(c => c.type === 'CONNECTOR').length;
+                const vectorCount = createdConnectors.length - nativeCount;
+                let message = `Created ${createdConnectors.length} connector${createdConnectors.length !== 1 ? 's' : ''}`;
+                if (nativeCount > 0) {
+                    message += ` (${nativeCount} dynamic${nativeCount !== 1 ? 's' : ''} - auto-update when cards move)`;
+                }
+                if (vectorCount > 0) {
+                    if (isFigJam()) {
+                        message += `. ${vectorCount} static connector${vectorCount !== 1 ? 's' : ''} - use "Refresh Connectors" to update`;
+                    }
+                    else {
+                        message += `. ${vectorCount} connector${vectorCount !== 1 ? 's' : ''} - auto-refreshing when cards move`;
+                    }
+                }
+                // If there were errors during connector creation, report them as a warning
+                if (connectorErrors.length > 0) {
+                    notifyUser({
+                        type: 'warning',
+                        title: `⚠️ ${message}`,
+                        detail: `However, ${connectorErrors.length} connector(s) failed to create.`,
+                        actionHint: 'The flow is complete, but some connections are missing. Check console for details.'
+                    });
+                }
+                else {
+                    notifyUser({ type: 'success', title: `✓ ${message}` });
+                }
+            }
+            else {
+                // No connectors created at all
+                if (connectorErrors.length > 0) {
+                    notifyUser({
+                        type: 'error',
+                        title: '❌ No connectors created',
+                        detail: `All ${connectorErrors.length} connector creation attempt(s) failed.`,
+                        actionHint: 'Flow structure is intact. Check console for detailed error information.'
+                    });
+                }
+                else {
+                    notifyUser(ERRORS.NO_CONNECTORS_CREATED);
+                }
+            }
+            // Select info card and zoom to view all nodes
+            if (infoCard) {
+                const allPageNodes = allNodes.map(n => n.node);
+                figma.viewport.scrollAndZoomIntoView([infoCard, ...allPageNodes]);
+            }
+            // --- Entry Notes Rendering ---
+            // In v2 schema, entry notes may be on flow.entryNotes or experiment.flow.entryNotes or not present
+            const entryNotesV2 = flow.entryNotes || experiment.entryNotes || [];
+            // Reuse nodeMap for anchor lookup (already built above for connectors)
+            // nodeMap is already populated with all nodes from connector rendering
+            if (Array.isArray(entryNotesV2)) {
+                for (const note of entryNotesV2) {
+                    // Create a sticky note frame
+                    const noteFrame = figma.createFrame();
+                    noteFrame.layoutMode = 'VERTICAL';
+                    noteFrame.counterAxisSizingMode = 'AUTO';
+                    noteFrame.primaryAxisSizingMode = 'AUTO';
+                    noteFrame.paddingLeft = noteFrame.paddingRight = TOKENS.space12;
+                    noteFrame.paddingTop = noteFrame.paddingBottom = TOKENS.space8;
+                    noteFrame.cornerRadius = TOKENS.radiusSM;
+                    noteFrame.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow50) }];
+                    noteFrame.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow300) }];
+                    noteFrame.strokeWeight = 1;
+                    noteFrame.name = `EntryNote: ${note.text}`;
+                    const noteText = figma.createText();
+                    noteText.fontName = { family: 'Figtree', style: 'Regular' };
+                    noteText.fontSize = TOKENS.fontSizeBodySm;
+                    noteText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow900) }];
+                    noteText.characters = note.text;
+                    noteText.textAutoResize = 'WIDTH_AND_HEIGHT';
+                    noteFrame.appendChild(noteText);
+                    attachNodeMeta(noteFrame, {
+                        name: note.text,
+                        type: 'frame',
+                        description: 'Entry Note',
+                        extra: {
+                            role: 'entry-note',
+                            entryNoteId: note.id,
+                            anchor: note.attachTo,
+                            experimentId: experiment.id,
+                        },
+                    });
+                    // Position note based on attachTo
+                    let anchorNode = undefined;
+                    const anchorType = (_7 = note.attachTo) === null || _7 === void 0 ? void 0 : _7.target;
+                    const anchorId = (_8 = note.attachTo) === null || _8 === void 0 ? void 0 : _8.targetId;
+                    if (anchorType === 'EVENT_NODE' && anchorId) {
+                        anchorNode = nodeMap[anchorId];
+                    }
+                    if (anchorNode) {
+                        // Place note above or to the left of anchor node, depending on layout
+                        // For horizontal spine, place above; for vertical, place left
+                        if (((_9 = flow.layout) === null || _9 === void 0 ? void 0 : _9.direction) === 'VERTICAL') {
+                            noteFrame.x = ((_10 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _10 !== void 0 ? _10 : 0) - noteFrame.width - 24;
+                            noteFrame.y = ((_11 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _11 !== void 0 ? _11 : 0) + ((_12 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.height) !== null && _12 !== void 0 ? _12 : 0) / 2 - noteFrame.height / 2;
+                        }
+                        else {
+                            noteFrame.x = ((_13 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _13 !== void 0 ? _13 : 0) + ((_14 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.width) !== null && _14 !== void 0 ? _14 : 0) / 2 - noteFrame.width / 2;
+                            noteFrame.y = ((_15 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _15 !== void 0 ? _15 : 0) - noteFrame.height - 24;
+                        }
+                    }
+                    else {
+                        // Default: place near first event
+                        const firstNode = allNodes[0];
+                        if (firstNode) {
+                            noteFrame.x = firstNode.node.x - noteFrame.width - 24;
+                            noteFrame.y = firstNode.node.y;
+                        }
+                        else {
+                            noteFrame.x = baseX - 60;
+                            noteFrame.y = baseY - 60;
+                        }
+                    }
+                    figma.currentPage.appendChild(noteFrame);
+                }
+            }
+            // Outcome Note removed
+            notifyUser(ERRORS.FLOW_CREATED_SUCCESSFULLY);
+            // Set up auto-refresh for connectors in regular Figma
+            // (In FigJam, native connectors auto-update, so this isn't needed)
+            setupAutoRefreshConnectors().catch(err => {
+            });
         });
     }
     /**
@@ -3066,15 +3074,27 @@ if (figma.editorType === 'figma') {
                     const experimentValidation = validateExperiment(experiment);
                     const flowValidation = validateFlow(flow);
                     if (!experimentValidation.isValid || !flowValidation.isValid) {
-                        const allErrors = [...experimentValidation.errors, ...flowValidation.errors];
-                        notifyUser(ERRORS.VALIDATION_FAILED(allErrors.length));
-                        console.error('Validation errors:', allErrors);
+                        const merged = [...experimentValidation.issues, ...flowValidation.issues];
+                        postValidationFailedToUi(merged);
+                        console.error('[Petri] create-flow-v2 validation', merged);
+                        const preview = merged.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
+                        notifyUser({
+                            type: 'error',
+                            title: 'Fix a few things before creating the flow',
+                            detail: preview + (merged.length > 3 ? `\n(+${merged.length - 3} more in the plugin panel)` : ''),
+                            actionHint: 'Details are listed in the plugin toast.',
+                        });
                         return;
                     }
-                    // Validate metrics if provided
                     if (metrics && !isMetricDefinitionArray(metrics)) {
-                        notifyUser(ERRORS.VALIDATION_FAILED(1));
-                        console.error('Invalid metrics array');
+                        const goalsIssues = [validationIssue('goals', 'metrics', 'One or more goals are incomplete or invalid.')];
+                        postValidationFailedToUi(goalsIssues);
+                        console.error('[Petri] invalid metrics payload', metrics);
+                        notifyUser({
+                            type: 'error',
+                            title: 'Fix goals before creating the flow',
+                            detail: goalsIssues[0].message,
+                        });
                         return;
                     }
                     yield createFlowV2FromData(experiment, flow, metrics);

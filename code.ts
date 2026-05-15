@@ -2859,6 +2859,18 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
       extra: { experimentId: experiment.id, role: 'experiment-info' },
     });
 
+    const center = figma.viewport.center;
+
+    // Mount the overview card before reading its size for the flow spine. Auto-layout frames
+    // that are not on the page often report width ≈ 0, so the spine was placed on top of the
+    // card and connectors pointed at the wrong bounds.
+    if (infoCard && infoCard.parent === null) {
+      infoCard.x = 100;
+      infoCard.y = center.y;
+      figma.currentPage.appendChild(infoCard);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     // --- STAGE 4: LAYOUT POSITIONING & NODE PLACEMENT ---
     // All nodes positioned directly on page (not in container frame) for ConnectorNode magnetic anchors
     //
@@ -2867,7 +2879,6 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     //   - Variants: Below their parent event, in horizontal row
     //   - All positioned with precise X,Y coordinates for deterministic output
     //
-    const center = figma.viewport.center;
     const eventSpacing = flow.layout?.eventSpacing ?? 80; // Horizontal space between events (configurable)
     const variantSpacing = flow.layout?.variantSpacing ?? 40; // Horizontal space between variants in a row
     const eventToVariantSpacing = 100; // Vertical space from event to variant row
@@ -3155,18 +3166,11 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
       nodeMap[id] = node;
     }
     
-    // Position info card (sidebar with experiment metadata)
-    // Info card appears to the left of the main flow spine
+    // Overview frame is mounted before spine layout so width is real; settle once more before connectors.
     if (infoCard) {
-      if (infoCard.parent === null) {
-        infoCard.x = 100;
-        infoCard.y = center.y;
-        figma.currentPage.appendChild(infoCard);
-      }
-      // Wait briefly for Figma's layout engine to settle before drawing connectors
-      // This ensures accurate node positions for connector calculations
-      await new Promise(resolve => setTimeout(resolve, 100));
-    
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
     // --- STAGE 5a: Dynamic Connector Rendering ---
     // Creates connectors between nodes using the smart dynamic system:
     //   1. Tries native ConnectorNode first (FigJam): automatic updates when nodes move! ✨
@@ -3473,7 +3477,6 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     // (In FigJam, native connectors auto-update, so this isn't needed)
     setupAutoRefreshConnectors().catch(err => {
     });
-  }
 }
 
 /**
