@@ -138,7 +138,7 @@
   margin-bottom: 0;
 }
 
-/* Petri: validation toast (created in JS) */
+/* GrowthLab: validation toast (created in JS) */
 #toast.toast {
   position: fixed;
   left: 50%;

@@ -623,8 +623,14 @@
       padding-bottom: var(--space-8);
     }
 
-    .intro-screen__logo #petri-wordmark path {
-      fill: var(--logo-wordmark-color);
+    .intro-screen__logo-img {
+      display: block;
+      width: 132px;
+      height: auto;
+    }
+
+    :root[data-figma-theme="dark"] .intro-screen__logo-img {
+      filter: invert(1);
     }
 
     .intro-screen__subtitle {
@@ -4863,31 +4869,7 @@
       <div class="intro-screen__content">
         <!-- Logo -->
         <div style="display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-12);">
-          <svg class="intro-screen__logo" viewBox="0 0 88 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Petri logo" style="width: 132px; height: auto; display: block; margin: 0;">
-          <g clip-path="url(#clip0_1425_29221)">
-            <!-- Icon: scaled so height = cap-height of wordmark (~20 units), left-padded 4, vertically centered -->
-            <g id="petri-logo" transform="scale(0.44 0.44) translate(3.84 3.84)">
-              <path d="M28 50.75C40.5644 50.75 50.75 40.5644 50.75 28C50.75 15.4356 40.5644 5.25 28 5.25C15.4356 5.25 5.25 15.4356 5.25 28C5.25 40.5644 15.4356 50.75 28 50.75Z" stroke="#7F4DFF" stroke-width="6"/>
-              <path opacity="0.9" d="M19.25 26.25C22.1494 26.25 24.5 23.8994 24.5 21C24.5 18.1006 22.1494 15.75 19.25 15.75C16.3505 15.75 14 18.1006 14 21C14 23.8994 16.3505 26.25 19.25 26.25Z" fill="#7F4DFF"/>
-              <path opacity="0.7" d="M33.25 21C35.183 21 36.75 19.433 36.75 17.5C36.75 15.567 35.183 14 33.25 14C31.317 14 29.75 15.567 29.75 17.5C29.75 19.433 31.317 21 33.25 21Z" fill="#7F4DFF"/>
-              <path opacity="0.8" d="M24.5 37.625C26.9162 37.625 28.875 35.6662 28.875 33.25C28.875 30.8338 26.9162 28.875 24.5 28.875C22.0838 28.875 20.125 30.8338 20.125 33.25C20.125 35.6662 22.0838 37.625 24.5 37.625Z" fill="#7F4DFF"/>
-              <path opacity="0.6" d="M36.75 34.125C38.1998 34.125 39.375 32.9498 39.375 31.5C39.375 30.0502 38.1998 28.875 36.75 28.875C35.3002 28.875 34.125 30.0502 34.125 31.5C34.125 32.9498 35.3002 34.125 36.75 34.125Z" fill="#7F4DFF"/>
-            </g>
-            <!-- Wordmark: 20 units tall, starts at x=34 (icon 20 + gap 10 + padding 4), top at y=4 -->
-            <g id="petri-wordmark" transform="scale(0.847 0.847) translate(-31.86 -11.47)">
-              <path d="M72 39.424V17.024H79.904C81.44 17.024 82.7946 17.3333 83.968 17.952C85.1414 18.5707 86.0586 19.4347 86.72 20.544C87.3814 21.632 87.712 22.9014 87.712 24.352C87.712 25.76 87.4026 27.0186 86.784 28.128C86.1654 29.2374 85.3014 30.112 84.192 30.752C83.104 31.3706 81.8346 31.68 80.384 31.68H75.712V39.424H72ZM75.712 28.256H80.32C81.3866 28.256 82.2614 27.8934 82.944 27.168C83.6266 26.4426 83.968 25.504 83.968 24.352C83.968 23.1786 83.584 22.2294 82.816 21.504C82.048 20.7786 81.056 20.416 79.84 20.416H75.712V28.256Z" fill="#0F1729"/>
-              <path d="M96.3516 39.808C94.7942 39.808 93.4076 39.456 92.1916 38.752C90.9968 38.0266 90.0476 37.0346 89.3436 35.776C88.6608 34.5174 88.3194 33.0666 88.3194 31.424C88.3194 29.7814 88.6714 28.3306 89.3754 27.072C90.0794 25.8134 91.0396 24.832 92.2556 24.128C93.4928 23.4026 94.9008 23.04 96.4794 23.04C98.0088 23.04 99.1996 23.4134 100.352 24.16C101.504 24.8854 102.41 25.9414 103.072 27.328C103.754 28.7146 104.096 30.368 104.096 32.288H92.0316C92.1382 33.632 92.6288 34.688 93.5036 35.456C94.3996 36.224 95.4556 36.608 96.6716 36.608C97.6528 36.608 98.4636 36.3946 99.1036 35.968C99.7436 35.52 100.245 34.944 100.608 34.24L103.776 35.584C103.328 36.4374 102.752 37.184 102.048 37.824C101.364 38.464 100.544 38.9546 99.5834 39.296C98.6448 39.6374 97.5676 39.808 96.3516 39.808ZM92.2556 29.536H100.224C100.159 28.768 99.9356 28.1386 99.5516 27.648C99.1676 27.136 98.6982 26.752 98.1436 26.496C97.5888 26.24 97.0022 26.112 96.3836 26.112C95.7862 26.112 95.1782 26.24 94.5596 26.496C93.9622 26.7306 93.4502 27.104 93.0236 27.616C92.5968 28.128 92.3408 28.768 92.2556 29.536Z" fill="#0F1729"/>
-              <path d="M112.409 39.808C110.723 39.808 109.433 39.392 108.537 38.56C107.661 37.7066 107.225 36.4906 107.225 34.912V26.496H104.569V23.424H107.225V18.432H110.777V23.424H115.097V26.496H110.777V34.24C110.777 34.9866 110.947 35.552 111.289 35.936C111.651 36.32 112.174 36.512 112.857 36.512C113.07 36.512 113.305 36.4694 113.561 36.384C113.817 36.2986 114.104 36.1386 114.423 35.904L115.737 38.624C115.182 39.008 114.627 39.296 114.072 39.488C113.518 39.7014 112.964 39.808 112.409 39.808Z" fill="#0F1729"/>
-              <path d="M117.803 39.424V23.424H121.387V26.336C122.027 25.3334 122.859 24.5866 123.883 24.096C124.907 23.6054 125.963 23.36 127.051 23.36V26.784C126.069 26.784 125.141 26.9226 124.267 27.2C123.413 27.456 122.72 27.8826 122.187 28.48C121.653 29.0774 121.387 29.8666 121.387 30.848V39.424H117.803Z" fill="#0F1729"/>
-              <path d="M128.852 39.424V23.424H132.404V39.424H128.852ZM130.644 20.384C130.068 20.384 129.567 20.1814 129.14 19.776C128.735 19.3494 128.532 18.848 128.532 18.272C128.532 17.696 128.735 17.2054 129.14 16.8C129.567 16.3946 130.068 16.192 130.644 16.192C131.22 16.192 131.711 16.3946 132.118 16.8C132.543 17.2054 132.756 17.696 132.756 18.272C132.756 18.848 132.543 19.3494 132.118 19.776C131.711 20.1814 131.22 20.384 130.644 20.384Z" fill="#0F1729"/>
-            </g>
-          </g>
-          <defs>
-            <clipPath id="clip0_1425_29221">
-              <rect width="88" height="28" fill="white"/>
-            </clipPath>
-          </defs>
-        </svg>
+          <img class="intro-screen__logo intro-screen__logo-img" src="data:image/png;base64,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" alt="GrowthLab logo" width="464" height="112" />
         <svg xmlns="http://www.w3.org/2000/svg" width="80" height="77" viewBox="0 0 80 77" fill="none" style="display:none" aria-hidden="true">
           <path d="M43.0264 75.216C43.5149 75.2161 43.91 75.6151 43.91 76.1084C43.91 76.6016 43.5149 77 43.0264 77H37.7257C37.2373 76.9999 36.8429 76.6016 36.8428 76.1084C36.8428 75.6152 37.2372 75.2162 37.7257 75.216H43.0264Z" fill="#333B47"/>
           <path d="M39.4928 71.6481C39.9814 71.6481 40.3764 72.0471 40.3764 72.5404C40.3764 73.0337 39.9813 73.432 39.4928 73.432H21.8249C21.3364 73.432 20.9414 73.0337 20.9413 72.5404C20.9413 72.0471 21.3364 71.6481 21.8249 71.6481H39.4928Z" fill="#333B47"/>
@@ -4915,7 +4897,7 @@
           <path d="M14.958 12.296C20.1588 12.296 25.8198 15.9319 25.8198 23.434C25.8198 30.7059 20.6651 35.3083 14.958 35.3083C13.025 35.3083 11.5062 34.8481 10.2635 33.9736V39.5426C10.2635 41.6597 12.3346 42.212 12.3346 43.5007V43.6848C12.3346 44.2371 11.8744 44.5593 11.23 44.5593H1.47279C0.828444 44.5593 0.368197 44.2371 0.368197 43.6848V43.5007C0.368197 42.212 2.20918 41.6597 2.20918 39.5426V20.6725C2.20918 18.6934 0 18.4633 0 17.1286V16.8985C0 16.3462 0.414222 15.9319 1.05857 15.5637L7.13382 12.5721C8.51456 11.9278 9.06686 12.5721 9.06686 13.4926V14.8273C10.2175 13.2165 12.3346 12.296 14.958 12.296ZM14.2216 33.0531C16.5689 33.0531 17.7195 31.028 17.7195 27.254C17.7195 22.2833 16.3848 14.5512 13.025 14.5512C11.3681 14.5512 10.2635 16.024 10.2635 18.1871V26.5176C10.2635 30.4297 12.1965 33.0531 14.2216 33.0531ZM51.5476 29.7854C51.5476 33.5134 53.5267 31.7184 53.5267 33.6054C53.5267 34.8481 51.7317 35.1242 48.7861 35.1242C45.9326 35.1242 44.69 34.4338 44.4598 32.4548C43.2632 34.2958 41.1 35.3083 37.9703 35.3083C33.3219 35.3083 29.3637 32.1326 29.3637 26.2415V18.5553C29.3637 16.3922 27.5228 15.8399 27.5228 14.6893V14.5052C27.5228 13.9989 27.937 13.5387 28.5813 13.4466L35.439 12.5261C36.7737 12.342 37.6022 12.6182 37.6022 13.4466L37.4641 27.0699C37.4181 30.8439 38.3846 32.2707 40.4097 32.2707C42.1126 32.2707 43.4473 30.4757 43.4473 27.6682V18.5553C43.4473 16.3922 41.6063 15.8399 41.6063 14.6893V14.5052C41.6063 13.9989 42.0205 13.5387 42.6649 13.4466L49.5225 12.5261C50.8573 12.342 51.5476 12.6182 51.5476 13.4466V29.7854ZM56.3342 34.8481C55.6898 34.8481 55.2756 34.5259 55.2756 33.9736V33.7895C55.2756 32.4548 57.0706 31.9485 57.0706 29.8314V8.79811C57.0706 6.63495 55.2756 6.03663 55.2756 4.88601V4.70191C55.2756 4.19564 55.6898 3.96552 56.2882 3.64335L63.2379 0.237522C64.5266 -0.406823 65.355 0.375596 65.355 1.20404V29.8314C65.355 31.9485 67.3801 32.4548 67.3801 33.7895V33.9736C67.3801 34.5259 66.9199 34.8481 66.2755 34.8481H56.3342ZM83.7189 12.296C88.9196 12.296 94.5807 15.9319 94.5807 23.434C94.5807 30.7059 89.4259 35.3083 83.7189 35.3083C81.7858 35.3083 80.267 34.8481 79.0244 33.9736V39.5426C79.0244 41.6597 81.0955 42.212 81.0955 43.5007V43.6848C81.0955 44.2371 80.6352 44.5593 79.9909 44.5593H70.2336C69.5893 44.5593 69.1291 44.2371 69.1291 43.6848V43.5007C69.1291 42.212 70.97 41.6597 70.97 39.5426V20.6725C70.97 18.6934 68.7609 18.4633 68.7609 17.1286V16.8985C68.7609 16.3462 69.1751 15.9319 69.8194 15.5637L75.8947 12.5721C77.2754 11.9278 77.8277 12.5721 77.8277 13.4926V14.8273C78.9783 13.2165 81.0955 12.296 83.7189 12.296ZM82.9825 33.0531C85.3297 33.0531 86.4803 31.028 86.4803 27.254C86.4803 22.2833 85.1456 14.5512 81.7858 14.5512C80.1289 14.5512 79.0244 16.024 79.0244 18.1871V26.5176C79.0244 30.4297 80.9574 33.0531 82.9825 33.0531ZM109.355 35.3083C102.313 35.3083 96.6058 30.4297 96.6058 23.7561C96.6058 16.9445 102.451 12.296 109.032 12.296C115.936 12.296 121.643 17.0826 121.643 23.8482C121.643 30.5678 116.074 35.3083 109.355 35.3083ZM110.321 33.0531C112.484 33.0531 113.267 30.8439 113.267 27.3921C113.267 23.8022 111.38 14.5512 107.744 14.5512C105.535 14.5512 104.752 16.5763 104.752 20.3043C104.752 24.0323 106.593 33.0531 110.321 33.0531Z" fill="#333B47"/>
         </svg>
 
-        <p class="intro-screen__subtitle">Petri for Figma helps teams map experiments and design variants directly on the canvas, so everyone can see what’s being tested, where it happens, and why it matters.</p>
+        <p class="intro-screen__subtitle">GrowthLab for Figma helps teams map experiments and design variants directly on the canvas, so everyone can see what’s being tested, where it happens, and why it matters.</p>
         <p class="intro-screen__subtitle">An experiment flow connects journeys, goals, and variants into one shared source of truth.</p>
         <div class="intro-screen__features">
           <ul>
@@ -5236,7 +5218,7 @@
   </div>
 
   <script>
-        window.__petriFeedbackEmail = '';
+        window.__growthlabFeedbackEmail = '';
 
         const FIGMA_THEME_ATTRIBUTE = 'data-figma-theme';
 
@@ -5355,7 +5337,7 @@
 
         // Global intro button actions — called by inline onclick on buttons,
         // and also wired up by initIntroScreen() below.
-        window._petriShowForm = function() {
+        window._growthlabShowForm = function() {
           var introScreen = document.getElementById('introScreen');
           var form = document.getElementById('exp-form');
           if (!introScreen || !form) return;
@@ -5373,7 +5355,7 @@
             var el = document.getElementById(id); if (el) el.value = '';
           });
           try { if (window._setDateRange) window._setDateRange('', ''); } catch(_) {}
-          window._petriShowForm();
+          window._growthlabShowForm();
         };
 
         window.startExampleExperiment = function() {
@@ -5396,21 +5378,21 @@
               window._setDateRange(s, e);
             }
           } catch(_) {}
-          window._petriShowForm();
+          window._growthlabShowForm();
         };
 
         const emailMeBtn = document.getElementById('emailMeBtn');
         if (emailMeBtn) {
           emailMeBtn.addEventListener('click', () => {
-            const TO = (typeof window.__petriFeedbackEmail === 'string' && window.__petriFeedbackEmail.trim()) || '';
+            const TO = (typeof window.__growthlabFeedbackEmail === 'string' && window.__growthlabFeedbackEmail.trim()) || '';
             if (!TO) return;
             const pluginVersion = (document.getElementById('pluginVersion') || {}).textContent || '';
             const expName = (document.getElementById('experimentName') || {}).value || '';
-            const subject = encodeURIComponent('Petri — Feedback');
+            const subject = encodeURIComponent('GrowthLab — Feedback');
             const body = encodeURIComponent(
 `Hi,
 
-I have feedback about Petri for Figma.
+I have feedback about GrowthLab for Figma.
 
 ---
 ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion || 'unknown'}
@@ -7621,14 +7603,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       showToast(body, null, null, 9000);
     }
 
-    function applyPetriFeedbackButton() {
+    function applyGrowthLabFeedbackButton() {
       const btn = document.getElementById('emailMeBtn');
       if (!btn) return;
-      const em = (typeof window.__petriFeedbackEmail === 'string' && window.__petriFeedbackEmail.trim()) || '';
+      const em = (typeof window.__growthlabFeedbackEmail === 'string' && window.__growthlabFeedbackEmail.trim()) || '';
       btn.style.display = em ? '' : 'none';
     }
 
-    function installPetriMainThreadMessageListener() {
+    function installGrowthLabMainThreadMessageListener() {
       window.addEventListener('message', (event) => {
         const msg = event.data && event.data.pluginMessage;
         if (!msg || typeof msg.type !== 'string') return;
@@ -7638,8 +7620,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           return;
         }
         if (msg.type === 'plugin-config') {
-          window.__petriFeedbackEmail = typeof msg.feedbackEmail === 'string' ? msg.feedbackEmail : '';
-          applyPetriFeedbackButton();
+          window.__growthlabFeedbackEmail = typeof msg.feedbackEmail === 'string' ? msg.feedbackEmail : '';
+          applyGrowthLabFeedbackButton();
           return;
         }
         if (msg.type === 'validation-failed' && Array.isArray(msg.issues)) {
@@ -7648,7 +7630,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       });
     }
 
-    installPetriMainThreadMessageListener();
+    installGrowthLabMainThreadMessageListener();
 
     function setPendingFocus(type, id, options = {}) {
       pendingFocusTarget = { type, id, ...options };
@@ -9476,15 +9458,15 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const btnNewExperiment = document.getElementById('btnNewExperiment');
       const btnLoadExample = document.getElementById('btnLoadExample');
 
-      console.log('[Petri] initIntroScreen called', { introScreen: !!introScreen, form: !!form, btnNewExperiment: !!btnNewExperiment, btnLoadExample: !!btnLoadExample });
+      console.log('[GrowthLab] initIntroScreen called', { introScreen: !!introScreen, form: !!form, btnNewExperiment: !!btnNewExperiment, btnLoadExample: !!btnLoadExample });
       if (!introScreen || !form || !btnNewExperiment || !btnLoadExample) {
-        console.error('[Petri] initIntroScreen: missing required element(s)', {
+        console.error('[GrowthLab] initIntroScreen: missing required element(s)', {
           introScreen: !!introScreen, form: !!form,
           btnNewExperiment: !!btnNewExperiment, btnLoadExample: !!btnLoadExample
         });
         return;
       }
-      console.log('[Petri] initIntroScreen: all elements found, setting up listeners');
+      console.log('[GrowthLab] initIntroScreen: all elements found, setting up listeners');
 
       function showForm() {
         introScreen.style.display = 'none';
@@ -9800,10 +9782,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       btnNewExperiment.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('[Petri] btnNewExperiment clicked');
-        try { resetForm(); } catch(err) { console.error('[Petri] resetForm error:', err); }
+        console.log('[GrowthLab] btnNewExperiment clicked');
+        try { resetForm(); } catch(err) { console.error('[GrowthLab] resetForm error:', err); }
         showForm();
-        console.log('[Petri] after showForm:', {
+        console.log('[GrowthLab] after showForm:', {
           innerHeight: window.innerHeight,
           introDisplay: introScreen.style.display,
           formDisplay: form.style.display,
@@ -9818,8 +9800,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       btnLoadExample.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('[Petri] btnLoadExample clicked');
-        try { loadExample(); } catch(err) { console.error('[Petri] loadExample error:', err); }
+        console.log('[GrowthLab] btnLoadExample clicked');
+        try { loadExample(); } catch(err) { console.error('[GrowthLab] loadExample error:', err); }
         showForm();
         const formContent = form.querySelector('.form-content');
         if (formContent) formContent.scrollTop = 0;
@@ -9847,7 +9829,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       initStatusDropdown();
       initRolledoutDropdown();
       initExpandButton();
-      applyPetriFeedbackButton();
+      applyGrowthLabFeedbackButton();
     }
 
     if (document.readyState === 'loading') {

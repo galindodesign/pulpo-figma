@@ -2477,7 +2477,7 @@ if (figma.editorType === 'figma') {
   figma.showUI(__html__, {
     width: MIN_UI_WIDTH,
     height: 720,
-    title: 'Petri',
+    title: 'GrowthLab',
     themeColors: true,
   });
 
@@ -2717,7 +2717,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     const validation = validateFlowData(experiment, flow);
     if (!validation.isValid) {
       postValidationFailedToUi(validation.issues);
-      console.error('[Petri] createFlowV2FromData validation', validation.issues);
+      console.error('[GrowthLab] createFlowV2FromData validation', validation.issues);
       const preview = validation.issues.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
       notifyUser({
         type: 'error',
@@ -3508,7 +3508,7 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
       if (!experimentValidation.isValid || !flowValidation.isValid) {
         const merged = [...experimentValidation.issues, ...flowValidation.issues];
         postValidationFailedToUi(merged);
-        console.error('[Petri] create-flow-v2 validation', merged);
+        console.error('[GrowthLab] create-flow-v2 validation', merged);
         const preview = merged.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
         notifyUser({
           type: 'error',
@@ -3522,7 +3522,7 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
       if (metrics && !isMetricDefinitionArray(metrics)) {
         const goalsIssues = [validationIssue('goals', 'metrics', 'One or more goals are incomplete or invalid.')];
         postValidationFailedToUi(goalsIssues);
-        console.error('[Petri] invalid metrics payload', metrics);
+        console.error('[GrowthLab] invalid metrics payload', metrics);
         notifyUser({
           type: 'error',
           title: 'Fix goals before creating the flow',

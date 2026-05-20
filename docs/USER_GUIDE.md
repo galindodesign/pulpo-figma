@@ -1,7 +1,7 @@
-# User Guide — Petri
+# User Guide — GrowthLab
 
 ## Overview
-Petri creates professional **experiment flow** diagrams on the Figma canvas: experiment metadata, **goals** (each goal is a metric you measure), journey steps, variants, and outcomes.
+GrowthLab creates professional **experiment flow** diagrams on the Figma canvas: experiment metadata, **goals** (each goal is a metric you measure), journey steps, variants, and outcomes.
 
 ## Experiment section
 Fields include:
@@ -38,4 +38,4 @@ Paste links to tools like Figma, Jira, Miro, Notion, Asana, Linear, GitHub, Slac
 - **Refresh**: When visible, updates connector lines on the current flow
 
 ## Validation
-If something is wrong before the flow can be built, Petri shows a **toast in the plugin** with up to five issues grouped under **Experiment**, **Goals**, or **Journey**. Figma may also show a short notification.
+If something is wrong before the flow can be built, GrowthLab shows a **toast in the plugin** with up to five issues grouped under **Experiment**, **Goals**, or **Journey**. Figma may also show a short notification.

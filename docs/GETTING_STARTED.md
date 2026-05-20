@@ -3,7 +3,7 @@
 Create a complete experiment flow in minutes.
 
 ## 1) Run the plugin
-Open your Figma file → Plugins → **Petri**.
+Open your Figma file → Plugins → **GrowthLab**.
 
 ## 2) Fill in the basics
 - **Experiment name** (required)

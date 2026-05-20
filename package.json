@@ -1,7 +1,7 @@
 {
   "name": "growthlab-flow-builder",
   "version": "1.0.0",
-  "description": "Petri — Figma plugin to design and document experiment flows on the canvas",
+  "description": "GrowthLab — Figma plugin to design and document experiment flows on the canvas",
   "main": "code.js",
   "scripts": {
     "build": "node esbuild.config.js && npm run postbuild",
