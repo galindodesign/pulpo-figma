@@ -95,7 +95,7 @@ function createThumbnailFrame(sourceNode, options = {}) {
     thumb.layoutMode = 'NONE';
     thumb.resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
     thumb.cornerRadius = (_a = options.cornerRadius) !== null && _a !== void 0 ? _a : TOKENS.radiusMD;
-    thumb.name = 'Thumbnail - Replace with image';
+    thumb.name = 'Thumbnail - Link Figma frame or replace with image';
     thumb.layoutAlign = 'MIN';
     thumb.clipsContent = true;
     if (!canCloneThumbnailSource(sourceNode)) {

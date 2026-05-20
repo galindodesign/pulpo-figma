@@ -3,10 +3,59 @@
 
 import { TOKENS } from './design-tokens';
 import { hexToRgb, getFontStyle, createBadge } from './layout-utils';
-import type { MetricDefinition } from './types';
+import type { MetricDefinition, Variant } from './types';
 
 const THUMBNAIL_WIDTH = 368;
+/** Used for flow spacing when cards are not yet on the canvas. */
+export const VARIANT_CARD_LAYOUT_WIDTH = 400;
 const THUMBNAIL_HEIGHT = 260;
+
+/** Shown on touchpoint / variant cards when the Figma link targets an image layer. */
+export const THUMBNAIL_IMAGE_UNSUPPORTED_TITLE = "Images can't be used as previews";
+export const THUMBNAIL_IMAGE_UNSUPPORTED_HELPER =
+  'Link a Frame in this file instead (right-click the frame → Copy link to selection).';
+export const THUMBNAIL_DEFAULT_HELPER =
+  'Use a Frame from this Figma file to render a preview.';
+export const THUMBNAIL_CANNOT_LINK_GENERATED_TITLE = "Can't link to experiment cards";
+export const THUMBNAIL_CANNOT_LINK_GENERATED_HELPER =
+  'Link a design Frame in this file (not Entry, Touchpoint, Variant, or Overview cards).';
+export const THUMBNAIL_REQUIRES_FRAME_TITLE = 'Link a Frame, not an image or shape';
+export const THUMBNAIL_REQUIRES_FRAME_HELPER =
+  'Select a Frame on the canvas, then right-click → Copy link to selection.';
+
+const GROWTHLAB_FLOW_ROLES = new Set([
+  'experiment-info',
+  'entry',
+  'event',
+  'variant',
+  'exit',
+  'entry-note',
+]);
+
+/** True when the node is (or is inside) a GrowthLab-generated flow card — unsafe as a thumbnail source. */
+export function isExperimentFlowCardNode(node: BaseNode): boolean {
+  let current: BaseNode | null = node;
+  while (current && current.type !== 'PAGE' && current.type !== 'DOCUMENT') {
+    if (current.type === 'FRAME') {
+      const frameName = current.name;
+      if (/^(Entry|Exit|Touchpoint|Variant)(:|$)/.test(frameName)) return true;
+      if (/^Experiment (Overview|Flow|Cards)( — |$)/.test(frameName)) return true;
+    }
+    const metaRaw = current.getPluginData('meta');
+    if (metaRaw) {
+      try {
+        const meta = JSON.parse(metaRaw) as { extra?: { role?: string } };
+        const role = meta?.extra?.role;
+        if (typeof role === 'string' && GROWTHLAB_FLOW_ROLES.has(role)) return true;
+      } catch {
+        // ignore malformed plugin data
+      }
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
 const ROLLED_OUT_BADGE_BG = '#fffbb5';
 const ROLLED_OUT_BADGE_TEXT = '#484122';
 const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
@@ -69,12 +118,6 @@ function createOpenInFigmaLinkRow(figmaLink: string): FrameNode {
   return linkRow;
 }
 
-type ThumbnailSourceNode = SceneNode & {
-  clone(): SceneNode;
-  resize?: (width: number, height: number) => void;
-  resizeWithoutConstraints?: (width: number, height: number) => void;
-};
-
 function createRolledOutIcon(): FrameNode {
   const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
   icon.name = 'Rolled Out Icon';
@@ -83,96 +126,138 @@ function createRolledOutIcon(): FrameNode {
   return icon;
 }
 
-function canCloneThumbnailSource(node: SceneNode | null | undefined): node is ThumbnailSourceNode {
-  return !!node && typeof (node as { clone?: unknown }).clone === 'function';
+/** True when the layer can be exported as a touchpoint / variant preview. */
+export function isSupportedThumbnailLinkTarget(node: SceneNode): boolean {
+  if (isExperimentFlowCardNode(node) || isUnsupportedImageThumbnailSource(node)) return false;
+  return node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE';
 }
 
-function resizeThumbnailChild(node: SceneNode, width: number, height: number): void {
-  const resizable = node as SceneNode & {
-    resize?: (width: number, height: number) => void;
-    resizeWithoutConstraints?: (width: number, height: number) => void;
-  };
+/** Image layers (screenshots, bitmap fills) are not supported — use {@link isUnsupportedImageThumbnailSource}. */
+export function isUnsupportedImageThumbnailSource(node: SceneNode): boolean {
+  if (node.type === 'ROUNDED_RECTANGLE') return true;
+  if (node.type === 'RECTANGLE') {
+    const fills = (node as RectangleNode).fills;
+    if (fills !== figma.mixed && Array.isArray(fills)) {
+      return fills.some((fill) => fill.type === 'IMAGE' && fill.visible !== false);
+    }
+  }
+  return false;
+}
 
-  if (typeof resizable.resize === 'function') {
-    resizable.resize(width, height);
-  } else if (typeof resizable.resizeWithoutConstraints === 'function') {
-    resizable.resizeWithoutConstraints(width, height);
+function appendThumbnailPlaceholder(
+  thumb: FrameNode,
+  options: { placeholderMessage?: string; placeholderHelper?: string }
+): void {
+  thumb.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue100) }];
+  thumb.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue200) }];
+  thumb.strokeWeight = 1;
+  if (!options.placeholderMessage) return;
+
+  const title = figma.createText();
+  title.fontName = getFontStyle('Bold');
+  title.fontSize = TOKENS.fontSizeBodySm;
+  title.lineHeight = { value: 16, unit: 'PIXELS' };
+  title.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+  title.textAlignHorizontal = 'CENTER';
+  title.textAutoResize = 'HEIGHT';
+  title.characters = options.placeholderMessage;
+  title.resize(THUMBNAIL_WIDTH - 48, title.height);
+  title.name = 'Thumbnail Message Title';
+
+  const helper = figma.createText();
+  helper.fontName = getFontStyle('Regular');
+  helper.fontSize = TOKENS.fontSizeLabel;
+  helper.lineHeight = { value: 14, unit: 'PIXELS' };
+  helper.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
+  helper.textAlignHorizontal = 'CENTER';
+  helper.textAutoResize = 'HEIGHT';
+  helper.characters = options.placeholderHelper || THUMBNAIL_DEFAULT_HELPER;
+  helper.resize(THUMBNAIL_WIDTH - 48, helper.height);
+  helper.name = 'Thumbnail Message Helper';
+
+  const contentHeight = title.height + 8 + helper.height;
+  title.x = 24;
+  title.y = (THUMBNAIL_HEIGHT - contentHeight) / 2;
+  helper.x = 24;
+  helper.y = title.y + title.height + 8;
+
+  thumb.appendChild(title);
+  thumb.appendChild(helper);
+}
+
+async function createRasterThumbnailLayer(sourceNode: SceneNode): Promise<RectangleNode | null> {
+  try {
+    const bytes = await sourceNode.exportAsync({
+      format: 'PNG',
+      constraint: { type: 'WIDTH', value: THUMBNAIL_WIDTH * 2 },
+    });
+    const image = figma.createImage(bytes);
+    const imgRect = figma.createRectangle();
+    imgRect.resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
+    imgRect.cornerRadius = TOKENS.radiusSM;
+    imgRect.fills = [{ type: 'IMAGE', imageHash: image.hash, scaleMode: 'FILL' }];
+    imgRect.strokes = [];
+    imgRect.name = 'Thumbnail Image';
+    return imgRect;
+  } catch (error) {
+    console.warn('Failed to rasterize thumbnail source', error);
+    return null;
   }
 }
 
-function createThumbnailFrame(
+async function createThumbnailFrame(
   sourceNode?: SceneNode | null,
-  options: { cornerRadius?: number; placeholderMessage?: string } = {}
-): FrameNode {
+  options: { cornerRadius?: number; placeholderMessage?: string; placeholderHelper?: string } = {}
+): Promise<FrameNode> {
   const thumb = figma.createFrame();
   thumb.layoutMode = 'NONE';
   thumb.resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
   thumb.cornerRadius = options.cornerRadius ?? TOKENS.radiusMD;
-  thumb.name = 'Thumbnail - Replace with image';
+  thumb.name = 'Thumbnail - Link Figma frame or replace with image';
   thumb.layoutAlign = 'MIN';
   thumb.clipsContent = true;
 
-  if (!canCloneThumbnailSource(sourceNode)) {
-    thumb.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue100) }];
-    thumb.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue200) }];
-    thumb.strokeWeight = 1;
-    if (options.placeholderMessage) {
-      const title = figma.createText();
-      title.fontName = getFontStyle("Bold");
-      title.fontSize = TOKENS.fontSizeBodySm;
-      title.lineHeight = { value: 16, unit: "PIXELS" };
-      title.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
-      title.textAlignHorizontal = 'CENTER';
-      title.textAutoResize = 'HEIGHT';
-      title.characters = options.placeholderMessage;
-      title.resize(THUMBNAIL_WIDTH - 48, title.height);
-      title.name = 'Thumbnail Message Title';
-
-      const helper = figma.createText();
-      helper.fontName = getFontStyle("Regular");
-      helper.fontSize = TOKENS.fontSizeLabel;
-      helper.lineHeight = { value: 14, unit: "PIXELS" };
-      helper.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
-      helper.textAlignHorizontal = 'CENTER';
-      helper.textAutoResize = 'HEIGHT';
-      helper.characters = 'Use a frame from this Figma file to render a preview.';
-      helper.resize(THUMBNAIL_WIDTH - 48, helper.height);
-      helper.name = 'Thumbnail Message Helper';
-
-      const contentHeight = title.height + 8 + helper.height;
-      title.x = 24;
-      title.y = (THUMBNAIL_HEIGHT - contentHeight) / 2;
-      helper.x = 24;
-      helper.y = title.y + title.height + 8;
-
-      thumb.appendChild(title);
-      thumb.appendChild(helper);
-    }
+  if (!sourceNode) {
+    appendThumbnailPlaceholder(thumb, options);
     return thumb;
   }
 
-  thumb.fills = [];
-  thumb.strokes = [];
-
-  const clone = sourceNode.clone();
-  clone.name = 'Thumbnail Source';
-
-  const sourceWidth = Math.max(1, sourceNode.width || THUMBNAIL_WIDTH);
-  const sourceHeight = Math.max(1, sourceNode.height || THUMBNAIL_HEIGHT);
-  const scale = Math.max(THUMBNAIL_WIDTH / sourceWidth, THUMBNAIL_HEIGHT / sourceHeight);
-  const resizedWidth = sourceWidth * scale;
-  const resizedHeight = sourceHeight * scale;
-
-  resizeThumbnailChild(clone, resizedWidth, resizedHeight);
-  clone.x = (THUMBNAIL_WIDTH - resizedWidth) / 2;
-  clone.y = (THUMBNAIL_HEIGHT - resizedHeight) / 2;
-
-  const roundedClone = clone as SceneNode & { cornerRadius?: number | PluginAPI['mixed'] };
-  if (typeof roundedClone.cornerRadius === 'number') {
-    roundedClone.cornerRadius = TOKENS.radiusSM;
+  if (isUnsupportedImageThumbnailSource(sourceNode)) {
+    appendThumbnailPlaceholder(thumb, {
+      placeholderMessage: options.placeholderMessage || THUMBNAIL_IMAGE_UNSUPPORTED_TITLE,
+      placeholderHelper: options.placeholderHelper || THUMBNAIL_IMAGE_UNSUPPORTED_HELPER,
+    });
+    return thumb;
   }
 
-  thumb.appendChild(clone);
+  if (!isSupportedThumbnailLinkTarget(sourceNode)) {
+    appendThumbnailPlaceholder(thumb, {
+      placeholderMessage: options.placeholderMessage || THUMBNAIL_REQUIRES_FRAME_TITLE,
+      placeholderHelper: options.placeholderHelper || THUMBNAIL_REQUIRES_FRAME_HELPER,
+    });
+    return thumb;
+  }
+
+  if (isExperimentFlowCardNode(sourceNode)) {
+    appendThumbnailPlaceholder(thumb, {
+      placeholderMessage: THUMBNAIL_CANNOT_LINK_GENERATED_TITLE,
+      placeholderHelper: THUMBNAIL_CANNOT_LINK_GENERATED_HELPER,
+    });
+    return thumb;
+  }
+
+  const rasterLayer = await createRasterThumbnailLayer(sourceNode);
+  if (rasterLayer) {
+    thumb.fills = [];
+    thumb.strokes = [];
+    thumb.appendChild(rasterLayer);
+    return thumb;
+  }
+
+  appendThumbnailPlaceholder(thumb, {
+    placeholderMessage: options.placeholderMessage || 'Preview unavailable',
+    placeholderHelper: options.placeholderHelper || THUMBNAIL_DEFAULT_HELPER,
+  });
   return thumb;
 }
 
@@ -307,14 +392,15 @@ async function createIconFromSVG(
  * eventCard.y = 200;
  * figma.currentPage.appendChild(eventCard);
  */
-export function createEventCard(
+export async function createEventCard(
   eventName: string,
   _variantCount?: number,
   _eventIndex?: number,
   thumbnailSource?: SceneNode | null,
   thumbnailMessage?: string,
+  thumbnailHelper?: string,
   options?: { figmaLink?: string; showFigmaLink?: boolean }
-): FrameNode {
+): Promise<FrameNode> {
   const card = figma.createFrame();
   card.layoutMode = 'VERTICAL';
   card.counterAxisSizingMode = 'AUTO';
@@ -342,8 +428,7 @@ export function createEventCard(
   card.itemSpacing = 8; // 1rem gap
   card.primaryAxisAlignItems = 'MIN';
   card.counterAxisAlignItems = 'MIN';
-  // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
-  card.name = `Touchpoint: ${eventName}`;
+  card.name = 'Touchpoint';
 
   const selection = figma.currentPage.selection;
   
@@ -351,12 +436,29 @@ export function createEventCard(
   // Only use FRAME or RECTANGLE types - ignore TEXT and other node types
   // to prevent accidentally cloning text content (like pasted URLs) into thumbnails
   const selectedNode = selection && selection.length > 0 ? selection[0] : null;
-  const isValidThumbnailSource = selectedNode && 
-    (selectedNode.type === 'FRAME' || selectedNode.type === 'RECTANGLE');
-  const resolvedThumbnailSource = thumbnailSource || (isValidThumbnailSource ? selectedNode : null);
-  const thumb = createThumbnailFrame(resolvedThumbnailSource, {
+  const hasFigmaLink = !!(options?.figmaLink && options.figmaLink.trim());
+  const isValidThumbnailSource =
+    !hasFigmaLink &&
+    selectedNode &&
+    !isExperimentFlowCardNode(selectedNode) &&
+    (selectedNode.type === 'FRAME' ||
+      selectedNode.type === 'RECTANGLE' ||
+      selectedNode.type === 'ROUNDED_RECTANGLE');
+  const candidateSource = thumbnailSource ?? (isValidThumbnailSource ? selectedNode : null);
+  const resolvedThumbnailSource =
+    candidateSource && !isUnsupportedImageThumbnailSource(candidateSource) ? candidateSource : null;
+  const thumb = await createThumbnailFrame(resolvedThumbnailSource, {
     cornerRadius: TOKENS.radiusMD,
-    placeholderMessage: thumbnailMessage,
+    placeholderMessage:
+      thumbnailMessage ||
+      (candidateSource && isUnsupportedImageThumbnailSource(candidateSource)
+        ? THUMBNAIL_IMAGE_UNSUPPORTED_TITLE
+        : undefined),
+    placeholderHelper:
+      thumbnailHelper ||
+      (candidateSource && isUnsupportedImageThumbnailSource(candidateSource)
+        ? THUMBNAIL_IMAGE_UNSUPPORTED_HELPER
+        : undefined),
   });
   card.appendChild(thumb);
 
@@ -407,8 +509,6 @@ export function createEventCard(
   return card;
 }
 
-import type { Variant } from './types';
-
 /**
  * Creates a Variant card displaying experiment variant details and performance metrics
  * 
@@ -448,6 +548,7 @@ export async function createVariantCard(
     metrics?: MetricDefinition[]; // Available metrics from plugin
     thumbnailSource?: SceneNode | null;
     thumbnailMessage?: string;
+    thumbnailHelper?: string;
     /**
      * Whether to render the variant description text on the canvas node.
      * Default: false (hidden) to keep nodes compact.
@@ -489,9 +590,21 @@ export async function createVariantCard(
   card.primaryAxisAlignItems = 'MIN';
   card.counterAxisAlignItems = 'MIN';
 
-  const thumb = createThumbnailFrame(options?.thumbnailSource, {
+  const candidateSource = options?.thumbnailSource ?? null;
+  const resolvedThumbnailSource =
+    candidateSource && !isUnsupportedImageThumbnailSource(candidateSource) ? candidateSource : null;
+  const thumb = await createThumbnailFrame(resolvedThumbnailSource, {
     cornerRadius: TOKENS.radiusSM,
-    placeholderMessage: options?.thumbnailMessage,
+    placeholderMessage:
+      options?.thumbnailMessage ||
+      (candidateSource && isUnsupportedImageThumbnailSource(candidateSource)
+        ? THUMBNAIL_IMAGE_UNSUPPORTED_TITLE
+        : undefined),
+    placeholderHelper:
+      options?.thumbnailHelper ||
+      (candidateSource && isUnsupportedImageThumbnailSource(candidateSource)
+        ? THUMBNAIL_IMAGE_UNSUPPORTED_HELPER
+        : undefined),
   });
   card.appendChild(thumb);
 

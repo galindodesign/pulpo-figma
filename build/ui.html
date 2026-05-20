@@ -3217,8 +3217,8 @@
 
     /* Touchpoint row: design variants (pairs with Figma / rolled-out chips) */
     .variant-passive-chip--variants {
-      /*background: var(--event-variants-badge-bg);
-      border-color: var(--event-variants-badge-border);*/
+      background: var(--event-variants-badge-bg);
+      border-color: var(--event-variants-badge-border);
       color: var(--event-variants-badge-color);
       width: 20px;
       padding: 0;
@@ -5350,6 +5350,8 @@
         };
 
         window.startNewExperiment = function() {
+          var form = document.getElementById('exp-form');
+          if (form) delete form.dataset.experimentId;
           ['experimentName','experimentDescription','experimentHypothesis',
            'experimentAudience','experimentSampleSize','experimentOwner'].forEach(function(id) {
             var el = document.getElementById(id); if (el) el.value = '';
@@ -5359,6 +5361,8 @@
         };
 
         window.startExampleExperiment = function() {
+          var form = document.getElementById('exp-form');
+          if (form) form.dataset.experimentId = 'sample-pricing-page-button-color';
           var vals = {
             experimentName: 'Pricing Page Button Color Experiment',
             experimentDescription: 'Test whether CTA color changes help more pricing-page visitors start checkout.',
@@ -6942,12 +6946,14 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     }) {
       const FIGMA_LINK_INVALID_MSG = 'Enter a valid figma.com frame or file link.';
 
-      const applySaveResult = (raw, errorEl) => {
+      const applySaveResult = async (raw, errorEl) => {
         if (typeof onSave !== 'function') return true;
-        const ok = onSave(raw) !== false;
-        if (errorEl) {
+        const ok = (await onSave(raw, errorEl)) !== false;
+        if (errorEl && !ok && !errorEl.textContent.trim()) {
           errorEl.textContent = FIGMA_LINK_INVALID_MSG;
-          errorEl.classList.toggle('is-visible', !ok);
+          errorEl.classList.add('is-visible');
+        } else if (errorEl && ok) {
+          errorEl.classList.remove('is-visible');
         }
         return ok;
       };
@@ -6993,7 +6999,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            applySaveResult(input.value, errorEl);
+            void applySaveResult(input.value, errorEl);
           }
         });
         input.addEventListener('paste', () => {
@@ -7001,7 +7007,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
             const pastedValue = input.value.trim();
             input.title = pastedValue || '';
             if (pastedValue && /figma\.com/i.test(pastedValue)) {
-              applySaveResult(pastedValue, errorEl);
+              void applySaveResult(pastedValue, errorEl);
             }
           }, 0);
         });
@@ -7114,7 +7120,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       editInput.addEventListener('keydown', (ev) => {
         if (ev.key === 'Enter') {
           ev.preventDefault();
-          applySaveResult(editInput.value, editErrorEl);
+          void applySaveResult(editInput.value, editErrorEl);
         } else if (ev.key === 'Escape') {
           ev.preventDefault();
           cancelEdit();
@@ -7126,7 +7132,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           const pastedValue = editInput.value.trim();
           editInput.title = pastedValue || '';
           if (pastedValue && /figma\.com/i.test(pastedValue)) {
-            applySaveResult(pastedValue, editErrorEl);
+            void applySaveResult(pastedValue, editErrorEl);
           }
         }, 0);
       });
@@ -7142,7 +7148,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       saveBtn.setAttribute('aria-label', 'Save Figma frame link');
       saveBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        applySaveResult(editInput.value, editErrorEl);
+        void applySaveResult(editInput.value, editErrorEl);
       });
 
       const cancelBtn = document.createElement('button');
@@ -7166,10 +7172,53 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       return row;
     }
 
-    function saveFigmaFrameLink(rawValue, setLink) {
+    function requestFigmaLinkValidation(url) {
+      return new Promise((resolve) => {
+        const requestId = `vfl-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        const timeoutMs = 10000;
+        const onReply = (event) => {
+          const msg = event.data && event.data.pluginMessage;
+          if (!msg || msg.type !== 'figma-link-validation' || msg.requestId !== requestId) return;
+          window.removeEventListener('message', onReply);
+          clearTimeout(timer);
+          resolve({
+            ok: msg.ok === true,
+            message: typeof msg.message === 'string' ? msg.message : '',
+            normalizedUrl: typeof msg.normalizedUrl === 'string' ? msg.normalizedUrl : url,
+          });
+        };
+        const timer = setTimeout(() => {
+          window.removeEventListener('message', onReply);
+          resolve({ ok: false, message: 'Could not verify link — try again.' });
+        }, timeoutMs);
+        window.addEventListener('message', onReply);
+        parent.postMessage({ pluginMessage: { type: 'validate-figma-link', requestId, url } }, '*');
+      });
+    }
+
+    async function saveFigmaFrameLink(rawValue, setLink, errorEl) {
       const { valid, url } = normalizeUrl(rawValue);
-      if (!valid || !/figma\.com/i.test(url)) return false;
-      setLink(url);
+      if (!valid || !/figma\.com/i.test(url)) {
+        if (errorEl) {
+          errorEl.textContent = 'Enter a valid figma.com link (Copy link to selection on a Frame).';
+          errorEl.classList.add('is-visible');
+        }
+        return false;
+      }
+      if (errorEl) {
+        errorEl.textContent = 'Checking frame link…';
+        errorEl.classList.add('is-visible');
+      }
+      const result = await requestFigmaLinkValidation(url);
+      if (!result.ok) {
+        if (errorEl) {
+          errorEl.textContent = result.message || 'Link a Frame in this file, not an image or shape.';
+          errorEl.classList.add('is-visible');
+        }
+        return false;
+      }
+      if (errorEl) errorEl.classList.remove('is-visible');
+      setLink(result.normalizedUrl || url);
       return true;
     }
 
@@ -7357,10 +7406,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         placeholder: 'Paste Figma link',
         compactLabel: 'Paste Figma link',
         ariaLabel: 'Linked Figma design for variant',
-        onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
+        onSave: (rawValue, errorEl) => saveFigmaFrameLink(rawValue, (url) => {
           variant.figmaLink = url;
           renderEvents(events);
-        }),
+        }, errorEl),
         onClear: () => {
           variant.figmaLink = '';
           renderEvents(events);
@@ -7627,6 +7676,15 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         if (msg.type === 'validation-failed' && Array.isArray(msg.issues)) {
           showValidationToast(msg.issues);
         }
+        if (msg.type === 'flow-create-finished') {
+          const form = document.getElementById('exp-form');
+          if (form) delete form.dataset.submitting;
+          const btn = form && form.querySelector('button[type="submit"]');
+          if (btn) btn.disabled = false;
+        }
+        if (msg.type === 'figma-link-validation') {
+          // Handled by requestFigmaLinkValidation listeners.
+        }
       });
     }
 
@@ -7825,10 +7883,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         placeholder: 'Paste Figma link',
         compactLabel: 'Paste Figma link',
         ariaLabel: 'Linked Figma design for touchpoint',
-        onSave: (rawValue) => saveFigmaFrameLink(rawValue, (url) => {
+        onSave: (rawValue, errorEl) => saveFigmaFrameLink(rawValue, (url) => {
           event.figmaLink = url;
           renderEvents(events);
-        }),
+        }, errorEl),
         onClear: () => {
           event.figmaLink = '';
           renderEvents(events);
@@ -8865,6 +8923,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       
       expForm.onsubmit = (e) => {
       e.preventDefault();
+      if (expForm.dataset.submitting === '1') return;
+      const submitBtn = expForm.querySelector('button[type="submit"]');
+      expForm.dataset.submitting = '1';
+      if (submitBtn) submitBtn.disabled = true;
       // --- Gather form values ---
       const experimentName = document.getElementById('experimentName').value.trim();
       const experimentDescription = document.getElementById('experimentDescription').value.trim();
@@ -8880,7 +8942,11 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const rolledoutVariant = document.getElementById('rolledoutVariant').value;
 
       // --- Build experiment object (v2 schema) ---
-      const experimentId = `exp-${Date.now()}`;
+      // Reuse one id per form session so canvas cleanup can remove prior flow nodes on regenerate.
+      if (!expForm.dataset.experimentId) {
+        expForm.dataset.experimentId = `exp-${Date.now()}`;
+      }
+      const experimentId = expForm.dataset.experimentId;
       const experiment = {
         id: experimentId,
         name: experimentName,
@@ -9485,6 +9551,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       }
 
       function resetForm() {
+        delete form.dataset.experimentId;
         metrics = [];
         events = [];
         renderMetrics(metrics, true);
@@ -9508,6 +9575,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       }
 
       function loadExample() {
+        form.dataset.experimentId = 'sample-pricing-page-button-color';
         metrics = [
           { id: 'metric-0', name: 'Checkout conversion rate', abbreviation: 'CVR', direction: 'increase', thresholdPct: 48, isPrimary: true },
           { id: 'metric-1', name: 'CTA click-through rate', abbreviation: 'CTR', direction: 'increase', thresholdPct: 72 },

@@ -4,7 +4,22 @@
 import { createExperimentInfoCard } from './experiment-info-card';
 import { TOKENS } from './design-tokens';
 import { hexToRgb, getFontStyle } from './layout-utils';
-import { createEventCard, createVariantCard, createMetricChip } from './experiment-node';
+import {
+  createEventCard,
+  createVariantCard,
+  createMetricChip,
+  VARIANT_CARD_LAYOUT_WIDTH,
+  isUnsupportedImageThumbnailSource,
+  isExperimentFlowCardNode,
+  isSupportedThumbnailLinkTarget,
+  THUMBNAIL_IMAGE_UNSUPPORTED_TITLE,
+  THUMBNAIL_IMAGE_UNSUPPORTED_HELPER,
+  THUMBNAIL_CANNOT_LINK_GENERATED_TITLE,
+  THUMBNAIL_CANNOT_LINK_GENERATED_HELPER,
+  THUMBNAIL_REQUIRES_FRAME_TITLE,
+  THUMBNAIL_REQUIRES_FRAME_HELPER,
+  THUMBNAIL_DEFAULT_HELPER,
+} from './experiment-node';
 import { createExperimentOutcomeCard, createOutcomeCardFromExperimentData } from './experiment-outcome-card';
 import { loadFonts } from './load-fonts';
 import { FEEDBACK_EMAIL } from './plugin-constants';
@@ -528,6 +543,16 @@ function getNodeExtra(node: BaseNode): Record<string, unknown> | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** Auto-layout frames can report width ≈ 0 until mounted and settled; use minWidth/render bounds as fallback. */
+function getReliableFrameWidth(frame: FrameNode): number {
+  const reported = frame.width;
+  if (reported >= 200) return reported;
+  const bounds = frame.absoluteRenderBounds;
+  if (bounds && bounds.width >= 200) return bounds.width;
+  const minW = typeof frame.minWidth === 'number' && Number.isFinite(frame.minWidth) ? frame.minWidth : 0;
+  return Math.max(reported, minW, 792);
 }
 
 // --- Utility: Create a native Figma connector between two nodes, magnetized to edges ---
@@ -2030,6 +2055,92 @@ function deleteExperimentFlowFrames() {
     }
   }
 
+const GROWTHLAB_FLOW_ROLES = new Set([
+  'experiment-info',
+  'entry',
+  'event',
+  'variant',
+  'exit',
+  'entry-note',
+]);
+
+/** Top-level canvas nodes created by flow generation (including failed/partial runs). */
+function isGrowthLabFlowSurfaceNode(node: BaseNode): boolean {
+  if (node.parent?.type !== 'PAGE') return false;
+  if (node.type === 'VECTOR' || node.type === 'CONNECTOR') {
+    return /PRIMARY_FLOW_LINE|BRANCH_LINE|MERGE_LINE/.test(node.name);
+  }
+  if (node.type === 'ELLIPSE' && /^Flow (Start|End) Dot$/.test(node.name)) {
+    return true;
+  }
+  if (node.type === 'FRAME') {
+    return /^(Entry|Exit|Touchpoint|Variant)(:|$)/.test(node.name) || node.name === 'Figma Link Row';
+  }
+  return false;
+}
+
+/** Remove all canvas artifacts for an experiment (named frames + plugin-tagged nodes). */
+function deleteExperimentCanvasArtifacts(experimentId: string, experimentName: string): void {
+  const namedFrames = [
+    `Experiment Flow — ${experimentName}`,
+    `Experiment Overview — ${experimentName}`,
+    `Experiment Cards — ${experimentName}`,
+  ];
+  for (const frameName of namedFrames) {
+    const matches = figma.currentPage.findAll((n) => n.name === frameName);
+    for (const node of matches) {
+      node.remove();
+    }
+  }
+
+  const toRemove = new Set<SceneNode>();
+
+  for (const node of figma.currentPage.findAll((n) => {
+    if (n.type !== 'FRAME') return false;
+    return (
+      /^Experiment (Overview|Flow|Cards)( — |$)/.test(n.name) ||
+      /^Touchpoint/.test(n.name) ||
+      /^(Entry|Exit|Variant)(:|$)/.test(n.name)
+    );
+  })) {
+    toRemove.add(node as SceneNode);
+  }
+
+  for (const child of figma.currentPage.children) {
+    if (isGrowthLabFlowSurfaceNode(child)) {
+      toRemove.add(child as SceneNode);
+    }
+  }
+
+  const visit = (node: BaseNode): void => {
+    if (node.type === 'PAGE') {
+      for (const pageChild of node.children) visit(pageChild);
+      return;
+    }
+    const meta = getNodeMeta(node);
+    const extra = meta?.extra as Record<string, unknown> | undefined;
+    const role = typeof extra?.role === 'string' ? extra.role : undefined;
+    const matchesCurrentExperiment = extra?.experimentId === experimentId;
+    const matchesFlowRole = !!role && GROWTHLAB_FLOW_ROLES.has(role);
+    if (matchesCurrentExperiment || matchesFlowRole) {
+      toRemove.add(node as SceneNode);
+      return;
+    }
+    if ('children' in node) {
+      for (const child of node.children) visit(child);
+    }
+  };
+  visit(figma.currentPage);
+
+  for (const node of toRemove) {
+    try {
+      if (node.parent) node.remove();
+    } catch {
+      // Node may already be removed with a parent
+    }
+  }
+}
+
 // --- V2 Experiment Flow Helpers ---
 
 /**
@@ -2473,6 +2584,11 @@ if (figma.editorType === 'figma') {
   const MIN_UI_WIDTH = 500;
   // Keep in sync with package.json version
   const PLUGIN_VERSION = '1.0.0';
+  let isCreatingFlow = false;
+
+  function notifyFlowCreateFinished(): void {
+    figma.ui.postMessage({ type: 'flow-create-finished' });
+  }
 
   figma.showUI(__html__, {
     width: MIN_UI_WIDTH,
@@ -2629,7 +2745,15 @@ if (figma.editorType === 'figma') {
         : null;
 
       if (node && 'type' in node && node.type !== 'PAGE' && node.type !== 'DOCUMENT') {
-        return { kind: 'current-file-node', node: node as SceneNode };
+        const sceneNode = node as SceneNode;
+        if (sceneNode.type === 'SECTION' || sceneNode.type === 'SLICE' || sceneNode.type === 'CONNECTOR') {
+          return {
+            kind: 'invalid',
+            url: rawUrl,
+            reason: `Linked layer type "${sceneNode.type}" cannot be used as a thumbnail`,
+          };
+        }
+        return { kind: 'current-file-node', node: sceneNode };
       }
 
       return { kind: 'external-url', url: rawUrl.trim(), reason: 'Node was not found in current file' };
@@ -2639,35 +2763,83 @@ if (figma.editorType === 'figma') {
     }
   }
 
+  async function validateFigmaLinkForThumbnail(
+    rawUrl?: string
+  ): Promise<{ ok: boolean; message?: string; normalizedUrl?: string }> {
+    const trimmed = rawUrl?.trim();
+    if (!trimmed) return { ok: true };
+
+    const resolution = await resolveFigmaNodeUrl(trimmed);
+    if (!resolution) {
+      return { ok: false, message: 'Enter a Figma link from this file.' };
+    }
+    if (resolution.kind === 'invalid') {
+      return { ok: false, message: resolution.reason || 'This Figma link is not valid.' };
+    }
+    if (resolution.kind === 'external-url') {
+      if (resolution.reason === 'Missing node id') {
+        return {
+          ok: false,
+          message: 'Include a frame in the link (right-click the frame → Copy link to selection).',
+        };
+      }
+      return {
+        ok: false,
+        message:
+          resolution.reason === 'Different Figma file'
+            ? 'Link must point to a frame in this Figma file.'
+            : 'That layer was not found on the current page — switch to the page with your design frame.',
+      };
+    }
+    if (isExperimentFlowCardNode(resolution.node)) {
+      return { ok: false, message: THUMBNAIL_CANNOT_LINK_GENERATED_HELPER };
+    }
+    if (isUnsupportedImageThumbnailSource(resolution.node)) {
+      return {
+        ok: false,
+        message: "Images and screenshots can't be linked. Copy link from a Frame instead.",
+      };
+    }
+    if (!isSupportedThumbnailLinkTarget(resolution.node)) {
+      return { ok: false, message: THUMBNAIL_REQUIRES_FRAME_HELPER };
+    }
+    return { ok: true, normalizedUrl: trimmed };
+  }
+
   async function resolveThumbnailSourceFromFigmaLink(
     rawUrl?: string,
     label?: string
-  ): Promise<{ node: SceneNode | null; message?: string }> {
-    const resolution = await resolveFigmaNodeUrl(rawUrl);
-    if (!resolution) return { node: null };
-
-    if (resolution.kind === 'current-file-node') {
-      return { node: resolution.node };
-    }
-
-    const suffix = label ? ` for ${label}` : '';
-    if (resolution.kind === 'external-url') {
-      console.warn(`Figma thumbnail link${suffix} could not be resolved in the current file; leaving placeholder.`, resolution.reason, resolution.url);
-      const reason = resolution.reason === 'Different Figma file'
-        ? 'points to another Figma file'
-        : 'is not in this file';
-      figma.notify(`Figma frame link${suffix} ${reason}, so the thumbnail stayed as a placeholder.`);
+  ): Promise<{ node: SceneNode | null; message?: string; helper?: string }> {
+    const linkCheck = await validateFigmaLinkForThumbnail(rawUrl);
+    if (!rawUrl?.trim()) return { node: null };
+    if (!linkCheck.ok) {
+      if (label) {
+        figma.notify(`${linkCheck.message || 'Invalid Figma link'} (${label})`);
+      } else {
+        figma.notify(linkCheck.message || 'Invalid Figma link');
+      }
+      const isImage =
+        linkCheck.message?.includes("Images and screenshots") ||
+        linkCheck.message?.includes("can't be linked");
+      const isGenerated = linkCheck.message === THUMBNAIL_CANNOT_LINK_GENERATED_HELPER;
       return {
         node: null,
-        message: resolution.reason === 'Different Figma file'
-          ? 'Frame link is from another Figma file'
-          : 'Frame link could not be found in this file',
+        message: isImage
+          ? THUMBNAIL_IMAGE_UNSUPPORTED_TITLE
+          : isGenerated
+            ? THUMBNAIL_CANNOT_LINK_GENERATED_TITLE
+            : THUMBNAIL_REQUIRES_FRAME_TITLE,
+        helper: isImage
+          ? THUMBNAIL_IMAGE_UNSUPPORTED_HELPER
+          : isGenerated
+            ? THUMBNAIL_CANNOT_LINK_GENERATED_HELPER
+            : linkCheck.message || THUMBNAIL_REQUIRES_FRAME_HELPER,
       };
-    } else {
-      console.warn(`Invalid Figma thumbnail link${suffix}; leaving placeholder.`, resolution.reason, resolution.url);
-      figma.notify(`Figma frame link${suffix} could not be used, so the thumbnail stayed as a placeholder.`);
-      return { node: null, message: 'Frame link could not be used' };
     }
+
+    const resolution = await resolveFigmaNodeUrl(rawUrl);
+    if (!resolution || resolution.kind !== 'current-file-node') return { node: null };
+    return { node: resolution.node };
   }
 
   // --- Unified V2 Flow Creation Function ---
@@ -2699,6 +2871,7 @@ if (figma.editorType === 'figma') {
  * ```
  */
 async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metrics?: MetricDefinition[]): Promise<void> {
+  try {
     // ========================================================================
     // FLOW RENDERING PIPELINE
     // Orchestrates complete experiment flow creation in 5 stages:
@@ -2733,17 +2906,9 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     }
 
     // --- STAGE 1: SETUP & FRAME CLEANUP ---
-    // Remove existing frames to avoid duplicates when re-running the flow builder
-    const flowFrameName = `Experiment Flow — ${experiment.name}`;
+    deleteExperimentCanvasArtifacts(experiment.id, experiment.name);
     const infoCardName = `Experiment Overview — ${experiment.name}`;
-    const cardsContainerName = `Experiment Cards — ${experiment.name}`;
-    const existingFlow = figma.currentPage.findOne(n => n.type === 'FRAME' && n.name === flowFrameName);
-    if (existingFlow) existingFlow.remove();
-    let infoCard = figma.currentPage.findOne(n => n.type === 'FRAME' && n.name === infoCardName) as FrameNode | undefined;
-    if (infoCard) infoCard.remove();
-    // Also remove existing cards container (info + outcome)
-    const existingCardsContainer = figma.currentPage.findOne(n => n.type === 'FRAME' && n.name === cardsContainerName);
-    if (existingCardsContainer) existingCardsContainer.remove();
+    let infoCard: FrameNode | undefined;
 
     // --- STAGE 2: DATA PREPARATION & VARIANT COLLECTION ---
     // Collect all variants from all events and normalize their properties
@@ -2865,11 +3030,13 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     // that are not on the page often report width ≈ 0, so the spine was placed on top of the
     // card and connectors pointed at the wrong bounds.
     if (infoCard && infoCard.parent === null) {
-      infoCard.x = 100;
+      infoCard.x = 0;
       infoCard.y = center.y;
       figma.currentPage.appendChild(infoCard);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 150));
     }
+
+    const overviewWidth = infoCard ? getReliableFrameWidth(infoCard) : 0;
 
     // --- STAGE 4: LAYOUT POSITIONING & NODE PLACEMENT ---
     // All nodes positioned directly on page (not in container frame) for ConnectorNode magnetic anchors
@@ -2882,7 +3049,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     const eventSpacing = flow.layout?.eventSpacing ?? 80; // Horizontal space between events (configurable)
     const variantSpacing = flow.layout?.variantSpacing ?? 40; // Horizontal space between variants in a row
     const eventToVariantSpacing = 100; // Vertical space from event to variant row
-    const baseX = infoCard ? infoCard.x + infoCard.width + 200 : 600; // Entry starts after info card
+    const baseX = infoCard ? infoCard.x + overviewWidth + 200 : 600; // Entry starts after overview card
     const baseY = infoCard ? infoCard.y : center.y; // Align to info card or viewport center
     
     // Track all created nodes: used for layout calc, connector lookup, and viewport zoom
@@ -2954,23 +3121,49 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
             `variant "${safeVariantName}"`
           );
           
-          const variantCard = await createVariantCard(variantForCard, vIdx, { 
-            rolledout: isRolledout,
-            metrics: metrics,
-            thumbnailSource: variantThumbnail.node,
-            thumbnailMessage: variantThumbnail.message,
-          });
-          // Position off-screen temporarily (will be positioned correctly in Stage 4d)
-          // We need to add to page to get accurate measurements from Figma's layout engine
-          variantCard.x = -10000;
-          variantCard.y = -10000;
-          figma.currentPage.appendChild(variantCard);
-          
-          // Accumulate total width: spacing between variants + card width
-          if (vIdx > 0) {
-            totalVariantWidth += variantSpacing; // Gap between this and previous variant
+          let variantCard: FrameNode;
+          try {
+            variantCard = await createVariantCard(variantForCard, vIdx, {
+              rolledout: isRolledout,
+              metrics: metrics,
+              thumbnailSource: variantThumbnail.node,
+              thumbnailMessage: variantThumbnail.message,
+              thumbnailHelper: variantThumbnail.helper,
+            });
+          } catch (error) {
+            console.warn(`Variant card failed for "${safeVariantName}", retrying without thumbnail`, error);
+            variantCard = await createVariantCard(variantForCard, vIdx, {
+              rolledout: isRolledout,
+              metrics: metrics,
+              thumbnailMessage: 'Preview unavailable',
+              thumbnailHelper: THUMBNAIL_DEFAULT_HELPER,
+            });
           }
-          totalVariantWidth += variantCard.width;
+
+          variantCard.name = `Variant`;
+          attachNodeMeta(variantCard, {
+            name: safeVariantName,
+            type: 'frame' as CanvasNodeType,
+            description: variant.description || '',
+            extra: {
+              role: 'variant',
+              eventId: event.id,
+              variantId: variant.id,
+              experimentId: experiment.id,
+              variantIndex: vIdx,
+              traffic: variant.traffic,
+              nodeType: 'VARIANT_NODE',
+              parentEventId: variant.parentEventId,
+              figmaLink: safeGetString(variant, 'figmaLink'),
+            },
+          });
+
+          // Keep off-canvas until Stage 4d — early append caused orphans when later stages failed.
+          const layoutWidth = Math.max(variantCard.width, VARIANT_CARD_LAYOUT_WIDTH);
+          if (vIdx > 0) {
+            totalVariantWidth += variantSpacing;
+          }
+          totalVariantWidth += layoutWidth;
           variantCards.push(variantCard);
         }
         
@@ -3000,18 +3193,35 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
         `touchpoint "${safeEventName}"`
       );
       
-      // Create event card
-      const eventCard = createEventCard(
-        safeEventName,
-        event.variants?.length ?? 0,
-        eventIdx,
-        eventThumbnail.node,
-        eventThumbnail.message,
-        {
-          figmaLink: safeGetString(event, 'figmaLink'),
-          showFigmaLink: event.showFigmaLink,
-        }
-      );
+      let eventCard: FrameNode;
+      try {
+        eventCard = await createEventCard(
+          safeEventName,
+          event.variants?.length ?? 0,
+          eventIdx,
+          eventThumbnail.node,
+          eventThumbnail.message,
+          eventThumbnail.helper,
+          {
+            figmaLink: safeGetString(event, 'figmaLink'),
+            showFigmaLink: event.showFigmaLink,
+          }
+        );
+      } catch (error) {
+        console.error(`Touchpoint card failed for "${safeEventName}", using placeholder thumbnail`, error);
+        eventCard = await createEventCard(
+          safeEventName,
+          event.variants?.length ?? 0,
+          eventIdx,
+          eventThumbnail.node,
+          eventThumbnail.message || 'Preview unavailable',
+          eventThumbnail.helper || THUMBNAIL_DEFAULT_HELPER,
+          {
+            figmaLink: safeGetString(event, 'figmaLink'),
+            showFigmaLink: event.showFigmaLink,
+          }
+        );
+      }
       // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
       eventCard.name = `Touchpoint`;
       // eventCard.name = `Touchpoint: ${safeEventName}`;
@@ -3070,29 +3280,12 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
             ? variant.name
             : `Variant ${vIdx + 1}`;
           
-          // Set variant card metadata (if not already set)
-          variantCard.name = `Variant`;
-          // variantCard.name = `Variant: ${safeVariantName}`;
-          attachNodeMeta(variantCard, {
-            name: safeVariantName,
-            type: 'frame' as CanvasNodeType,
-            description: variant.description || '',
-            extra: {
-              role: 'variant',
-              eventId: event.id,
-              variantId: variant.id,
-              experimentId: experiment.id,
-              variantIndex: vIdx,
-              traffic: variant.traffic,
-              nodeType: 'VARIANT_NODE',
-              parentEventId: variant.parentEventId,
-              figmaLink: safeGetString(variant, 'figmaLink'),
-            },
-          });
-          
-          // Position variant in horizontal row below event
+          // Position variant in horizontal row below event, then mount on canvas
           variantCard.x = variantX;
           variantCard.y = variantY;
+          if (variantCard.parent === null) {
+            figma.currentPage.appendChild(variantCard);
+          }
           allNodes.push({node: variantCard as SceneNode & {width: number; height: number}, id: variant.id, type: 'VARIANT_NODE'});
           
           variantX += variantCard.width + variantSpacing;
@@ -3157,6 +3350,19 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     // Center Exit node: move up by half the height difference
     const exitCenterOffset = (maxSpineHeight - exitCard.height) / 2;
     exitCard.y = baseY + exitCenterOffset;
+
+    // Safety net: if layout still under-reported overview width, spine nodes can overlap the card.
+    if (infoCard) {
+      const minSpineX = infoCard.x + getReliableFrameWidth(infoCard) + 200;
+      const spineXs = [entryCard.x, exitCard.x, ...eventPositions.map((ep) => ep.eventCard.x)];
+      const spineStartX = Math.min(...spineXs);
+      const shiftX = minSpineX - spineStartX;
+      if (shiftX > 0) {
+        for (const { node } of allNodes) {
+          node.x += shiftX;
+        }
+      }
+    }
 
     // --- STAGE 5: CONNECTOR RENDERING SETUP ---
     // Build a quick lookup map: node ID → node object
@@ -3477,6 +3683,17 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     // (In FigJam, native connectors auto-update, so this isn't needed)
     setupAutoRefreshConnectors().catch(err => {
     });
+  } catch (error) {
+    console.error('[GrowthLab] createFlowV2FromData failed', error);
+    notifyUser({
+      type: 'error',
+      title: 'Could not finish the experiment flow',
+      detail: error instanceof Error ? error.message : 'An unexpected error occurred while building the canvas.',
+      actionHint: 'Reload the plugin and try again. Orphaned nodes were cleared at the start of this run.',
+    });
+  } finally {
+    notifyFlowCreateFinished();
+  }
 }
 
 /**
@@ -3496,7 +3713,26 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
   }
 
   // Handle V2 flow creation (primary handler with full type safety)
+  if (msg.type === 'validate-figma-link') {
+    const requestId = safeGetString(msg, 'requestId');
+    const url = safeGetString(msg, 'url');
+    const result = await validateFigmaLinkForThumbnail(url);
+    figma.ui.postMessage({
+      type: 'figma-link-validation',
+      requestId,
+      ok: result.ok,
+      message: result.message,
+      normalizedUrl: result.normalizedUrl,
+    });
+    return;
+  }
+
   if (msg.type === 'create-flow-v2') {
+    if (isCreatingFlow) {
+      figma.notify('Flow is still being created — please wait.');
+      notifyFlowCreateFinished();
+      return;
+    }
     const payload = safeGetProperty(msg, 'payload');
     if (payload && isCreateFlowV2Payload(payload)) {
       const { experiment, flow, metrics } = payload;
@@ -3516,6 +3752,7 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
           detail: preview + (merged.length > 3 ? `\n(+${merged.length - 3} more in the plugin panel)` : ''),
           actionHint: 'Details are listed in the plugin toast.',
         });
+        notifyFlowCreateFinished();
         return;
       }
 
@@ -3528,10 +3765,49 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
           title: 'Fix goals before creating the flow',
           detail: goalsIssues[0].message,
         });
+        notifyFlowCreateFinished();
         return;
       }
-      
-      await createFlowV2FromData(experiment, flow, metrics);
+
+      const invalidLinks: string[] = [];
+      for (const event of flow.events) {
+        const eventLink = safeGetString(event, 'figmaLink');
+        if (eventLink) {
+          const check = await validateFigmaLinkForThumbnail(eventLink);
+          if (!check.ok) {
+            invalidLinks.push(`Touchpoint "${event.name}": ${check.message || 'invalid link'}`);
+          }
+        }
+        for (const variant of event.variants || []) {
+          const variantLink = safeGetString(variant, 'figmaLink');
+          if (variantLink) {
+            const check = await validateFigmaLinkForThumbnail(variantLink);
+            if (!check.ok) {
+              invalidLinks.push(`Variant "${variant.name}": ${check.message || 'invalid link'}`);
+            }
+          }
+        }
+      }
+      if (invalidLinks.length > 0) {
+        const preview = invalidLinks.slice(0, 2).join('\n');
+        notifyUser({
+          type: 'error',
+          title: 'Fix Figma frame links before creating the flow',
+          detail: preview + (invalidLinks.length > 2 ? `\n(+${invalidLinks.length - 2} more)` : ''),
+          actionHint: 'Use Copy link to selection on a Frame — not on images or experiment cards.',
+        });
+        notifyFlowCreateFinished();
+        return;
+      }
+
+      isCreatingFlow = true;
+      try {
+        await createFlowV2FromData(experiment, flow, metrics);
+      } finally {
+        isCreatingFlow = false;
+      }
+    } else {
+      notifyFlowCreateFinished();
     }
     return;
   }
@@ -3610,7 +3886,7 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
         entryCard = await createVariantCard(matchingVariant);
         entryCard.name = 'Entry Variant Node';
       } else {
-        entryCard = createEventCard(entryLabel, 0, undefined);
+        entryCard = await createEventCard(entryLabel, 0, undefined, undefined, undefined);
         entryCard.name = 'Entry Event Node';
       }
       flowFrame.appendChild(entryCard);

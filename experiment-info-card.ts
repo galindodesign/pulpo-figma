@@ -618,7 +618,8 @@ export async function createExperimentInfoCard(
   linksSection.layoutAlign = "STRETCH";
   contentStack.appendChild(linksSection);
 
-  const contentTargetWidth = Math.min(CONTENT_MAX_WIDTH, Math.max(CONTENT_MIN_WIDTH, contentStack.width));
+  const measuredContentWidth = contentStack.width > 0 ? contentStack.width : CONTENT_MIN_WIDTH;
+  const contentTargetWidth = Math.min(CONTENT_MAX_WIDTH, Math.max(CONTENT_MIN_WIDTH, measuredContentWidth));
   contentStack.minWidth = contentTargetWidth;
   contentStack.maxWidth = contentTargetWidth;
 
