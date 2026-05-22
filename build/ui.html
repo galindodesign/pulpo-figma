@@ -4019,35 +4019,16 @@
       height: 14px;
     }
 
-    /* ── Inline Figma resource link ─────────────────────────────────
-       Empty/add state intentionally reuses the same .link-input-wrapper /
-       .link-input-row / .InputField structure as the Resources add-link
-       control. Filled state reuses the same .link-row structure as saved
-       resource links. */
+    /* ── Inline Figma frame link ────────────────────────────────────
+       Empty and saved states share .link-input-wrapper / .link-input-row /
+       .InputField. Scope (this file vs other) is a short status line under the
+       field — same slot as validation errors while editing. */
 
     .figma-link-input {
       width: 100%;
     }
 
-    /* Anchor variant of .link-row__name — used by figma-link-row so the URL
-       is keyboard-reachable and opens in a new tab. Inherits ellipsis and
-       sizing from .link-row__name; we only override link-specific styling. */
-    a.link-row__name {
-      text-decoration: none;
-      color: var(--text-primary);
-      cursor: pointer;
-    }
-
-    a.link-row__name:hover,
-    a.link-row__name:focus-visible {
-      outline: none;
-      color: var(--text-link);
-      text-decoration: underline;
-    }
-
-    /* Event-level inline figma link row.
-       Sits between event-row-main and any event-variants-container, indented so the
-       link row lines up with the event name input (badge is 20px + 8px gap + 12px row pad). */
+    /* Event-level inline figma link row (indented under touchpoint name). */
     .event-link-row {
       display: flex;
       align-items: stretch;
@@ -4056,8 +4037,7 @@
       padding: var(--space-0) var(--space-12) var(--space-12) calc(var(--space-12) + 20px + var(--space-8));
     }
 
-    .event-link-row .figma-link-input,
-    .event-link-row .figma-link-row {
+    .event-link-row .figma-link-input {
       width: 100%;
     }
 
@@ -4080,15 +4060,20 @@
       min-width: 0;
     }
 
-    .CustomDropdown__figma-panel .figma-link-input,
-    .CustomDropdown__figma-panel .figma-link-row {
+    .CustomDropdown__figma-panel .figma-link-input {
       width: 100%;
       min-width: 0;
     }
 
-    .figma-link-input__error {
+    .figma-link-input__error,
+    .figma-link-input__status {
       font-size: var(--body-xs-size);
-      line-height: 1.3;
+      line-height: 1.35;
+      margin: 0;
+      padding-top: var(--space-4);
+    }
+
+    .figma-link-input__error {
       color: var(--danger);
       display: none;
     }
@@ -4097,35 +4082,91 @@
       display: block;
     }
 
-    .figma-link-input .figma-link-input__error {
+    .figma-link-input__error.is-checking {
+      color: var(--text-secondary);
+    }
+
+    .figma-link-input__status {
+      display: none;
+    }
+
+    .figma-link-input--saved .figma-link-input__status {
+      display: block;
+    }
+
+    .figma-link-input__status--same,
+    .figma-link-input__status--cross {
+      color: var(--color-malachite-700);
+    }
+
+    .figma-link-input__helper {
+      font-size: var(--body-xs-size);
+      line-height: 1.35;
+      color: var(--text-secondary);
+      margin: 0;
       padding-top: var(--space-4);
     }
 
-    /* Stacked edit layout inside narrow menu (touchpoint + variant kebabs) */
-    .CustomDropdown__figma-panel .figma-link-row.link-row.editing {
-      height: auto;
-      min-height: 24px;
+    .figma-link-input--saved.is-editing .figma-link-saved-row,
+    .figma-link-input--saved.is-editing .figma-link-input__status {
+      display: none;
+    }
+
+    .figma-link-input--saved.is-editing .figma-link-input__helper {
+      display: block;
+    }
+
+    .figma-link-saved-row {
+      display: flex;
       align-items: flex-start;
+      gap: var(--space-4);
+      width: 100%;
+      min-width: 0;
     }
 
-    .CustomDropdown__figma-panel .figma-link-row.link-row.editing .link-row__edit-form {
+    .figma-link-saved-row .InputField {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .figma-link-saved-row .InputField__input {
+      cursor: pointer;
+      text-overflow: ellipsis;
+    }
+
+    .figma-link-saved-row__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .figma-link-saved-row__actions .icon-btn {
+      width: 24px;
+      height: 24px;
+    }
+
+    .figma-link-input__edit-panel {
+      display: none;
       flex-direction: column;
-      align-items: stretch;
-      align-self: stretch;
-    }
-
-    .CustomDropdown__figma-panel .figma-link-row .link-row__edit-input {
-      flex: none;
+      gap: var(--space-4);
       width: 100%;
     }
 
-    .CustomDropdown__figma-panel .figma-link-row .link-row__edit-actions {
-      align-self: flex-end;
+    .figma-link-input--saved.is-editing .figma-link-input__edit-panel {
+      display: flex;
     }
 
-    .CustomDropdown__figma-panel .figma-link-row .figma-link-input__error {
+    .figma-link-input__edit-panel .link-row__edit-input {
       width: 100%;
-      padding-top: var(--space-4);
+      box-sizing: border-box;
+    }
+
+    .figma-link-input__edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-4);
     }
 
     a.variant-passive-chip--figma {
@@ -4158,7 +4199,13 @@
 
     /* Touchpoint kebab: width + scroll when Figma panel present (override overflow: visible) */
     .event-actions-dropdown .CustomDropdown__menu:has(.CustomDropdown__figma-panel) {
-      min-width: 260px;
+      min-width: 280px;
+      max-width: min(360px, calc(100vw - 20px));
+      overflow-y: auto;
+    }
+
+    .variant-actions-dropdown .CustomDropdown__menu:has(.CustomDropdown__figma-panel) {
+      min-width: 280px;
       max-width: min(360px, calc(100vw - 20px));
       overflow-y: auto;
     }
@@ -6930,14 +6977,70 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
      * `onSave(rawValue)` must return `false` when the URL is rejected; any other
      * return (including `undefined`) is treated as success. Use `saveFigmaFrameLink`.
      *
-     * Empty state reuses the Resources add-link structure:
-     *   .link-input-wrapper > .link-input-row > .InputField > .InputField__wrapper > input
-     *
-     * The only addition is the Figma brand icon inside the InputField wrapper.
-     * Filled state uses the same .link-row structure as saved resource links.
+     * Empty and saved states share the Resources add-link input shell.
+     * File scope ("this file" / "other file") is a status line under the field,
+     * in the same slot as validation errors while editing.
      */
+    function parseFileKeyFromFigmaUrl(url) {
+      if (!url || typeof url !== 'string') return null;
+      const branchParent = url.match(/figma\.com\/(?:file|design)\/([^/?#]+)\/branch\//i);
+      if (branchParent) return decodeURIComponent(branchParent[1]);
+      const direct = url.match(/figma\.com\/(?:file|design|proto|board)\/([^/?#]+)/i);
+      return direct ? decodeURIComponent(direct[1]) : null;
+    }
+
+    function inferFigmaLinkScope(url) {
+      const linkKey = parseFileKeyFromFigmaUrl(url);
+      const currentKey = typeof window.__growthlabFileKey === 'string' ? window.__growthlabFileKey.trim() : '';
+      if (!linkKey || !currentKey) return 'same_file';
+      return linkKey === currentKey ? 'same_file' : 'cross_file';
+    }
+
+    function resolveFigmaLinkDisplayScope(url, storedScope) {
+      const inferred = inferFigmaLinkScope(url);
+      if (storedScope === 'cross_file' && inferred === 'same_file') return 'same_file';
+      if (storedScope === 'same_file' || storedScope === 'cross_file') return storedScope;
+      return inferred;
+    }
+
+    function formatFigmaLinkDisplay(url) {
+      if (!url || typeof url !== 'string') return '';
+      try {
+        const parsed = new URL(url);
+        const path = `${parsed.pathname}${parsed.search}`.replace(/^\//, '');
+        return path || parsed.hostname;
+      } catch {
+        return url.replace(/^https?:\/\//, '');
+      }
+    }
+
+    const FIGMA_LINK_HELPER_TEXT =
+      'Paste a link from this file or another';
+
+    function createFigmaLinkHelperEl() {
+      const helper = document.createElement('p');
+      helper.className = 'figma-link-input__helper';
+      helper.textContent = FIGMA_LINK_HELPER_TEXT;
+      return helper;
+    }
+
+    function getFigmaLinkScopeStatusText(linkScope) {
+      return linkScope === 'cross_file'
+        ? 'Linked frame is in another file'
+        : 'Linked frame is in this file';
+    }
+
+    function createFigmaLinkScopeStatusEl(url, storedScope) {
+      const scope = resolveFigmaLinkDisplayScope(url, storedScope);
+      const status = document.createElement('p');
+      status.className = `figma-link-input__status figma-link-input__status--${scope === 'cross_file' ? 'cross' : 'same'}`;
+      status.textContent = getFigmaLinkScopeStatusText(scope);
+      return status;
+    }
+
     function createFigmaFrameLinkInlineBlock({
       value,
+      linkScope,
       placeholder,
       onSave,
       onClear,
@@ -6951,9 +7054,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         const ok = (await onSave(raw, errorEl)) !== false;
         if (errorEl && !ok && !errorEl.textContent.trim()) {
           errorEl.textContent = FIGMA_LINK_INVALID_MSG;
+          errorEl.classList.remove('is-checking');
           errorEl.classList.add('is-visible');
         } else if (errorEl && ok) {
-          errorEl.classList.remove('is-visible');
+          errorEl.classList.remove('is-visible', 'is-checking');
         }
         return ok;
       };
@@ -6984,7 +7088,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         const input = document.createElement('input');
         input.type = 'url';
         input.className = 'InputField__input figma-link-input__field';
-        input.placeholder = placeholder || compactLabel;
+        input.placeholder = placeholder || 'Paste Figma link';
         input.setAttribute('aria-label', compactLabel);
 
         const errorEl = document.createElement('div');
@@ -6992,7 +7096,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         errorEl.setAttribute('role', 'alert');
 
         input.addEventListener('input', () => {
-          errorEl.classList.remove('is-visible');
+          errorEl.classList.remove('is-visible', 'is-checking');
           input.title = input.value.trim() || '';
         });
 
@@ -7015,81 +7119,91 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         fieldWrapper.appendChild(input);
         inputField.appendChild(fieldWrapper);
         inputRow.appendChild(inputField);
+        inputWrapper.appendChild(createFigmaLinkHelperEl());
         inputWrapper.appendChild(inputRow);
         inputWrapper.appendChild(errorEl);
         return inputWrapper;
       }
 
-      const row = document.createElement('div');
-      row.className = 'link-row figma-link-row';
-      row.setAttribute('role', 'group');
-      row.setAttribute('aria-label', ariaLabel);
-      // Don't bubble into row-select / click-outside handlers.
-      row.addEventListener('click', (e) => e.stopPropagation());
+      const wrapper = document.createElement('div');
+      wrapper.className = 'link-input-wrapper figma-link-input figma-link-input--saved';
+      wrapper.setAttribute('role', 'group');
+      wrapper.setAttribute('aria-label', ariaLabel);
+      wrapper.addEventListener('click', (e) => e.stopPropagation());
 
-      // ── Brand chip (always visible, even while editing — parity with .link-row) ──
-      const iconEl = document.createElement('div');
-      iconEl.className = 'link-row__icon figma';
-      iconEl.innerHTML = getBrandIcon('figma', { size: 12 });
-      row.appendChild(iconEl);
+      const savedRow = document.createElement('div');
+      savedRow.className = 'link-input-row figma-link-saved-row';
 
-      // ── Info: URL anchor (same saved-row shape as resource links) ──
-      const infoEl = document.createElement('div');
-      infoEl.className = 'link-row__info';
+      const inputField = document.createElement('div');
+      inputField.className = 'InputField';
+      inputField.setAttribute('data-state', 'default');
+      inputField.setAttribute('data-variant', 'horizontal');
 
-      const urlAnchor = document.createElement('a');
-      urlAnchor.className = 'link-row__name link-row__url';
-      urlAnchor.target = '_blank';
-      urlAnchor.rel = 'noopener noreferrer';
-      urlAnchor.href = value;
-      urlAnchor.textContent = value.replace(/^https?:\/\//, '');
-      urlAnchor.title = value;
+      const fieldWrapper = document.createElement('div');
+      fieldWrapper.className = 'InputField__wrapper';
 
-      infoEl.appendChild(urlAnchor);
-      row.appendChild(infoEl);
+      const iconEl = document.createElement('span');
+      iconEl.className = 'InputField__left-icon figma';
+      iconEl.innerHTML = getBrandIcon('figma', { size: 14 });
+      fieldWrapper.appendChild(iconEl);
 
-      // ── Actions: pencil + x (same saved-row actions as resource links) ──
-      const actionsEl = document.createElement('div');
-      actionsEl.className = 'link-row__actions';
+      const displayInput = document.createElement('input');
+      displayInput.type = 'url';
+      displayInput.className = 'InputField__input figma-link-input__field';
+      displayInput.readOnly = true;
+      displayInput.value = formatFigmaLinkDisplay(value);
+      displayInput.title = value;
+      displayInput.setAttribute('aria-label', 'Linked Figma frame (opens in browser)');
+      displayInput.addEventListener('click', () => {
+        if (!wrapper.classList.contains('is-editing')) window.open(value, '_blank');
+      });
+      fieldWrapper.appendChild(displayInput);
+      inputField.appendChild(fieldWrapper);
+      savedRow.appendChild(inputField);
+
+      const rowActions = document.createElement('div');
+      rowActions.className = 'figma-link-saved-row__actions';
 
       const editBtn = document.createElement('button');
       editBtn.type = 'button';
-      editBtn.className = 'link-row__action edit figma-link-row__edit';
+      editBtn.className = 'icon-btn';
       editBtn.innerHTML = getIcon('pencil', { size: 14 });
       editBtn.title = 'Edit Figma frame link';
       editBtn.setAttribute('aria-label', 'Edit Figma frame link');
 
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
-      removeBtn.className = 'link-row__action delete figma-link-row__remove';
+      removeBtn.className = 'icon-btn';
       removeBtn.innerHTML = getIcon('x', { size: 14 });
       removeBtn.title = 'Remove Figma frame link';
       removeBtn.setAttribute('aria-label', 'Remove Figma frame link');
 
-      actionsEl.appendChild(editBtn);
-      actionsEl.appendChild(removeBtn);
-      row.appendChild(actionsEl);
+      rowActions.appendChild(editBtn);
+      rowActions.appendChild(removeBtn);
+      savedRow.appendChild(rowActions);
+      wrapper.appendChild(createFigmaLinkHelperEl());
+      wrapper.appendChild(savedRow);
+      wrapper.appendChild(createFigmaLinkScopeStatusEl(value, linkScope));
 
-      // ── Edit form: same .link-row editing shape used by resource rows ──
-      const editForm = document.createElement('div');
-      editForm.className = 'link-row__edit-form';
+      const editPanel = document.createElement('div');
+      editPanel.className = 'figma-link-input__edit-panel';
 
       const editInput = document.createElement('input');
       editInput.type = 'url';
-      editInput.className = 'link-row__edit-input figma-link-row__input';
+      editInput.className = 'link-row__edit-input';
       editInput.value = value;
-      editInput.placeholder = placeholder;
+      editInput.placeholder = placeholder || 'Paste Figma link';
       editInput.title = value;
+      editInput.setAttribute('aria-label', compactLabel);
 
       const editErrorEl = document.createElement('div');
       editErrorEl.className = 'figma-link-input__error';
       editErrorEl.setAttribute('role', 'alert');
 
       const enterEditMode = () => {
-        row.classList.add('editing');
+        wrapper.classList.add('is-editing');
         editErrorEl.classList.remove('is-visible');
         editInput.title = editInput.value.trim() || value;
-        // Defer focus so the layout swap (info/actions hidden, form shown) settles first.
         requestAnimationFrame(() => {
           editInput.focus();
           editInput.select();
@@ -7097,7 +7211,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       };
 
       const cancelEdit = () => {
-        row.classList.remove('editing');
+        wrapper.classList.remove('is-editing');
         editInput.value = value;
         editErrorEl.classList.remove('is-visible');
         editBtn.focus();
@@ -7114,7 +7228,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       });
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        onClear();
+        if (typeof onClear === 'function') onClear();
       });
 
       editInput.addEventListener('keydown', (ev) => {
@@ -7127,7 +7241,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         }
       });
       editInput.addEventListener('paste', () => {
-        // Auto-save on a clean Figma URL paste — no extra click needed.
         setTimeout(() => {
           const pastedValue = editInput.value.trim();
           editInput.title = pastedValue || '';
@@ -7138,7 +7251,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       });
 
       const editActions = document.createElement('div');
-      editActions.className = 'link-row__edit-actions';
+      editActions.className = 'figma-link-input__edit-actions';
 
       const saveBtn = document.createElement('button');
       saveBtn.type = 'button';
@@ -7164,12 +7277,12 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       editActions.appendChild(saveBtn);
       editActions.appendChild(cancelBtn);
-      editForm.appendChild(editInput);
-      editForm.appendChild(editErrorEl);
-      editForm.appendChild(editActions);
-      row.appendChild(editForm);
+      editPanel.appendChild(editInput);
+      editPanel.appendChild(editErrorEl);
+      editPanel.appendChild(editActions);
+      wrapper.appendChild(editPanel);
 
-      return row;
+      return wrapper;
     }
 
     function requestFigmaLinkValidation(url) {
@@ -7185,6 +7298,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
             ok: msg.ok === true,
             message: typeof msg.message === 'string' ? msg.message : '',
             normalizedUrl: typeof msg.normalizedUrl === 'string' ? msg.normalizedUrl : url,
+            linkScope: msg.linkScope === 'cross_file' ? 'cross_file' : msg.linkScope === 'same_file' ? 'same_file' : undefined,
           });
         };
         const timer = setTimeout(() => {
@@ -7201,24 +7315,26 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       if (!valid || !/figma\.com/i.test(url)) {
         if (errorEl) {
           errorEl.textContent = 'Enter a valid figma.com link (Copy link to selection on a Frame).';
+          errorEl.classList.remove('is-checking');
           errorEl.classList.add('is-visible');
         }
         return false;
       }
       if (errorEl) {
-        errorEl.textContent = 'Checking frame link…';
-        errorEl.classList.add('is-visible');
+        errorEl.textContent = 'Checking link…';
+        errorEl.classList.add('is-visible', 'is-checking');
       }
       const result = await requestFigmaLinkValidation(url);
       if (!result.ok) {
         if (errorEl) {
           errorEl.textContent = result.message || 'Link a Frame in this file, not an image or shape.';
+          errorEl.classList.remove('is-checking');
           errorEl.classList.add('is-visible');
         }
         return false;
       }
-      if (errorEl) errorEl.classList.remove('is-visible');
-      setLink(result.normalizedUrl || url);
+      if (errorEl) errorEl.classList.remove('is-visible', 'is-checking');
+      setLink(result.normalizedUrl || url, result.linkScope || inferFigmaLinkScope(result.normalizedUrl || url));
       return true;
     }
 
@@ -7406,12 +7522,15 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         placeholder: 'Paste Figma link',
         compactLabel: 'Paste Figma link',
         ariaLabel: 'Linked Figma design for variant',
-        onSave: (rawValue, errorEl) => saveFigmaFrameLink(rawValue, (url) => {
+        linkScope: variant.figmaLinkScope,
+        onSave: (rawValue, errorEl) => saveFigmaFrameLink(rawValue, (url, scope) => {
           variant.figmaLink = url;
+          variant.figmaLinkScope = scope;
           renderEvents(events);
         }, errorEl),
         onClear: () => {
           variant.figmaLink = '';
+          delete variant.figmaLinkScope;
           renderEvents(events);
         }
       }));
@@ -7670,7 +7789,12 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         }
         if (msg.type === 'plugin-config') {
           window.__growthlabFeedbackEmail = typeof msg.feedbackEmail === 'string' ? msg.feedbackEmail : '';
+          if (typeof msg.fileKey === 'string') window.__growthlabFileKey = msg.fileKey;
           applyGrowthLabFeedbackButton();
+          return;
+        }
+        if (msg.type === 'current-file-context' && typeof msg.fileKey === 'string') {
+          window.__growthlabFileKey = msg.fileKey;
           return;
         }
         if (msg.type === 'validation-failed' && Array.isArray(msg.issues)) {
@@ -7681,9 +7805,6 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           if (form) delete form.dataset.submitting;
           const btn = form && form.querySelector('button[type="submit"]');
           if (btn) btn.disabled = false;
-        }
-        if (msg.type === 'figma-link-validation') {
-          // Handled by requestFigmaLinkValidation listeners.
         }
       });
     }
@@ -7880,15 +8001,18 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       eventFigmaMenuPanel.addEventListener('click', (e) => e.stopPropagation());
       eventFigmaMenuPanel.appendChild(createFigmaFrameLinkInlineBlock({
         value: event.figmaLink || '',
+        linkScope: event.figmaLinkScope,
         placeholder: 'Paste Figma link',
         compactLabel: 'Paste Figma link',
         ariaLabel: 'Linked Figma design for touchpoint',
-        onSave: (rawValue, errorEl) => saveFigmaFrameLink(rawValue, (url) => {
+        onSave: (rawValue, errorEl) => saveFigmaFrameLink(rawValue, (url, scope) => {
           event.figmaLink = url;
+          event.figmaLinkScope = scope;
           renderEvents(events);
         }, errorEl),
         onClear: () => {
           event.figmaLink = '';
+          delete event.figmaLinkScope;
           renderEvents(events);
         }
       }));

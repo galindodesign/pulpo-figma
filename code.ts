@@ -18,6 +18,8 @@ import {
   THUMBNAIL_CANNOT_LINK_GENERATED_HELPER,
   THUMBNAIL_REQUIRES_FRAME_TITLE,
   THUMBNAIL_REQUIRES_FRAME_HELPER,
+  THUMBNAIL_CROSS_FILE_TITLE,
+  THUMBNAIL_CROSS_FILE_HELPER,
   THUMBNAIL_DEFAULT_HELPER,
 } from './experiment-node';
 import { createExperimentOutcomeCard, createOutcomeCardFromExperimentData } from './experiment-outcome-card';
@@ -2598,11 +2600,13 @@ if (figma.editorType === 'figma') {
   });
 
   figma.ui.postMessage({ type: 'plugin-version', version: PLUGIN_VERSION });
-  figma.ui.postMessage({ type: 'plugin-config', feedbackEmail: FEEDBACK_EMAIL });
+  const startupFileKey = getPluginFileKey() || '';
   figma.ui.postMessage({
-    type: 'current-file-context',
-    fileKey: (figma as typeof figma & { fileKey?: string | null }).fileKey || ''
+    type: 'plugin-config',
+    feedbackEmail: FEEDBACK_EMAIL,
+    fileKey: startupFileKey,
   });
+  figma.ui.postMessage({ type: 'current-file-context', fileKey: startupFileKey });
 
   function createNodeCard(title: string, subtitle?: string, trafficLabel?: string, note?: string): FrameNode {
     const card = figma.createFrame();
@@ -2688,8 +2692,16 @@ if (figma.editorType === 'figma') {
 
   type FigmaNodeUrlResolution =
     | { kind: 'current-file-node'; node: SceneNode }
+    | { kind: 'cross-file-link'; fileKey: string; nodeId: string; url: string }
     | { kind: 'external-url'; url: string; reason?: string }
     | { kind: 'invalid'; url: string; reason: string };
+
+  type FigmaLinkScope = 'same_file' | 'cross_file';
+
+  function getPluginFileKey(): string | null {
+    const fileKey = (figma as typeof figma & { fileKey?: string | null }).fileKey;
+    return fileKey || null;
+  }
 
   function parseFigmaNodeIdFromUrl(rawUrl: string): FigmaNodeUrlResolution | { kind: 'node-id'; nodeId: string; fileKey?: string } {
     const trimmed = rawUrl.trim();
@@ -2708,8 +2720,13 @@ if (figma.editorType === 'figma') {
     }
 
     const path = figmaUrlMatch[2] || '';
+    const branchParentMatch = path.match(/^\/(?:file|design)\/([^/]+)\/branch\/[^/]+/i);
     const fileKeyMatch = path.match(/^\/(?:file|design|proto|board)\/([^/]+)/i);
-    const fileKey = fileKeyMatch ? decodeURIComponent(fileKeyMatch[1]) : undefined;
+    const fileKey = branchParentMatch
+      ? decodeURIComponent(branchParentMatch[1])
+      : fileKeyMatch
+        ? decodeURIComponent(fileKeyMatch[1])
+        : undefined;
 
     const query = figmaUrlMatch[3] || '';
     const nodeIdMatch = query.match(/(?:^|&)(?:node-id|node_id)=([^&]+)/i);
@@ -2732,10 +2749,8 @@ if (figma.editorType === 'figma') {
     if (parsed.kind !== 'node-id') return parsed;
 
     try {
-      const currentFileKey = (figma as typeof figma & { fileKey?: string | null }).fileKey;
-      if (parsed.fileKey && currentFileKey && parsed.fileKey !== currentFileKey) {
-        return { kind: 'external-url', url: rawUrl.trim(), reason: 'Different Figma file' };
-      }
+      const trimmed = rawUrl.trim();
+      const currentFileKey = getPluginFileKey();
 
       const figmaWithLookup = figma as typeof figma & {
         getNodeByIdAsync?: (id: string) => Promise<BaseNode | null>;
@@ -2756,6 +2771,23 @@ if (figma.editorType === 'figma') {
         return { kind: 'current-file-node', node: sceneNode };
       }
 
+      if (parsed.fileKey && currentFileKey && parsed.fileKey !== currentFileKey) {
+        return {
+          kind: 'cross-file-link',
+          fileKey: parsed.fileKey,
+          nodeId: parsed.nodeId,
+          url: trimmed,
+        };
+      }
+      if (parsed.fileKey && !currentFileKey) {
+        return {
+          kind: 'cross-file-link',
+          fileKey: parsed.fileKey,
+          nodeId: parsed.nodeId,
+          url: trimmed,
+        };
+      }
+
       return { kind: 'external-url', url: rawUrl.trim(), reason: 'Node was not found in current file' };
     } catch (error) {
       console.warn('Could not resolve Figma node URL', rawUrl, error);
@@ -2765,16 +2797,23 @@ if (figma.editorType === 'figma') {
 
   async function validateFigmaLinkForThumbnail(
     rawUrl?: string
-  ): Promise<{ ok: boolean; message?: string; normalizedUrl?: string }> {
+  ): Promise<{ ok: boolean; message?: string; normalizedUrl?: string; linkScope?: FigmaLinkScope }> {
     const trimmed = rawUrl?.trim();
     if (!trimmed) return { ok: true };
 
     const resolution = await resolveFigmaNodeUrl(trimmed);
     if (!resolution) {
-      return { ok: false, message: 'Enter a Figma link from this file.' };
+      return { ok: false, message: 'Enter a valid Figma design link.' };
     }
     if (resolution.kind === 'invalid') {
       return { ok: false, message: resolution.reason || 'This Figma link is not valid.' };
+    }
+    if (resolution.kind === 'cross-file-link') {
+      return {
+        ok: true,
+        normalizedUrl: resolution.url,
+        linkScope: 'cross_file',
+      };
     }
     if (resolution.kind === 'external-url') {
       if (resolution.reason === 'Missing node id') {
@@ -2786,9 +2825,7 @@ if (figma.editorType === 'figma') {
       return {
         ok: false,
         message:
-          resolution.reason === 'Different Figma file'
-            ? 'Link must point to a frame in this Figma file.'
-            : 'That layer was not found on the current page — switch to the page with your design frame.',
+          'That layer was not found in this file — check the link or switch to the page with your frame.',
       };
     }
     if (isExperimentFlowCardNode(resolution.node)) {
@@ -2803,7 +2840,7 @@ if (figma.editorType === 'figma') {
     if (!isSupportedThumbnailLinkTarget(resolution.node)) {
       return { ok: false, message: THUMBNAIL_REQUIRES_FRAME_HELPER };
     }
-    return { ok: true, normalizedUrl: trimmed };
+    return { ok: true, normalizedUrl: trimmed, linkScope: 'same_file' };
   }
 
   async function resolveThumbnailSourceFromFigmaLink(
@@ -2834,6 +2871,14 @@ if (figma.editorType === 'figma') {
           : isGenerated
             ? THUMBNAIL_CANNOT_LINK_GENERATED_HELPER
             : linkCheck.message || THUMBNAIL_REQUIRES_FRAME_HELPER,
+      };
+    }
+
+    if (linkCheck.linkScope === 'cross_file') {
+      return {
+        node: null,
+        message: THUMBNAIL_CROSS_FILE_TITLE,
+        helper: THUMBNAIL_CROSS_FILE_HELPER,
       };
     }
 
@@ -3723,6 +3768,7 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
       ok: result.ok,
       message: result.message,
       normalizedUrl: result.normalizedUrl,
+      linkScope: result.linkScope,
     });
     return;
   }

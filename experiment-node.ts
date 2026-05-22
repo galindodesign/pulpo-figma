@@ -22,6 +22,8 @@ export const THUMBNAIL_CANNOT_LINK_GENERATED_HELPER =
 export const THUMBNAIL_REQUIRES_FRAME_TITLE = 'Link a Frame, not an image or shape';
 export const THUMBNAIL_REQUIRES_FRAME_HELPER =
   'Select a Frame on the canvas, then right-click → Copy link to selection.';
+export const THUMBNAIL_CROSS_FILE_TITLE = 'Design in another file';
+export const THUMBNAIL_CROSS_FILE_HELPER = 'Open in Figma to view';
 
 const GROWTHLAB_FLOW_ROLES = new Set([
   'experiment-info',
@@ -207,7 +209,11 @@ async function createRasterThumbnailLayer(sourceNode: SceneNode): Promise<Rectan
 
 async function createThumbnailFrame(
   sourceNode?: SceneNode | null,
-  options: { cornerRadius?: number; placeholderMessage?: string; placeholderHelper?: string } = {}
+  options: {
+    cornerRadius?: number;
+    placeholderMessage?: string;
+    placeholderHelper?: string;
+  } = {}
 ): Promise<FrameNode> {
   const thumb = figma.createFrame();
   thumb.layoutMode = 'NONE';
