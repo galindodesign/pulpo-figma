@@ -21,6 +21,8 @@ import {
   THUMBNAIL_CROSS_FILE_TITLE,
   THUMBNAIL_CROSS_FILE_HELPER,
   THUMBNAIL_DEFAULT_HELPER,
+  THUMBNAIL_MESSAGES,
+  THUMBNAIL_VALIDATION_MSG,
 } from './experiment-node';
 import { createExperimentOutcomeCard, createOutcomeCardFromExperimentData } from './experiment-outcome-card';
 import { loadFonts } from './load-fonts';
@@ -2803,10 +2805,10 @@ if (figma.editorType === 'figma') {
 
     const resolution = await resolveFigmaNodeUrl(trimmed);
     if (!resolution) {
-      return { ok: false, message: 'Enter a valid Figma design link.' };
+      return { ok: false, message: THUMBNAIL_VALIDATION_MSG.invalidLink };
     }
     if (resolution.kind === 'invalid') {
-      return { ok: false, message: resolution.reason || 'This Figma link is not valid.' };
+      return { ok: false, message: resolution.reason || THUMBNAIL_VALIDATION_MSG.invalidLink };
     }
     if (resolution.kind === 'cross-file-link') {
       return {
@@ -2817,28 +2819,18 @@ if (figma.editorType === 'figma') {
     }
     if (resolution.kind === 'external-url') {
       if (resolution.reason === 'Missing node id') {
-        return {
-          ok: false,
-          message: 'Include a frame in the link (right-click the frame → Copy link to selection).',
-        };
+        return { ok: false, message: THUMBNAIL_VALIDATION_MSG.missingNode };
       }
-      return {
-        ok: false,
-        message:
-          'That layer was not found in this file — check the link or switch to the page with your frame.',
-      };
+      return { ok: false, message: THUMBNAIL_VALIDATION_MSG.notFound };
     }
     if (isExperimentFlowCardNode(resolution.node)) {
-      return { ok: false, message: THUMBNAIL_CANNOT_LINK_GENERATED_HELPER };
+      return { ok: false, message: THUMBNAIL_VALIDATION_MSG.generated };
     }
     if (isUnsupportedImageThumbnailSource(resolution.node)) {
-      return {
-        ok: false,
-        message: "Images and screenshots can't be linked. Copy link from a Frame instead.",
-      };
+      return { ok: false, message: THUMBNAIL_VALIDATION_MSG.image };
     }
     if (!isSupportedThumbnailLinkTarget(resolution.node)) {
-      return { ok: false, message: THUMBNAIL_REQUIRES_FRAME_HELPER };
+      return { ok: false, message: THUMBNAIL_VALIDATION_MSG.unsupported };
     }
     return { ok: true, normalizedUrl: trimmed, linkScope: 'same_file' };
   }
@@ -2855,22 +2847,25 @@ if (figma.editorType === 'figma') {
       } else {
         figma.notify(linkCheck.message || 'Invalid Figma link');
       }
-      const isImage =
-        linkCheck.message?.includes("Images and screenshots") ||
-        linkCheck.message?.includes("can't be linked");
-      const isGenerated = linkCheck.message === THUMBNAIL_CANNOT_LINK_GENERATED_HELPER;
+      const isImage = linkCheck.message === THUMBNAIL_VALIDATION_MSG.image;
+      const isGenerated = linkCheck.message === THUMBNAIL_VALIDATION_MSG.generated;
+      const isUnsupported = linkCheck.message === THUMBNAIL_VALIDATION_MSG.unsupported;
       return {
         node: null,
         message: isImage
-          ? THUMBNAIL_IMAGE_UNSUPPORTED_TITLE
+          ? THUMBNAIL_MESSAGES.image.title
           : isGenerated
-            ? THUMBNAIL_CANNOT_LINK_GENERATED_TITLE
-            : THUMBNAIL_REQUIRES_FRAME_TITLE,
+            ? THUMBNAIL_MESSAGES.generated.title
+            : isUnsupported
+              ? THUMBNAIL_MESSAGES.unsupported.title
+              : THUMBNAIL_MESSAGES.unavailable.title,
         helper: isImage
-          ? THUMBNAIL_IMAGE_UNSUPPORTED_HELPER
+          ? THUMBNAIL_MESSAGES.image.helper
           : isGenerated
-            ? THUMBNAIL_CANNOT_LINK_GENERATED_HELPER
-            : linkCheck.message || THUMBNAIL_REQUIRES_FRAME_HELPER,
+            ? THUMBNAIL_MESSAGES.generated.helper
+            : isUnsupported
+              ? THUMBNAIL_MESSAGES.unsupported.helper
+              : linkCheck.message || THUMBNAIL_MESSAGES.unavailable.helper,
       };
     }
 

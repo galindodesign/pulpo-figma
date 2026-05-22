@@ -10,20 +10,56 @@ const THUMBNAIL_WIDTH = 368;
 export const VARIANT_CARD_LAYOUT_WIDTH = 400;
 const THUMBNAIL_HEIGHT = 260;
 
-/** Shown on touchpoint / variant cards when the Figma link targets an image layer. */
-export const THUMBNAIL_IMAGE_UNSUPPORTED_TITLE = "Images can't be used as previews";
-export const THUMBNAIL_IMAGE_UNSUPPORTED_HELPER =
-  'Link a Frame in this file instead (right-click the frame → Copy link to selection).';
-export const THUMBNAIL_DEFAULT_HELPER =
-  'Use a Frame from this Figma file to render a preview.';
-export const THUMBNAIL_CANNOT_LINK_GENERATED_TITLE = "Can't link to experiment cards";
-export const THUMBNAIL_CANNOT_LINK_GENERATED_HELPER =
-  'Link a design Frame in this file (not Entry, Touchpoint, Variant, or Overview cards).';
-export const THUMBNAIL_REQUIRES_FRAME_TITLE = 'Link a Frame, not an image or shape';
-export const THUMBNAIL_REQUIRES_FRAME_HELPER =
-  'Select a Frame on the canvas, then right-click → Copy link to selection.';
-export const THUMBNAIL_CROSS_FILE_TITLE = 'Design in another file';
-export const THUMBNAIL_CROSS_FILE_HELPER = 'Open in Figma to view';
+/** Shared hint for canvas placeholders and link validation. */
+export const THUMBNAIL_LINK_HINT = 'Right-click a frame → Copy link to selection.';
+
+/** Canvas placeholder copy (title + optional helper line). */
+export const THUMBNAIL_MESSAGES = {
+  default: {
+    title: 'Link a Figma frame',
+    helper: 'Paste a frame link for a preview.',
+  },
+  image: {
+    title: 'Use a frame, not an image',
+    helper: THUMBNAIL_LINK_HINT,
+  },
+  generated: {
+    title: "Can't use experiment cards",
+    helper: 'Link a design frame instead.',
+  },
+  unsupported: {
+    title: 'Link a frame',
+    helper: THUMBNAIL_LINK_HINT,
+  },
+  crossFile: {
+    title: 'Frame in another file',
+    helper: 'Open the link in Figma.',
+  },
+  unavailable: {
+    title: 'Preview unavailable',
+    helper: THUMBNAIL_LINK_HINT,
+  },
+} as const;
+
+/** Single-line errors from the link field (keep in sync with checks in code.ts). */
+export const THUMBNAIL_VALIDATION_MSG = {
+  invalidLink: 'Enter a valid Figma link.',
+  missingNode: `Add a frame to the link. ${THUMBNAIL_LINK_HINT}`,
+  notFound: 'Frame not found in this file.',
+  generated: THUMBNAIL_MESSAGES.generated.helper,
+  image: 'Link a frame — not an image or screenshot.',
+  unsupported: THUMBNAIL_MESSAGES.unsupported.helper,
+} as const;
+
+export const THUMBNAIL_DEFAULT_HELPER = THUMBNAIL_MESSAGES.default.helper;
+export const THUMBNAIL_IMAGE_UNSUPPORTED_TITLE = THUMBNAIL_MESSAGES.image.title;
+export const THUMBNAIL_IMAGE_UNSUPPORTED_HELPER = THUMBNAIL_MESSAGES.image.helper;
+export const THUMBNAIL_CANNOT_LINK_GENERATED_TITLE = THUMBNAIL_MESSAGES.generated.title;
+export const THUMBNAIL_CANNOT_LINK_GENERATED_HELPER = THUMBNAIL_MESSAGES.generated.helper;
+export const THUMBNAIL_REQUIRES_FRAME_TITLE = THUMBNAIL_MESSAGES.unsupported.title;
+export const THUMBNAIL_REQUIRES_FRAME_HELPER = THUMBNAIL_MESSAGES.unsupported.helper;
+export const THUMBNAIL_CROSS_FILE_TITLE = THUMBNAIL_MESSAGES.crossFile.title;
+export const THUMBNAIL_CROSS_FILE_HELPER = THUMBNAIL_MESSAGES.crossFile.helper;
 
 const GROWTHLAB_FLOW_ROLES = new Set([
   'experiment-info',
@@ -261,7 +297,7 @@ async function createThumbnailFrame(
   }
 
   appendThumbnailPlaceholder(thumb, {
-    placeholderMessage: options.placeholderMessage || 'Preview unavailable',
+    placeholderMessage: options.placeholderMessage || THUMBNAIL_MESSAGES.unavailable.title,
     placeholderHelper: options.placeholderHelper || THUMBNAIL_DEFAULT_HELPER,
   });
   return thumb;

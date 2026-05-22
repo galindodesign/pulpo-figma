@@ -6997,10 +6997,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     }
 
     function resolveFigmaLinkDisplayScope(url, storedScope) {
-      const inferred = inferFigmaLinkScope(url);
-      if (storedScope === 'cross_file' && inferred === 'same_file') return 'same_file';
-      if (storedScope === 'same_file' || storedScope === 'cross_file') return storedScope;
-      return inferred;
+      if (storedScope === 'cross_file' || storedScope === 'same_file') return storedScope;
+      return inferFigmaLinkScope(url);
     }
 
     function formatFigmaLinkDisplay(url) {
@@ -7015,7 +7013,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     }
 
     const FIGMA_LINK_HELPER_TEXT =
-      'Paste a link from this file or another';
+      'Paste a frame link';
 
     function createFigmaLinkHelperEl() {
       const helper = document.createElement('p');
@@ -7026,8 +7024,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
     function getFigmaLinkScopeStatusText(linkScope) {
       return linkScope === 'cross_file'
-        ? 'Linked frame is in another file'
-        : 'Linked frame is in this file';
+        ? 'Frame is in another file'
+        : 'Frame is in this file';
     }
 
     function createFigmaLinkScopeStatusEl(url, storedScope) {
@@ -7047,7 +7045,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       compactLabel = 'Link Figma frame',
       ariaLabel = 'Linked Figma design'
     }) {
-      const FIGMA_LINK_INVALID_MSG = 'Enter a valid figma.com frame or file link.';
+      const FIGMA_LINK_INVALID_MSG = 'Enter a valid Figma frame';
 
       const applySaveResult = async (raw, errorEl) => {
         if (typeof onSave !== 'function') return true;
