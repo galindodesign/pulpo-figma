@@ -478,8 +478,19 @@ async function createMetricsTablesSection(data: ExperimentOutcomeData): Promise<
   section.name = "Metrics Tables";
 
   const flippedMetricsTable = await createFlippedMetricsTable(data);
-
   section.appendChild(flippedMetricsTable);
+
+  const hasRolledOut = data.variants.some(v => v.isRolledOut);
+  if (hasRolledOut) {
+    const legend = figma.createText();
+    legend.fontName = getFontStyle("Regular");
+    legend.fontSize = TOKENS.fontSizeLabel;
+    legend.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    legend.textAutoResize = "WIDTH_AND_HEIGHT";
+    legend.characters = "Highlighted cells show decision metrics for the rolled-out variant.";
+    legend.name = "Table Legend";
+    section.appendChild(legend);
+  }
 
   return section;
 }
@@ -505,7 +516,7 @@ async function createMetricsTable(data: ExperimentOutcomeData): Promise<FrameNod
   for (let i = 0; i < data.metrics.length; i++) {
     const metric = data.metrics[i];
     const isLast = i === data.metrics.length - 1;
-    const metricRow = await createMetricRow(metric, data.variants, isLast);
+    const metricRow = await createMetricRow(metric, data.variants, isLast, data);
     table.appendChild(metricRow);
   }
 
@@ -537,7 +548,8 @@ async function createFlippedMetricsTable(data: ExperimentOutcomeData): Promise<F
         variant,
         data.metrics,
         comparisonVariant,
-        isLast
+        isLast,
+        data,
       );
       table.appendChild(variantRow);
     }
@@ -824,7 +836,8 @@ function createComparisonCell(
 async function createMetricRow(
   metric: MetricDefinition,
   variants: VariantOutcome[],
-  isLast: boolean = false
+  isLast: boolean = false,
+  data?: ExperimentOutcomeData,
 ): Promise<FrameNode> {
   const row = figma.createFrame();
   row.layoutMode = "HORIZONTAL";
@@ -857,21 +870,18 @@ async function createMetricRow(
   goalCell.layoutGrow = 0; // Don't grow
   row.appendChild(goalCell);
 
-  // Render variant value cells in the SAME order as provided.
-  // Treat an explicitly selected comparison variant as the "no-change" column,
-  // but do not invent one when the experiment did not define it.
   const comparisonVariant = variants.find(v => v.isControl === true);
 
   if (variants.length > 0) {
     for (const variant of variants) {
       const metricData = variant.metrics[metricKey];
       const isComparison = !!comparisonVariant && variant.id === comparisonVariant.id;
-      const valueCell = createMetricValueCell(metricData, isComparison, metric);
+      const highlight = data ? getCellHighlight(variant, metric, data, comparisonVariant) : 'none' as const;
+      const valueCell = createMetricValueCell(metricData, isComparison, metric, highlight);
       valueCell.layoutGrow = 1; // Grow to fill available space
       row.appendChild(valueCell);
     }
   } else {
-    // No variants at all - still render one placeholder value cell to match header.
     const emptyValueCell = createMetricValueCell(undefined, true, metric);
     emptyValueCell.layoutGrow = 1;
     row.appendChild(emptyValueCell);
@@ -884,7 +894,8 @@ async function createVariantMetricRow(
   variant: VariantOutcome,
   metrics: MetricDefinition[],
   comparisonVariant: VariantOutcome | undefined,
-  isLast: boolean = false
+  isLast: boolean = false,
+  data?: ExperimentOutcomeData,
 ): Promise<FrameNode> {
   const row = figma.createFrame();
   row.layoutMode = "HORIZONTAL";
@@ -915,7 +926,8 @@ async function createVariantMetricRow(
       const metricKey = getMetricKey(metric);
       const metricData = variant.metrics[metricKey];
       const isComparison = !!comparisonVariant && variant.id === comparisonVariant.id;
-      const valueCell = createMetricValueCell(metricData, isComparison, metric);
+      const highlight = data ? getCellHighlight(variant, metric, data, comparisonVariant) : 'none' as const;
+      const valueCell = createMetricValueCell(metricData, isComparison, metric, highlight);
       valueCell.layoutGrow = 1;
       row.appendChild(valueCell);
     }
@@ -1071,12 +1083,76 @@ function createMetricNameCell(metric: MetricDefinition): FrameNode {
 }
 
 /**
- * Create a metric value cell with uplift indicator
+ * Decide whether a metric value cell on the rolled-out (or leading) variant
+ * row should be highlighted, and if so whether positively or negatively.
+ *
+ * Returns 'positive' (green), 'negative' (red), or 'none' (no fill).
+ */
+function getCellHighlight(
+  variant: VariantOutcome,
+  metric: MetricDefinition,
+  data: ExperimentOutcomeData,
+  comparisonVariant: VariantOutcome | undefined,
+): 'positive' | 'negative' | 'none' {
+  const rolledOutVariant = data.variants.find(v => v.isRolledOut);
+  const primaryMetric = getPrimaryDecisionMetric(data);
+
+  const isRolledOutRow = !!rolledOutVariant && variant.id === rolledOutVariant.id;
+  const isLeadingRow = !rolledOutVariant
+    && (data.status === 'completed' || data.status === 'rolled_out')
+    && !!primaryMetric
+    && getLeadingVariant(data, primaryMetric)?.id === variant.id;
+
+  if (!isRolledOutRow && !isLeadingRow) return 'none';
+
+  // For the leading (pre-rollout) row, only highlight the primary metric column.
+  if (isLeadingRow && primaryMetric && getMetricKey(metric) !== getMetricKey(primaryMetric)) {
+    return 'none';
+  }
+
+  const metricKey = getMetricKey(metric);
+  const metricData = variant.metrics[metricKey];
+  if (!metricData || metricData.value === undefined) return 'none';
+
+  // When a comparison variant exists, judge by direction-aware change.
+  if (comparisonVariant && variant.id !== comparisonVariant.id && metricData.uplift !== undefined) {
+    const directionIsDecrease = metric.direction === 'decrease';
+    const changeIsGood = directionIsDecrease
+      ? metricData.uplift <= 0
+      : metricData.uplift >= 0;
+    return changeIsGood ? 'positive' : 'negative';
+  }
+
+  // Fallback: use goal threshold when no control uplift is available.
+  const goalPerformance = getGoalPerformance(metric, metricData.value);
+  if (goalPerformance !== undefined) {
+    return goalPerformance ? 'positive' : 'negative';
+  }
+
+  // Primary metric on rolled-out row with no other signal: mild positive.
+  if (isRolledOutRow && primaryMetric && getMetricKey(metric) === getMetricKey(primaryMetric)) {
+    return 'positive';
+  }
+
+  return 'none';
+}
+
+/**
+ * Cell highlight contract (rollout-only):
+ * - Green fill: rolled-out variant on metrics where performance supports the
+ *   rollout decision (primary metric, or guardrails beating control in the
+ *   metric's intended direction). Also the leading variant's primary-metric
+ *   cell for completed-but-not-yet-rolled-out experiments.
+ * - Red fill: rolled-out variant on guardrail metrics that regressed vs
+ *   control or missed a decrease goal — trade-off visibility.
+ * - No fill: all other variants (including control), and any cell where data
+ *   is missing or the metric direction is neutral.
  */
 function createMetricValueCell(
   metricData: VariantOutcome['metrics'][string] | undefined,
   isComparisonVariant: boolean = false,
-  metric?: MetricDefinition
+  metric?: MetricDefinition,
+  highlight: 'positive' | 'negative' | 'none' = 'none',
 ): FrameNode {
   const cell = figma.createFrame();
   cell.layoutMode = "VERTICAL";
@@ -1089,22 +1165,18 @@ function createMetricValueCell(
   cell.primaryAxisAlignItems = "CENTER";
   cell.itemSpacing = 2;
   cell.paddingLeft = cell.paddingRight = 8;
-  
-  const value = metricData?.value;
-  const goalPerformance = getGoalPerformance(metric, value);
 
-  // Add light background color based on metric goal performance or available change.
-  if (!isComparisonVariant && metricData?.uplift !== undefined) {
-    const isPositive = metricData.uplift >= 0;
-    cell.fills = [{ type: "SOLID", color: hexToRgb(isPositive ? TOKENS.malachite50 : TOKENS.coralRed50) }];
-  } else if (goalPerformance !== undefined) {
-    cell.fills = [{ type: "SOLID", color: hexToRgb(goalPerformance ? TOKENS.malachite50 : TOKENS.coralRed50) }];
+  if (highlight === 'positive') {
+    cell.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.malachite50) }];
+  } else if (highlight === 'negative') {
+    cell.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.coralRed50) }];
   } else {
     cell.fills = [];
   }
   cell.name = "Value Cell";
 
   // Main value
+  const value = metricData?.value;
   const valueText = figma.createText();
   valueText.fontName = getFontStyle("Medium");
   valueText.fontSize = TOKENS.fontSizeBodyMd;
@@ -1127,13 +1199,10 @@ function createMetricValueCell(
     upliftRow.fills = [];
     upliftRow.name = "Uplift Row";
 
-    // Uplift value with color based on direction
-    const uplift = showVariantDelta ? metricData!.uplift : 0;
-    let upliftColor = TOKENS.textTertiary;
-    if (showVariantDelta) {
-      const isPositive = uplift! >= 0;
-      upliftColor = isPositive ? TOKENS.malachite600 : TOKENS.coralRed500;
-    }
+    const uplift = metricData!.uplift!;
+    const directionIsDecrease = metric?.direction === 'decrease';
+    const changeIsGood = directionIsDecrease ? uplift <= 0 : uplift >= 0;
+    const upliftColor = changeIsGood ? TOKENS.malachite600 : TOKENS.coralRed500;
     
     const upliftText = figma.createText();
     upliftText.fontName = getFontStyle("Medium");
