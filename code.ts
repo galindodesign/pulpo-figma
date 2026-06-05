@@ -4,7 +4,8 @@
 import { createExperimentInfoCard } from './experiment-info-card';
 import { TOKENS } from './design-tokens';
 import { initCanvasTheme, getCanvasTokens, createCardShadowEffect } from './canvas-theme';
-import { hexToRgb, getFontStyle } from './layout-utils';
+import { hexToRgb } from './layout-utils';
+import { styleOverviewText } from './experiment-card-shared';
 import {
   createEventCard,
   createVariantCard,
@@ -2636,9 +2637,7 @@ if (figma.editorType === 'figma') {
     topRow.name = 'Top Row';
 
     const titleText = figma.createText();
-    titleText.fontName = { family: "Figtree", style: "Bold" };
-    titleText.fontSize = TOKENS.fontSizeBodyLg;
-    titleText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+    styleOverviewText(titleText, 'headline');
     titleText.textAutoResize = 'WIDTH_AND_HEIGHT';
     titleText.characters = title && title.length > 0 ? title : '';
     topRow.appendChild(titleText);
@@ -2651,9 +2650,7 @@ if (figma.editorType === 'figma') {
     // Subtitle (if provided)
     if (subtitle && subtitle.length > 0) {
       const subtitleText = figma.createText();
-      subtitleText.fontName = { family: "Figtree", style: "Regular" };
-      subtitleText.fontSize = TOKENS.fontSizeBodyMd;
-      subtitleText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
+      styleOverviewText(subtitleText, 'bodyMuted');
       subtitleText.textAutoResize = 'WIDTH_AND_HEIGHT';
       subtitleText.characters = subtitle;
       subtitleText.name = 'Subtitle';
@@ -2677,9 +2674,7 @@ if (figma.editorType === 'figma') {
       noteContainer.resize(200, noteContainer.height);
       
       const noteText = figma.createText();
-      noteText.fontName = { family: "Figtree", style: "Regular" };
-      noteText.fontSize = TOKENS.fontSizeBodySm;
-      noteText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textTertiary) }];
+      styleOverviewText(noteText, 'caption');
       noteText.textAutoResize = 'HEIGHT'; // Allow wrapping
       noteText.characters = note;
       noteText.name = 'Note Text';
@@ -3667,8 +3662,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
         noteFrame.name = `EntryNote: ${note.text}`;
 
         const noteText = figma.createText();
-        noteText.fontName = { family: 'Figtree', style: 'Regular' };
-        noteText.fontSize = TOKENS.fontSizeBodySm;
+        styleOverviewText(noteText, 'caption');
         noteText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow900) }];
         noteText.characters = note.text;
         noteText.textAutoResize = 'WIDTH_AND_HEIGHT';

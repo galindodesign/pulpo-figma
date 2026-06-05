@@ -48,7 +48,7 @@ function buildTokenSet(theme: CanvasTheme): CanvasTokenSet {
       theme,
       fillsSurface: hexToRgb(TOKENS.fillsSurface),
       border: hexToRgb(TOKENS.paleSky400),
-      sectionTint: hexToRgb(TOKENS.azure100),
+      sectionTint: hexToRgb(TOKENS.azure50),
       connectorPrimary: hexToRgb(TOKENS.paleSky300),
       connectorBrand: hexToRgb(TOKENS.electricViolet400),
       connectorWinner: hexToRgb(TOKENS.malachite400),

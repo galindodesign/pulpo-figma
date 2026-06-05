@@ -3,7 +3,8 @@
 
 import { TOKENS } from './design-tokens';
 import { getCanvasTokens, createCardShadowEffect } from './canvas-theme';
-import { hexToRgb, getFontStyle, createBadge } from './layout-utils';
+import { styleOverviewText, SUMMARY_TYPOGRAPHY } from './experiment-card-shared';
+import { hexToRgb, createBadge } from './layout-utils';
 import type { MetricDefinition, Variant } from './types';
 
 const THUMBNAIL_WIDTH = 368;
@@ -145,9 +146,7 @@ function createOpenInFigmaLinkRow(figmaLink: string): FrameNode {
   }
 
   const linkText = figma.createText();
-  linkText.fontName = getFontStyle('Medium');
-  linkText.fontSize = TOKENS.fontSizeBodySm;
-  linkText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue600) }];
+  styleOverviewText(linkText, 'link');
   linkText.textAutoResize = 'WIDTH_AND_HEIGHT';
   linkText.hyperlink = { type: 'URL', value: trimmed };
   linkText.characters = 'Open in Figma';
@@ -193,10 +192,8 @@ function appendThumbnailPlaceholder(
   if (!options.placeholderMessage) return;
 
   const title = figma.createText();
-  title.fontName = getFontStyle('Bold');
-  title.fontSize = TOKENS.fontSizeBodySm;
+  styleOverviewText(title, 'bodyEmphasis');
   title.lineHeight = { value: 16, unit: 'PIXELS' };
-  title.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
   title.textAlignHorizontal = 'CENTER';
   title.textAutoResize = 'HEIGHT';
   title.characters = options.placeholderMessage;
@@ -204,10 +201,8 @@ function appendThumbnailPlaceholder(
   title.name = 'Thumbnail Message Title';
 
   const helper = figma.createText();
-  helper.fontName = getFontStyle('Regular');
-  helper.fontSize = TOKENS.fontSizeLabel;
+  styleOverviewText(helper, 'caption');
   helper.lineHeight = { value: 14, unit: 'PIXELS' };
-  helper.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
   helper.textAlignHorizontal = 'CENTER';
   helper.textAutoResize = 'HEIGHT';
   helper.characters = options.placeholderHelper || THUMBNAIL_DEFAULT_HELPER;
@@ -515,9 +510,7 @@ export async function createEventCard(
   eventDetailsContainer.paddingTop = 8;
 
   const eventNameText = figma.createText();
-  eventNameText.fontName = getFontStyle("Bold");
-  eventNameText.fontSize = TOKENS.fontSizeBodyLg;
-  eventNameText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+  styleOverviewText(eventNameText, 'headline');
   eventNameText.textAutoResize = 'WIDTH_AND_HEIGHT';
   eventNameText.textAlignHorizontal = 'LEFT';
   eventNameText.layoutGrow = 1;
@@ -689,9 +682,7 @@ export async function createVariantCard(
 
   // Variant name (with fallback logic always applied)
   const variantNameText = figma.createText();
-  variantNameText.fontName = getFontStyle("Bold");
-  variantNameText.fontSize = TOKENS.fontSizeBodyLg;
-  variantNameText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+  styleOverviewText(variantNameText, 'headline');
   variantNameText.textAutoResize = 'WIDTH_AND_HEIGHT';
   // Always apply fallback: if name is empty, whitespace, or missing, use 'Variant <index+1>'
   const displayName = (typeof variant.name === 'string' && variant.name.trim().length > 0)
@@ -713,9 +704,7 @@ export async function createVariantCard(
   // (We keep description in the data model / metadata; just don't render it.)
   if (options?.showDescription) {
     const variantLabel = figma.createText();
-    variantLabel.fontName = getFontStyle("Regular");
-    variantLabel.fontSize = TOKENS.fontSizeBodyMd;
-    variantLabel.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+    styleOverviewText(variantLabel, 'body');
     variantLabel.textAutoResize = 'WIDTH_AND_HEIGHT';
     const description = (variant as Record<string, unknown>).description as string | undefined;
     variantLabel.characters = description || '';
@@ -754,10 +743,7 @@ export async function createVariantCard(
 
   // Metrics header (label above metrics list)
   const metricsHeader = figma.createText();
-  metricsHeader.fontName = getFontStyle("Bold");
-  metricsHeader.fontSize = TOKENS.fontSizeBodySm;
-  metricsHeader.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
-  metricsHeader.opacity = 0.5;
+  styleOverviewText(metricsHeader, 'sectionTitle');
   metricsHeader.textAutoResize = 'WIDTH_AND_HEIGHT';
   metricsHeader.characters = 'Goals';
   metricsHeader.name = 'Goals Header';
@@ -791,9 +777,7 @@ export async function createVariantCard(
     
     // Label: metric name (abbreviation):
     const labelText = figma.createText();
-    labelText.fontName = getFontStyle("Regular");
-    labelText.fontSize = TOKENS.fontSizeBodyMd;
-    labelText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+    styleOverviewText(labelText, 'fieldLabel');
     labelText.textAutoResize = 'WIDTH_AND_HEIGHT';
     labelText.characters = `${metricName} (${abbreviation}):`;
     labelText.name = `${metricName} Label`;
@@ -813,10 +797,7 @@ export async function createVariantCard(
     valueContainer.name = `${metricName} Value`;
     
     const valueText = figma.createText();
-    // Consistent styling matching outcome card table
-    valueText.fontName = getFontStyle("Medium");
-    valueText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
-    valueText.fontSize = TOKENS.fontSizeBodyMd;
+    styleOverviewText(valueText, 'fieldValue');
     valueText.textAutoResize = 'WIDTH_AND_HEIGHT';
     valueText.characters = value;
     valueText.name = `${metricName} Value Text`;
@@ -904,13 +885,8 @@ export function createMetricChip(label: string, value: number): FrameNode {
   chip.strokeWeight = 1;
   chip.name = 'Metric Chip';
   const txt = figma.createText();
-  txt.fontSize = TOKENS.fontSizeBodyLg;
-  try {
-    txt.fontName = getFontStyle("Bold");
-  } catch {
-    txt.fontName = getFontStyle("Medium");
-  }
-  txt.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
+  styleOverviewText(txt, 'fieldValue');
+  txt.fills = [{ type: 'SOLID', color: hexToRgb(SUMMARY_TYPOGRAPHY.muted) }];
   txt.textAutoResize = 'WIDTH_AND_HEIGHT';
   txt.characters = `${label}: ${value}`;
   chip.appendChild(txt);

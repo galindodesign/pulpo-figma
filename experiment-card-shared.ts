@@ -13,10 +13,67 @@ export interface ExperimentStatusConfig {
 export const SUMMARY_TYPOGRAPHY = {
   label: TOKENS.textTertiary,
   body: TOKENS.textPrimary,
+  muted: TOKENS.textSecondary,
 } as const;
 
 /** Bullet diameter for summary list rows (matches body text color). */
 export const SUMMARY_BULLET_PX = 5;
+
+/**
+ * Typography roles for experiment canvas cards (overview, touchpoint, variant, entry/exit).
+ * - cardTitle: experiment name on overview card
+ * - headline: touchpoint / variant / entry / exit card title
+ * - sectionTitle: Summary, Goals and Variants, Outcome summary, table column headers
+ * - fieldLabel: Description, Goals, metric names
+ * - fieldValue: summary values, metric values, table body cells, notes
+ * - link: Open in Figma rows
+ */
+export type OverviewTextRole =
+  | "cardTitle"
+  | "headline"
+  | "sectionTitle"
+  | "fieldLabel"
+  | "fieldValue"
+  | "body"
+  | "bodyMuted"
+  | "bodyEmphasis"
+  | "caption"
+  | "tableHeader"
+  | "link";
+
+const OVERVIEW_TEXT_STYLES: Record<
+  OverviewTextRole,
+  { weight: "Bold" | "Medium" | "Regular"; size: number; color: string }
+> = {
+  cardTitle: { weight: "Bold", size: 24, color: SUMMARY_TYPOGRAPHY.body },
+  headline: { weight: "Bold", size: TOKENS.fontSizeBodyLg, color: SUMMARY_TYPOGRAPHY.body },
+  sectionTitle: { weight: "Medium", size: TOKENS.fontSizeLabel, color: SUMMARY_TYPOGRAPHY.label },
+  fieldLabel: { weight: "Regular", size: TOKENS.fontSizeLabel, color: SUMMARY_TYPOGRAPHY.label },
+  fieldValue: { weight: "Regular", size: TOKENS.fontSizeBodySm, color: SUMMARY_TYPOGRAPHY.body },
+  body: { weight: "Regular", size: TOKENS.fontSizeBodyMd, color: SUMMARY_TYPOGRAPHY.body },
+  bodyMuted: { weight: "Regular", size: TOKENS.fontSizeBodyMd, color: SUMMARY_TYPOGRAPHY.muted },
+  bodyEmphasis: { weight: "Medium", size: TOKENS.fontSizeBodySm, color: SUMMARY_TYPOGRAPHY.body },
+  caption: { weight: "Regular", size: TOKENS.fontSizeLabel, color: SUMMARY_TYPOGRAPHY.label },
+  tableHeader: { weight: "Medium", size: TOKENS.fontSizeLabel, color: SUMMARY_TYPOGRAPHY.label },
+  link: { weight: "Medium", size: TOKENS.fontSizeBodySm, color: TOKENS.royalBlue600 },
+};
+
+/** Apply a consistent overview-card text style to an existing TextNode. */
+export function styleOverviewText(text: TextNode, role: OverviewTextRole): void {
+  const style = OVERVIEW_TEXT_STYLES[role];
+  text.fontName = { family: TOKENS.fontFamily, style: style.weight };
+  text.fontSize = style.size;
+  text.fills = [{ type: "SOLID", color: hexToRgb(style.color) }];
+}
+
+/** Section eyebrow label (Summary, Goals and Variants, Resources, …). */
+export function createOverviewSectionTitle(title: string): TextNode {
+  const text = figma.createText();
+  styleOverviewText(text, "sectionTitle");
+  text.textAutoResize = "WIDTH_AND_HEIGHT";
+  text.characters = title;
+  return text;
+}
 
 export const EXPERIMENT_STATUS_STYLES: Record<ExperimentStatus, ExperimentStatusConfig> = {
   draft: {

@@ -21,7 +21,7 @@ function buildTokenSet(theme) {
             theme,
             fillsSurface: hexToRgb(TOKENS.fillsSurface),
             border: hexToRgb(TOKENS.paleSky400),
-            sectionTint: hexToRgb(TOKENS.azure100),
+            sectionTint: hexToRgb(TOKENS.azure50),
             sectionTintBorder: hexToRgb(TOKENS.azure200),
             connectorPrimary: hexToRgb(TOKENS.paleSky300),
             connectorBrand: hexToRgb(TOKENS.electricViolet400),

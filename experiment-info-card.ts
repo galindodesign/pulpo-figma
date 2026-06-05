@@ -10,6 +10,8 @@ import {
 import {
   EXPERIMENT_STATUS_STYLES,
   SUMMARY_TYPOGRAPHY,
+  createOverviewSectionTitle,
+  styleOverviewText,
   formatDateForDisplay,
   getExperimentTypeLabel,
   type ExperimentStatus,
@@ -574,13 +576,7 @@ export async function createExperimentInfoCard(
       metricsSection.itemSpacing = 8;
       metricsSection.fills = [];
 
-      const metricsLabel = figma.createText();
-      metricsLabel.fontName = { family: "Figtree", style: "Bold" };
-      metricsLabel.fontSize = TOKENS.fontSizeLabel;
-      metricsLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-      metricsLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-      metricsLabel.characters = "Goals and Variants";
-      metricsSection.appendChild(metricsLabel);
+      metricsSection.appendChild(createOverviewSectionTitle("Goals and Variants"));
       metricsSection.appendChild(outcomeSections.metricsTable);
       contentStack.appendChild(metricsSection);
 
@@ -772,14 +768,7 @@ function createResourcesSection(
   linksSection.strokes = [];
   linksSection.name = "Links Section";
   
-  const linksLabel = figma.createText();
-  linksLabel.fontName = { family: "Figtree", style: "Bold" };
-  linksLabel.fontSize = TOKENS.fontSizeLabel;
-  linksLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  linksLabel.opacity = 1;
-  linksLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-  linksLabel.characters = "Resources";
-  linksSection.appendChild(linksLabel);
+  linksSection.appendChild(createOverviewSectionTitle("Resources"));
   
   // Links container - horizontal wrap for link chips
   const linksContainer = figma.createFrame();
@@ -820,9 +809,7 @@ function createResourcesSection(
   // If no links, show placeholder text
   if (linksContainer.children.length === 0) {
     const placeholderText = figma.createText();
-    placeholderText.fontName = { family: "Figtree", style: "Regular" };
-    placeholderText.fontSize = TOKENS.fontSizeBodySm;
-    placeholderText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    styleOverviewText(placeholderText, "caption");
     placeholderText.textAutoResize = "WIDTH_AND_HEIGHT";
     placeholderText.characters = "—";
     linksContainer.appendChild(placeholderText);
@@ -877,14 +864,7 @@ async function appendTargetingSection(
   section.name = "Section: Targeting";
   
   // Section title
-  const titleLabel = figma.createText();
-  titleLabel.fontName = { family: "Figtree", style: "Bold" };
-  titleLabel.fontSize = TOKENS.fontSizeLabel;
-  titleLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  titleLabel.opacity = 1;
-  titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-  titleLabel.characters = "Targeting";
-  section.appendChild(titleLabel);
+  section.appendChild(createOverviewSectionTitle("Targeting"));
   
   // Details container with background
   const detailsContainer = figma.createFrame();
@@ -970,13 +950,7 @@ async function appendDetailsSection(
   }
   
   // Section title label
-  const titleLabel = figma.createText();
-  titleLabel.fontName = { family: "Figtree", style: "Medium" };
-  titleLabel.fontSize = TOKENS.fontSizeLabel;
-  titleLabel.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.label) }];
-  titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-  titleLabel.characters = title;
-  section.appendChild(titleLabel);
+  section.appendChild(createOverviewSectionTitle(title));
   
   // Details container with background
   const detailsContainer = figma.createFrame();
@@ -1019,9 +993,7 @@ async function appendDetailsSection(
     
     // Label
     const labelNode = figma.createText();
-    labelNode.fontName = { family: "Figtree", style: "Regular" };
-    labelNode.fontSize = TOKENS.fontSizeLabel;
-    labelNode.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.label) }];
+    styleOverviewText(labelNode, "fieldLabel");
     labelNode.textAutoResize = "WIDTH_AND_HEIGHT";
     labelNode.characters = label;
     row.appendChild(labelNode);
@@ -1035,9 +1007,10 @@ async function appendDetailsSection(
     }
     
     const valueNode = figma.createText();
-    valueNode.fontName = { family: "Figtree", style: "Medium" };
-    valueNode.fontSize = TOKENS.fontSizeBodySm;
-    valueNode.fills = [{ type: "SOLID", color: hexToRgb(valueColor || SUMMARY_TYPOGRAPHY.body) }];
+    styleOverviewText(valueNode, "fieldValue");
+    if (valueColor) {
+      valueNode.fills = [{ type: "SOLID", color: hexToRgb(valueColor) }];
+    }
     // Ensure long content wraps and grows in height for key detail fields
     const shouldWrapValue =
       label === 'Description' ||
@@ -1090,9 +1063,7 @@ async function createStoryHeaderWithBadges(experimentName: string, description: 
   statusRow.name = "Status Row";
 
   const dateLabel = figma.createText();
-  dateLabel.fontName = { family: "Figtree", style: "Regular" };
-  dateLabel.fontSize = TOKENS.fontSizeLabel;
-  dateLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary), opacity: 0.5 }];
+  styleOverviewText(dateLabel, "caption");
   dateLabel.textAutoResize = "WIDTH_AND_HEIGHT";
   dateLabel.characters = dateFormatted;
   dateLabel.name = "Date Created Label";
@@ -1101,9 +1072,7 @@ async function createStoryHeaderWithBadges(experimentName: string, description: 
 
   // Title (Bold, 24px)
   const titleText = figma.createText();
-  titleText.fontName = { family: "Figtree", style: "Bold" };
-  titleText.fontSize = 24;
-  titleText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  styleOverviewText(titleText, "cardTitle");
   titleText.textAutoResize = "WIDTH_AND_HEIGHT";
   titleText.characters = experimentName && experimentName.length > 0 ? experimentName : 'Untitled Experiment';
   section.appendChild(titleText);
@@ -1141,18 +1110,13 @@ async function createStoryHypothesis(hypothesis: string): Promise<FrameNode> {
 
   // Label with question framing
   const labelText = figma.createText();
-  labelText.fontName = { family: "Figtree", style: "Medium" };
-  labelText.fontSize = TOKENS.fontSizeLabel;
-  labelText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.label) }];
+  styleOverviewText(labelText, "fieldLabel");
   labelText.textAutoResize = "WIDTH_AND_HEIGHT";
   labelText.characters = "Hypothesis";
   section.appendChild(labelText);
 
-  // Hypothesis text with quote styling
   const hypothesisText = figma.createText();
-  hypothesisText.fontName = { family: "Figtree", style: "Regular" };
-  hypothesisText.fontSize = TOKENS.fontSizeBodyMd;
-  hypothesisText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
+  styleOverviewText(hypothesisText, "fieldValue");
   hypothesisText.textAutoResize = "WIDTH_AND_HEIGHT";
   hypothesisText.characters = `"${hypothesis}"`;
   section.appendChild(hypothesisText);
@@ -1678,10 +1642,8 @@ function createLinkChip(label: string, url?: string): FrameNode {
     'ClickUp': 'ClickUp task',
   };
   const title = figma.createText();
-  title.fontName = { family: "Figtree", style: "Regular" };
-  title.fontSize = TOKENS.fontSizeBodySm;
+  styleOverviewText(title, "fieldValue");
   title.lineHeight = { unit: "PIXELS", value: 12 };
-  title.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   title.textAutoResize = "WIDTH_AND_HEIGHT";
   title.name = "Link Title";
   const titleText = linkLabels[label] || `${label} link`;

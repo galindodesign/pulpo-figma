@@ -1,12 +1,14 @@
 /// <reference types="@figma/plugin-typings" />
 import { TOKENS } from "./design-tokens";
 import { applyCardShell, applySectionPanel, applyTableHeaderRow, applyTableRowDivider, applyTableShell } from "./canvas-theme";
-import { hexToRgb, getFontStyle, createBadge } from "./layout-utils";
+import { hexToRgb, createBadge } from "./layout-utils";
 import { loadFonts } from "./load-fonts";
 import {
   EXPERIMENT_STATUS_STYLES,
   SUMMARY_TYPOGRAPHY,
   SUMMARY_BULLET_PX,
+  createOverviewSectionTitle,
+  styleOverviewText,
   formatDateForDisplay,
   getExperimentTypeLabel,
 } from "./experiment-card-shared";
@@ -401,9 +403,7 @@ async function createHeaderSection(data: ExperimentOutcomeData): Promise<FrameNo
   const dateCreated = data.dateCreated || new Date().toISOString().split('T')[0];
   const dateFormatted = formatDateForDisplay(dateCreated);
   const dateLabel = figma.createText();
-  dateLabel.fontName = { family: "Figtree", style: "Regular" };
-  dateLabel.fontSize = TOKENS.fontSizeLabel;
-  dateLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary), opacity: 0.5 }];
+  styleOverviewText(dateLabel, "caption");
   dateLabel.textAutoResize = "WIDTH_AND_HEIGHT";
   dateLabel.characters = dateFormatted;
   dateLabel.name = "Date Created Label";
@@ -419,9 +419,7 @@ async function createHeaderSection(data: ExperimentOutcomeData): Promise<FrameNo
 
   // Experiment name (Bold, 24px)
   const titleText = figma.createText();
-  titleText.fontName = getFontStyle("Bold");
-  titleText.fontSize = 24;
-  titleText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  styleOverviewText(titleText, "cardTitle");
   titleText.textAutoResize = "WIDTH_AND_HEIGHT";
   titleText.characters = data.experimentName || 'Untitled Experiment';
   section.appendChild(titleText);
@@ -453,9 +451,7 @@ async function createHeaderSection(data: ExperimentOutcomeData): Promise<FrameNo
   // Render context line if we have any parts
   if (contextParts.length > 0) {
     const contextText = figma.createText();
-    contextText.fontName = getFontStyle("Regular");
-    contextText.fontSize = TOKENS.fontSizeBodySm;
-    contextText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    styleOverviewText(contextText, "caption");
     contextText.textAutoResize = "WIDTH_AND_HEIGHT";
     contextText.characters = contextParts.join('  •  ');
     section.appendChild(contextText);
@@ -484,9 +480,7 @@ async function createMetricsTablesSection(data: ExperimentOutcomeData): Promise<
   const hasRolledOut = data.variants.some(v => v.isRolledOut);
   if (hasRolledOut) {
     const legend = figma.createText();
-    legend.fontName = getFontStyle("Regular");
-    legend.fontSize = TOKENS.fontSizeLabel;
-    legend.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    styleOverviewText(legend, "caption");
     legend.textAutoResize = "WIDTH_AND_HEIGHT";
     legend.characters = "Highlighted cells show decision metrics for the rolled-out variant.";
     legend.name = "Table Legend";
@@ -661,9 +655,7 @@ function createVariantHeaderCell(variant: VariantOutcome): FrameNode {
 
   // Variant name
   const nameText = figma.createText();
-  nameText.fontName = getFontStyle("Medium");
-  nameText.fontSize = TOKENS.fontSizeBodySm;
-  nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+  styleOverviewText(nameText, "tableHeader");
   nameText.textAutoResize = "WIDTH_AND_HEIGHT";
   nameText.characters = variantName;
   cell.appendChild(nameText);
@@ -689,9 +681,7 @@ function createFlippedMetricHeaderCell(metric: MetricDefinition): FrameNode {
   cell.name = `Metric Header: ${metric.name}`;
 
   const metricText = figma.createText();
-  metricText.fontName = getFontStyle("Medium");
-  metricText.fontSize = TOKENS.fontSizeBodySm;
-  metricText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+  styleOverviewText(metricText, "tableHeader");
   metricText.textAlignHorizontal = "CENTER";
   metricText.characters = getMetricDisplayName(metric);
   metricText.textAutoResize = "HEIGHT";
@@ -701,9 +691,7 @@ function createFlippedMetricHeaderCell(metric: MetricDefinition): FrameNode {
   const goalLabel = getGoalLabel(metric);
   if (goalLabel !== '--') {
     const goalText = figma.createText();
-    goalText.fontName = getFontStyle("Regular");
-    goalText.fontSize = TOKENS.fontSizeLabel;
-    goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    styleOverviewText(goalText, "caption");
     goalText.textAlignHorizontal = "CENTER";
     goalText.characters = goalLabel;
     goalText.textAutoResize = "HEIGHT";
@@ -750,27 +738,21 @@ function createGoalCell(metric: MetricDefinition): FrameNode {
 
   if (typeof metric.thresholdPct === 'number' && Number.isFinite(metric.thresholdPct)) {
     const goalText = figma.createText();
-    goalText.fontName = getFontStyle("Medium");
-    goalText.fontSize = TOKENS.fontSizeBodyMd;
-    goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+    styleOverviewText(goalText, "fieldValue");
     goalText.textAutoResize = "WIDTH_AND_HEIGHT";
     goalText.textAlignHorizontal = "CENTER";
     goalText.characters = `${getGoalDirectionArrow(metric)} ${metric.thresholdPct}%`;
     cell.appendChild(goalText);
   } else if (metric.min !== undefined && metric.max !== undefined) {
     const goalText = figma.createText();
-    goalText.fontName = getFontStyle("Medium");
-    goalText.fontSize = TOKENS.fontSizeBodyMd;
-    goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+    styleOverviewText(goalText, "fieldValue");
     goalText.textAutoResize = "WIDTH_AND_HEIGHT";
     goalText.textAlignHorizontal = "CENTER";
     goalText.characters = `${metric.min} - ${metric.max}`;
     cell.appendChild(goalText);
   } else {
     const noGoalText = figma.createText();
-    noGoalText.fontName = getFontStyle("Regular");
-    noGoalText.fontSize = TOKENS.fontSizeLabel;
-    noGoalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    styleOverviewText(noGoalText, "caption");
     noGoalText.textAutoResize = "WIDTH_AND_HEIGHT";
     noGoalText.textAlignHorizontal = "CENTER";
     noGoalText.characters = '--';
@@ -804,14 +786,12 @@ function createComparisonCell(
 
   // Main value only (name and badge are in header)
   const valueText = figma.createText();
-  valueText.fontName = getFontStyle("Medium");
-  valueText.fontSize = TOKENS.fontSizeBodyMd;
+  styleOverviewText(valueText, "fieldValue");
   valueText.textAutoResize = "WIDTH_AND_HEIGHT";
   valueText.textAlignHorizontal = "CENTER";
   
   const value = metricData?.value;
   valueText.characters = formatMetricValue(value);
-  valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   cell.appendChild(valueText);
 
   return cell;
@@ -978,9 +958,7 @@ function createVariantNameCell(variant: VariantOutcome): FrameNode {
 
   const variantName = variant.name || `Variant ${variant.key}`;
   const nameText = figma.createText();
-  nameText.fontName = { family: "Figtree", style: "Regular" };
-  nameText.fontSize = TOKENS.fontSizeBodySm;
-  nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  styleOverviewText(nameText, "fieldValue");
   nameText.textAutoResize = "WIDTH_AND_HEIGHT";
   nameText.characters = variantName;
   nameRow.appendChild(nameText);
@@ -994,9 +972,7 @@ function createVariantNameCell(variant: VariantOutcome): FrameNode {
 
   if (variant.figmaLink) {
     const linkText = figma.createText();
-    linkText.fontName = getFontStyle("Medium");
-    linkText.fontSize = TOKENS.fontSizeLabel;
-    linkText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.royalBlue600) }];
+    styleOverviewText(linkText, "link");
     linkText.textAutoResize = "WIDTH_AND_HEIGHT";
     linkText.characters = "Open in Figma";
     linkText.hyperlink = { type: "URL", value: variant.figmaLink.trim() };
@@ -1036,9 +1012,7 @@ function createMetricNameCell(metric: MetricDefinition): FrameNode {
   nameRow.name = "Name Row";
 
   const nameText = figma.createText();
-  nameText.fontName = getFontStyle("Regular");
-  nameText.fontSize = TOKENS.fontSizeBodySm;
-  nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  styleOverviewText(nameText, "fieldValue");
   nameText.textAutoResize = "WIDTH_AND_HEIGHT";
   nameText.characters = metric.name;
   nameRow.appendChild(nameText);
@@ -1050,9 +1024,7 @@ function createMetricNameCell(metric: MetricDefinition): FrameNode {
 
   if (hasAbbrev) {
     const subText = figma.createText();
-    subText.fontName = getFontStyle("Regular");
-    subText.fontSize = TOKENS.fontSizeLabel;
-    subText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    styleOverviewText(subText, "caption");
     subText.textAutoResize = "WIDTH_AND_HEIGHT";
     subText.characters = metric.abbreviation!;
     cell.appendChild(subText);
@@ -1157,13 +1129,11 @@ function createMetricValueCell(
   // Main value
   const value = metricData?.value;
   const valueText = figma.createText();
-  valueText.fontName = getFontStyle("Medium");
-  valueText.fontSize = TOKENS.fontSizeBodyMd;
+  styleOverviewText(valueText, "fieldValue");
   valueText.textAutoResize = "WIDTH_AND_HEIGHT";
   valueText.textAlignHorizontal = "CENTER";
   
   valueText.characters = formatMetricValue(value, metric);
-  valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
   cell.appendChild(valueText);
 
   // Delta row (only shown when change is available from an explicit comparison variant)
@@ -1184,8 +1154,7 @@ function createMetricValueCell(
     const upliftColor = changeIsGood ? TOKENS.malachite600 : TOKENS.coralRed500;
     
     const upliftText = figma.createText();
-    upliftText.fontName = getFontStyle("Medium");
-    upliftText.fontSize = TOKENS.fontSizeLabel;
+    styleOverviewText(upliftText, "caption");
     upliftText.fills = [{ type: "SOLID", color: hexToRgb(upliftColor) }];
     upliftText.textAutoResize = "WIDTH_AND_HEIGHT";
     upliftText.characters = formatDelta(uplift);
@@ -1220,9 +1189,7 @@ function createTableCell(
   cell.name = `Cell: ${content}`;
 
   const text = figma.createText();
-  text.fontName = getFontStyle(isHeader ? "Medium" : "Regular");
-  text.fontSize = TOKENS.fontSizeBodySm;
-  text.fills = [{ type: "SOLID", color: hexToRgb(isHeader ? TOKENS.textSecondary : TOKENS.textPrimary) }];
+  styleOverviewText(text, isHeader ? "tableHeader" : "fieldValue");
   text.textAutoResize = "WIDTH_AND_HEIGHT";
   text.characters = content;
   cell.appendChild(text);
@@ -1264,12 +1231,7 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   headerRow.fills = [];
   headerRow.name = "Outcome Summary Header";
 
-  const headerText = figma.createText();
-  headerText.fontName = getFontStyle("Medium");
-  headerText.fontSize = TOKENS.fontSizeLabel;
-  headerText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.label) }];
-  headerText.textAutoResize = "WIDTH_AND_HEIGHT";
-  headerText.characters = "Outcome summary";
+  const headerText = createOverviewSectionTitle("Outcome summary");
   headerRow.appendChild(headerText);
 
   const stateBadge = createBadge(
@@ -1282,16 +1244,12 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   section.appendChild(headerRow);
 
   const headlineText = figma.createText();
-  headlineText.fontName = getFontStyle("Bold");
-  headlineText.fontSize = TOKENS.fontSizeBodyLg;
-  headlineText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
+  styleOverviewText(headlineText, "fieldValue");
   setWrappedText(headlineText, outcome.headline, contentWidth);
   section.appendChild(headlineText);
 
   const outcomeDetail = figma.createText();
-  outcomeDetail.fontName = getFontStyle("Regular");
-  outcomeDetail.fontSize = TOKENS.fontSizeBodyMd;
-  outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
+  styleOverviewText(outcomeDetail, "fieldValue");
   setWrappedText(outcomeDetail, outcome.detail, contentWidth);
   section.appendChild(outcomeDetail);
 
@@ -1311,9 +1269,7 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   section.appendChild(factsFrame);
 
   const nextStepText = figma.createText();
-  nextStepText.fontName = getFontStyle("Medium");
-  nextStepText.fontSize = TOKENS.fontSizeBodySm;
-  nextStepText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
+  styleOverviewText(nextStepText, "fieldValue");
   setWrappedText(nextStepText, `Next step: ${outcome.nextStep}`, contentWidth);
   section.appendChild(nextStepText);
 
@@ -1338,9 +1294,7 @@ function createSummaryFactRow(fact: string, width: number): FrameNode {
   row.appendChild(dot);
 
   const factText = figma.createText();
-  factText.fontName = getFontStyle("Regular");
-  factText.fontSize = TOKENS.fontSizeBodySm;
-  factText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
+  styleOverviewText(factText, "fieldValue");
   setWrappedText(factText, fact, width - (SUMMARY_BULLET_PX + 6));
   row.appendChild(factText);
 
