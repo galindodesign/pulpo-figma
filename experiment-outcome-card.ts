@@ -1,9 +1,12 @@
 /// <reference types="@figma/plugin-typings" />
 import { TOKENS } from "./design-tokens";
+import { applyCardShell, applySectionPanel, applyTableHeaderRow, applyTableRowDivider, applyTableShell } from "./canvas-theme";
 import { hexToRgb, getFontStyle, createBadge } from "./layout-utils";
 import { loadFonts } from "./load-fonts";
 import {
   EXPERIMENT_STATUS_STYLES,
+  SUMMARY_TYPOGRAPHY,
+  SUMMARY_BULLET_PX,
   formatDateForDisplay,
   getExperimentTypeLabel,
 } from "./experiment-card-shared";
@@ -353,9 +356,7 @@ export async function createExperimentOutcomeCard(
   card.paddingLeft = card.paddingRight = 32;
   card.paddingTop = card.paddingBottom = 32;
   card.cornerRadius = 24;
-  card.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  card.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  card.strokeWeight = 1;
+  applyCardShell(card);
   card.minWidth = 792;
   card.minHeight = 612;
 
@@ -502,9 +503,7 @@ async function createMetricsTable(data: ExperimentOutcomeData): Promise<FrameNod
   table.primaryAxisSizingMode = "AUTO"; // Hug height
   table.layoutAlign = "STRETCH"; // Stretch to parent width
   table.itemSpacing = 0;
-  table.fills = [];
-  table.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  table.strokeWeight = 1;
+  applyTableShell(table);
   table.cornerRadius = 8;
   table.name = "Metrics Table";
 
@@ -530,9 +529,7 @@ async function createFlippedMetricsTable(data: ExperimentOutcomeData): Promise<F
   table.primaryAxisSizingMode = "AUTO";
   table.layoutAlign = "STRETCH";
   table.itemSpacing = 0;
-  table.fills = [];
-  table.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  table.strokeWeight = 1;
+  applyTableShell(table);
   table.cornerRadius = 8;
   table.name = "Metrics Table — Variants as Rows";
 
@@ -573,12 +570,7 @@ async function createTableHeaderRow(data: ExperimentOutcomeData, variantCount: n
   row.counterAxisAlignItems = "CENTER";
   row.minHeight = 40;
   row.resize(row.width, 40);
-  row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  row.strokeWeight = 1;
-  row.strokeTopWeight = 0;
-  row.strokeLeftWeight = 0;
-  row.strokeRightWeight = 0;
+  applyTableHeaderRow(row);
   row.name = "Header Row";
 
   // First column: Metric label (fixed width)
@@ -621,12 +613,7 @@ async function createFlippedTableHeaderRow(metrics: MetricDefinition[]): Promise
   row.layoutAlign = "STRETCH";
   row.counterAxisAlignItems = "MIN";
   row.minHeight = 48;
-  row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  row.strokeWeight = 1;
-  row.strokeTopWeight = 0;
-  row.strokeLeftWeight = 0;
-  row.strokeRightWeight = 0;
+  applyTableHeaderRow(row);
   row.name = "Flipped Header Row";
 
   const variantHeader = createTableCell('Variant', 200, true, false);
@@ -850,11 +837,7 @@ async function createMetricRow(
   row.fills = [];
   
   if (!isLast) {
-    row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-    row.strokeWeight = 1;
-    row.strokeTopWeight = 0;
-    row.strokeLeftWeight = 0;
-    row.strokeRightWeight = 0;
+    applyTableRowDivider(row);
   }
   
   row.name = `Row: ${metric.name}`;
@@ -908,11 +891,7 @@ async function createVariantMetricRow(
   row.fills = [];
 
   if (!isLast) {
-    row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-    row.strokeWeight = 1;
-    row.strokeTopWeight = 0;
-    row.strokeLeftWeight = 0;
-    row.strokeRightWeight = 0;
+    applyTableRowDivider(row);
   }
 
   row.name = `Variant Row: ${variant.name || variant.key}`;
@@ -1263,9 +1242,7 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   section.paddingTop = section.paddingBottom = 16;
   section.paddingLeft = section.paddingRight = OUTCOME_SUMMARY_HORIZONTAL_PADDING;
   section.cornerRadius = 12;
-  section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.azure50) }];
-  section.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.azure100) }];
-  section.strokeWeight = 1;
+  applySectionPanel(section);
   section.name = "Outcome Summary Section";
   section.layoutAlign = "STRETCH";
   section.minWidth = OUTCOME_SUMMARY_MIN_WIDTH;
@@ -1274,13 +1251,9 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
 
   const outcome = classifyOutcomeState(data);
 
-  const stateColors: Record<OutcomeState, string> = {
-    recommendation: TOKENS.royalBlue700,
-    inconclusive: TOKENS.azure600,
-    running: TOKENS.royalBlue700,
-    paused: TOKENS.yellow700,
-    rolled_out: TOKENS.malachite700,
-  };
+  /** Badge label color: decision green, otherwise neutral primary text. */
+  const badgeTextColor =
+    outcome.state === "rolled_out" ? TOKENS.malachite700 : SUMMARY_TYPOGRAPHY.body;
 
   const headerRow = figma.createFrame();
   headerRow.layoutMode = "HORIZONTAL";
@@ -1294,7 +1267,7 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   const headerText = figma.createText();
   headerText.fontName = getFontStyle("Medium");
   headerText.fontSize = TOKENS.fontSizeLabel;
-  headerText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+  headerText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.label) }];
   headerText.textAutoResize = "WIDTH_AND_HEIGHT";
   headerText.characters = "Outcome summary";
   headerRow.appendChild(headerText);
@@ -1303,7 +1276,7 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
     outcome.state === "rolled_out" ? "Decision" : outcome.state === "running" ? "Live read" : "Guidance",
     "micro",
     TOKENS.fillsSurface,
-    stateColors[outcome.state]
+    badgeTextColor
   );
   headerRow.appendChild(stateBadge);
   section.appendChild(headerRow);
@@ -1311,14 +1284,14 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   const headlineText = figma.createText();
   headlineText.fontName = getFontStyle("Bold");
   headlineText.fontSize = TOKENS.fontSizeBodyLg;
-  headlineText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  headlineText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
   setWrappedText(headlineText, outcome.headline, contentWidth);
   section.appendChild(headlineText);
 
   const outcomeDetail = figma.createText();
   outcomeDetail.fontName = getFontStyle("Regular");
   outcomeDetail.fontSize = TOKENS.fontSizeBodyMd;
-  outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
   setWrappedText(outcomeDetail, outcome.detail, contentWidth);
   section.appendChild(outcomeDetail);
 
@@ -1333,21 +1306,21 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   factsFrame.name = "Outcome Evidence";
 
   for (const fact of outcome.facts) {
-    factsFrame.appendChild(createSummaryFactRow(fact, stateColors[outcome.state], contentWidth));
+    factsFrame.appendChild(createSummaryFactRow(fact, contentWidth));
   }
   section.appendChild(factsFrame);
 
   const nextStepText = figma.createText();
   nextStepText.fontName = getFontStyle("Medium");
   nextStepText.fontSize = TOKENS.fontSizeBodySm;
-  nextStepText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  nextStepText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
   setWrappedText(nextStepText, `Next step: ${outcome.nextStep}`, contentWidth);
   section.appendChild(nextStepText);
 
   return section;
 }
 
-function createSummaryFactRow(fact: string, accentColor: string, width: number): FrameNode {
+function createSummaryFactRow(fact: string, width: number): FrameNode {
   const row = figma.createFrame();
   row.layoutMode = "HORIZONTAL";
   row.counterAxisSizingMode = "AUTO";
@@ -1360,15 +1333,15 @@ function createSummaryFactRow(fact: string, accentColor: string, width: number):
   row.minWidth = width;
 
   const dot = figma.createEllipse();
-  dot.resize(5, 5);
-  dot.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  dot.resize(SUMMARY_BULLET_PX, SUMMARY_BULLET_PX);
+  dot.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
   row.appendChild(dot);
 
   const factText = figma.createText();
   factText.fontName = getFontStyle("Regular");
   factText.fontSize = TOKENS.fontSizeBodySm;
-  factText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  setWrappedText(factText, fact, width - 11);
+  factText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
+  setWrappedText(factText, fact, width - (SUMMARY_BULLET_PX + 6));
   row.appendChild(factText);
 
   return row;

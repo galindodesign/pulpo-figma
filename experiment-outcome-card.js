@@ -9,6 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 /// <reference types="@figma/plugin-typings" />
 import { TOKENS } from "./design-tokens";
+import { getCanvasTokens, createCardShadowEffect } from "./canvas-theme";
 import { hexToRgb, getFontStyle, createBadge } from "./layout-utils";
 import { loadFonts } from "./load-fonts";
 import { EXPERIMENT_STATUS_STYLES, formatDateForDisplay, getExperimentTypeLabel, } from "./experiment-card-shared";
@@ -278,9 +279,11 @@ export function createExperimentOutcomeCard(data) {
         card.paddingLeft = card.paddingRight = 32;
         card.paddingTop = card.paddingBottom = 32;
         card.cornerRadius = 24;
-        card.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-        card.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        const canvas = getCanvasTokens();
+        card.fills = [{ type: "SOLID", color: canvas.fillsSurface }];
+        card.strokes = [{ type: "SOLID", color: canvas.border }];
         card.strokeWeight = 1;
+        card.effects = [createCardShadowEffect()];
         card.minWidth = 792;
         card.minHeight = 612;
         const sections = yield createOutcomeCardSections(data);
@@ -388,6 +391,17 @@ function createMetricsTablesSection(data) {
         section.name = "Metrics Tables";
         const flippedMetricsTable = yield createFlippedMetricsTable(data);
         section.appendChild(flippedMetricsTable);
+        const hasRolledOut = data.variants.some(v => v.isRolledOut);
+        if (hasRolledOut) {
+            const legend = figma.createText();
+            legend.fontName = getFontStyle("Regular");
+            legend.fontSize = TOKENS.fontSizeLabel;
+            legend.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+            legend.textAutoResize = "WIDTH_AND_HEIGHT";
+            legend.characters = "Highlighted cells show decision metrics for the rolled-out variant.";
+            legend.name = "Table Legend";
+            section.appendChild(legend);
+        }
         return section;
     });
 }
@@ -400,7 +414,7 @@ function createMetricsTable(data) {
         table.layoutAlign = "STRETCH"; // Stretch to parent width
         table.itemSpacing = 0;
         table.fills = [];
-        table.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        table.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
         table.strokeWeight = 1;
         table.cornerRadius = 8;
         table.name = "Metrics Table";
@@ -411,7 +425,7 @@ function createMetricsTable(data) {
         for (let i = 0; i < data.metrics.length; i++) {
             const metric = data.metrics[i];
             const isLast = i === data.metrics.length - 1;
-            const metricRow = yield createMetricRow(metric, data.variants, isLast);
+            const metricRow = yield createMetricRow(metric, data.variants, isLast, data);
             table.appendChild(metricRow);
         }
         return table;
@@ -426,7 +440,7 @@ function createFlippedMetricsTable(data) {
         table.layoutAlign = "STRETCH";
         table.itemSpacing = 0;
         table.fills = [];
-        table.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        table.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
         table.strokeWeight = 1;
         table.cornerRadius = 8;
         table.name = "Metrics Table — Variants as Rows";
@@ -437,7 +451,7 @@ function createFlippedMetricsTable(data) {
             for (let i = 0; i < data.variants.length; i++) {
                 const variant = data.variants[i];
                 const isLast = i === data.variants.length - 1;
-                const variantRow = yield createVariantMetricRow(variant, data.metrics, comparisonVariant, isLast);
+                const variantRow = yield createVariantMetricRow(variant, data.metrics, comparisonVariant, isLast, data);
                 table.appendChild(variantRow);
             }
         }
@@ -461,8 +475,8 @@ function createTableHeaderRow(data, variantCount) {
         row.counterAxisAlignItems = "CENTER";
         row.minHeight = 40;
         row.resize(row.width, 40);
-        row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-        row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        row.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
+        row.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
         row.strokeWeight = 1;
         row.strokeTopWeight = 0;
         row.strokeLeftWeight = 0;
@@ -507,8 +521,8 @@ function createFlippedTableHeaderRow(metrics) {
         row.layoutAlign = "STRETCH";
         row.counterAxisAlignItems = "MIN";
         row.minHeight = 48;
-        row.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-        row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        row.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
+        row.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
         row.strokeWeight = 1;
         row.strokeTopWeight = 0;
         row.strokeLeftWeight = 0;
@@ -702,7 +716,7 @@ function createComparisonCell(metricData, variant) {
  * Create a metric row with values for all variants
  */
 function createMetricRow(metric_1, variants_1) {
-    return __awaiter(this, arguments, void 0, function* (metric, variants, isLast = false) {
+    return __awaiter(this, arguments, void 0, function* (metric, variants, isLast = false, data) {
         const row = figma.createFrame();
         row.layoutMode = "HORIZONTAL";
         row.counterAxisSizingMode = "FIXED"; // Fixed height
@@ -713,7 +727,7 @@ function createMetricRow(metric_1, variants_1) {
         row.resize(row.width, 48);
         row.fills = [];
         if (!isLast) {
-            row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+            row.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
             row.strokeWeight = 1;
             row.strokeTopWeight = 0;
             row.strokeLeftWeight = 0;
@@ -729,21 +743,18 @@ function createMetricRow(metric_1, variants_1) {
         const goalCell = createGoalCell(metric);
         goalCell.layoutGrow = 0; // Don't grow
         row.appendChild(goalCell);
-        // Render variant value cells in the SAME order as provided.
-        // Treat an explicitly selected comparison variant as the "no-change" column,
-        // but do not invent one when the experiment did not define it.
         const comparisonVariant = variants.find(v => v.isControl === true);
         if (variants.length > 0) {
             for (const variant of variants) {
                 const metricData = variant.metrics[metricKey];
                 const isComparison = !!comparisonVariant && variant.id === comparisonVariant.id;
-                const valueCell = createMetricValueCell(metricData, isComparison, metric);
+                const highlight = data ? getCellHighlight(variant, metric, data, comparisonVariant) : 'none';
+                const valueCell = createMetricValueCell(metricData, isComparison, metric, highlight);
                 valueCell.layoutGrow = 1; // Grow to fill available space
                 row.appendChild(valueCell);
             }
         }
         else {
-            // No variants at all - still render one placeholder value cell to match header.
             const emptyValueCell = createMetricValueCell(undefined, true, metric);
             emptyValueCell.layoutGrow = 1;
             row.appendChild(emptyValueCell);
@@ -752,7 +763,7 @@ function createMetricRow(metric_1, variants_1) {
     });
 }
 function createVariantMetricRow(variant_1, metrics_1, comparisonVariant_1) {
-    return __awaiter(this, arguments, void 0, function* (variant, metrics, comparisonVariant, isLast = false) {
+    return __awaiter(this, arguments, void 0, function* (variant, metrics, comparisonVariant, isLast = false, data) {
         const row = figma.createFrame();
         row.layoutMode = "HORIZONTAL";
         row.counterAxisSizingMode = "FIXED";
@@ -763,7 +774,7 @@ function createVariantMetricRow(variant_1, metrics_1, comparisonVariant_1) {
         row.resize(row.width, 48);
         row.fills = [];
         if (!isLast) {
-            row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+            row.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
             row.strokeWeight = 1;
             row.strokeTopWeight = 0;
             row.strokeLeftWeight = 0;
@@ -778,7 +789,8 @@ function createVariantMetricRow(variant_1, metrics_1, comparisonVariant_1) {
                 const metricKey = getMetricKey(metric);
                 const metricData = variant.metrics[metricKey];
                 const isComparison = !!comparisonVariant && variant.id === comparisonVariant.id;
-                const valueCell = createMetricValueCell(metricData, isComparison, metric);
+                const highlight = data ? getCellHighlight(variant, metric, data, comparisonVariant) : 'none';
+                const valueCell = createMetricValueCell(metricData, isComparison, metric, highlight);
                 valueCell.layoutGrow = 1;
                 row.appendChild(valueCell);
             }
@@ -917,9 +929,61 @@ function createMetricNameCell(metric) {
     return cell;
 }
 /**
- * Create a metric value cell with uplift indicator
+ * Decide whether a metric value cell on the rolled-out (or leading) variant
+ * row should be highlighted, and if so whether positively or negatively.
+ *
+ * Returns 'positive' (green), 'negative' (red), or 'none' (no fill).
  */
-function createMetricValueCell(metricData, isComparisonVariant = false, metric) {
+function getCellHighlight(variant, metric, data, comparisonVariant) {
+    var _a;
+    const rolledOutVariant = data.variants.find(v => v.isRolledOut);
+    const primaryMetric = getPrimaryDecisionMetric(data);
+    const isRolledOutRow = !!rolledOutVariant && variant.id === rolledOutVariant.id;
+    const isLeadingRow = !rolledOutVariant
+        && (data.status === 'completed' || data.status === 'rolled_out')
+        && !!primaryMetric
+        && ((_a = getLeadingVariant(data, primaryMetric)) === null || _a === void 0 ? void 0 : _a.id) === variant.id;
+    if (!isRolledOutRow && !isLeadingRow)
+        return 'none';
+    // For the leading (pre-rollout) row, only highlight the primary metric column.
+    if (isLeadingRow && primaryMetric && getMetricKey(metric) !== getMetricKey(primaryMetric)) {
+        return 'none';
+    }
+    const metricKey = getMetricKey(metric);
+    const metricData = variant.metrics[metricKey];
+    if (!metricData || metricData.value === undefined)
+        return 'none';
+    // When a comparison variant exists, judge by direction-aware change.
+    if (comparisonVariant && variant.id !== comparisonVariant.id && metricData.uplift !== undefined) {
+        const directionIsDecrease = metric.direction === 'decrease';
+        const changeIsGood = directionIsDecrease
+            ? metricData.uplift <= 0
+            : metricData.uplift >= 0;
+        return changeIsGood ? 'positive' : 'negative';
+    }
+    // Fallback: use goal threshold when no control uplift is available.
+    const goalPerformance = getGoalPerformance(metric, metricData.value);
+    if (goalPerformance !== undefined) {
+        return goalPerformance ? 'positive' : 'negative';
+    }
+    // Primary metric on rolled-out row with no other signal: mild positive.
+    if (isRolledOutRow && primaryMetric && getMetricKey(metric) === getMetricKey(primaryMetric)) {
+        return 'positive';
+    }
+    return 'none';
+}
+/**
+ * Cell highlight contract (rollout-only):
+ * - Green fill: rolled-out variant on metrics where performance supports the
+ *   rollout decision (primary metric, or guardrails beating control in the
+ *   metric's intended direction). Also the leading variant's primary-metric
+ *   cell for completed-but-not-yet-rolled-out experiments.
+ * - Red fill: rolled-out variant on guardrail metrics that regressed vs
+ *   control or missed a decrease goal — trade-off visibility.
+ * - No fill: all other variants (including control), and any cell where data
+ *   is missing or the metric direction is neutral.
+ */
+function createMetricValueCell(metricData, isComparisonVariant = false, metric, highlight = 'none') {
     const cell = figma.createFrame();
     cell.layoutMode = "VERTICAL";
     cell.counterAxisSizingMode = "FIXED"; // Fixed height
@@ -931,21 +995,18 @@ function createMetricValueCell(metricData, isComparisonVariant = false, metric) 
     cell.primaryAxisAlignItems = "CENTER";
     cell.itemSpacing = 2;
     cell.paddingLeft = cell.paddingRight = 8;
-    const value = metricData === null || metricData === void 0 ? void 0 : metricData.value;
-    const goalPerformance = getGoalPerformance(metric, value);
-    // Add light background color based on metric goal performance or available change.
-    if (!isComparisonVariant && (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined) {
-        const isPositive = metricData.uplift >= 0;
-        cell.fills = [{ type: "SOLID", color: hexToRgb(isPositive ? TOKENS.malachite50 : TOKENS.coralRed50) }];
+    if (highlight === 'positive') {
+        cell.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.malachite50) }];
     }
-    else if (goalPerformance !== undefined) {
-        cell.fills = [{ type: "SOLID", color: hexToRgb(goalPerformance ? TOKENS.malachite50 : TOKENS.coralRed50) }];
+    else if (highlight === 'negative') {
+        cell.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.coralRed50) }];
     }
     else {
         cell.fills = [];
     }
     cell.name = "Value Cell";
     // Main value
+    const value = metricData === null || metricData === void 0 ? void 0 : metricData.value;
     const valueText = figma.createText();
     valueText.fontName = getFontStyle("Medium");
     valueText.fontSize = TOKENS.fontSizeBodyMd;
@@ -965,13 +1026,10 @@ function createMetricValueCell(metricData, isComparisonVariant = false, metric) 
         upliftRow.counterAxisAlignItems = "CENTER";
         upliftRow.fills = [];
         upliftRow.name = "Uplift Row";
-        // Uplift value with color based on direction
-        const uplift = showVariantDelta ? metricData.uplift : 0;
-        let upliftColor = TOKENS.textTertiary;
-        if (showVariantDelta) {
-            const isPositive = uplift >= 0;
-            upliftColor = isPositive ? TOKENS.malachite600 : TOKENS.coralRed500;
-        }
+        const uplift = metricData.uplift;
+        const directionIsDecrease = (metric === null || metric === void 0 ? void 0 : metric.direction) === 'decrease';
+        const changeIsGood = directionIsDecrease ? uplift <= 0 : uplift >= 0;
+        const upliftColor = changeIsGood ? TOKENS.malachite600 : TOKENS.coralRed500;
         const upliftText = figma.createText();
         upliftText.fontName = getFontStyle("Medium");
         upliftText.fontSize = TOKENS.fontSizeLabel;
@@ -1021,8 +1079,8 @@ function createSummarySection(data) {
         section.paddingTop = section.paddingBottom = 16;
         section.paddingLeft = section.paddingRight = OUTCOME_SUMMARY_HORIZONTAL_PADDING;
         section.cornerRadius = 12;
-        section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.azure50) }];
-        section.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.azure100) }];
+        section.fills = [{ type: "SOLID", color: getCanvasTokens().sectionTint }];
+        section.strokes = [{ type: "SOLID", color: getCanvasTokens().sectionTintBorder }];
         section.strokeWeight = 1;
         section.name = "Outcome Summary Section";
         section.layoutAlign = "STRETCH";
@@ -1101,12 +1159,12 @@ function createSummaryFactRow(fact, accentColor, width) {
     row.minWidth = width;
     const dot = figma.createEllipse();
     dot.resize(5, 5);
-    dot.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    dot.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
     row.appendChild(dot);
     const factText = figma.createText();
     factText.fontName = getFontStyle("Regular");
     factText.fontSize = TOKENS.fontSizeBodySm;
-    factText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+    factText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
     setWrappedText(factText, fact, width - 11);
     row.appendChild(factText);
     return row;

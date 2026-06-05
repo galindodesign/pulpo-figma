@@ -1,5 +1,6 @@
 /// <reference types="@figma/plugin-typings" />
 import { TOKENS } from "./design-tokens";
+import { applyCardShell, applySectionPanel, getCanvasTokens } from "./canvas-theme";
 import { hexToRgb, createBadge, getFontStyle } from "./layout-utils";
 import { loadFonts, getLoadedFigtreeSemibold } from "./load-fonts";
 import {
@@ -8,6 +9,7 @@ import {
 } from "./experiment-outcome-card";
 import {
   EXPERIMENT_STATUS_STYLES,
+  SUMMARY_TYPOGRAPHY,
   formatDateForDisplay,
   getExperimentTypeLabel,
   type ExperimentStatus,
@@ -369,10 +371,7 @@ export async function createExperimentInfoCard(
   card.paddingLeft = card.paddingRight = 32;
   card.paddingTop = card.paddingBottom = 32;
   card.cornerRadius = 24;
-  card.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  card.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  card.strokeWeight = 1;
-  card.effects = [];
+  applyCardShell(card);
   card.minWidth = 792;
   card.minHeight = 612;
 
@@ -845,7 +844,7 @@ function createDivider(): FrameNode {
   divider.primaryAxisSizingMode = "AUTO";
   divider.layoutAlign = 'STRETCH';
   divider.resize(100, 1);
-  divider.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+  divider.fills = [{ type: "SOLID", color: getCanvasTokens().border }];
   divider.opacity = 0.5;
   divider.name = "Divider";
   return divider;
@@ -899,8 +898,7 @@ async function appendTargetingSection(
   detailsContainer.paddingLeft = detailsContainer.paddingRight = 16;
   detailsContainer.paddingTop = detailsContainer.paddingBottom = 16;
   detailsContainer.cornerRadius = 8;
-  detailsContainer.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  detailsContainer.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+  applySectionPanel(detailsContainer);
   detailsContainer.name = "Targeting Container";
   section.appendChild(detailsContainer);
 
@@ -973,10 +971,9 @@ async function appendDetailsSection(
   
   // Section title label
   const titleLabel = figma.createText();
-  titleLabel.fontName = { family: "Figtree", style: "Bold" };
+  titleLabel.fontName = { family: "Figtree", style: "Medium" };
   titleLabel.fontSize = TOKENS.fontSizeLabel;
-  titleLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  titleLabel.opacity = 1;
+  titleLabel.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.label) }];
   titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
   titleLabel.characters = title;
   section.appendChild(titleLabel);
@@ -991,9 +988,7 @@ async function appendDetailsSection(
   detailsContainer.paddingLeft = detailsContainer.paddingRight = 16;
   detailsContainer.paddingTop = detailsContainer.paddingBottom = 16;
   detailsContainer.cornerRadius = 8;
-  detailsContainer.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  detailsContainer.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-  detailsContainer.opacity = 0.85;
+  applySectionPanel(detailsContainer);
   detailsContainer.name = "Details Container";
   section.appendChild(detailsContainer);
 
@@ -1026,8 +1021,7 @@ async function appendDetailsSection(
     const labelNode = figma.createText();
     labelNode.fontName = { family: "Figtree", style: "Regular" };
     labelNode.fontSize = TOKENS.fontSizeLabel;
-    labelNode.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-    labelNode.opacity = 0.5;
+    labelNode.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.label) }];
     labelNode.textAutoResize = "WIDTH_AND_HEIGHT";
     labelNode.characters = label;
     row.appendChild(labelNode);
@@ -1043,7 +1037,7 @@ async function appendDetailsSection(
     const valueNode = figma.createText();
     valueNode.fontName = { family: "Figtree", style: "Medium" };
     valueNode.fontSize = TOKENS.fontSizeBodySm;
-    valueNode.fills = [{ type: "SOLID", color: hexToRgb(valueColor || TOKENS.textPrimary) }];
+    valueNode.fills = [{ type: "SOLID", color: hexToRgb(valueColor || SUMMARY_TYPOGRAPHY.body) }];
     // Ensure long content wraps and grows in height for key detail fields
     const shouldWrapValue =
       label === 'Description' ||
@@ -1142,16 +1136,14 @@ async function createStoryHypothesis(hypothesis: string): Promise<FrameNode> {
   section.paddingTop = section.paddingBottom = 16;
   section.paddingLeft = section.paddingRight = 16;
   section.cornerRadius = 8;
-  section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.azure50) }];
-  section.strokes = [];
+  applySectionPanel(section);
   section.name = "Hypothesis Section";
 
   // Label with question framing
   const labelText = figma.createText();
   labelText.fontName = { family: "Figtree", style: "Medium" };
   labelText.fontSize = TOKENS.fontSizeLabel;
-  labelText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-  labelText.opacity = 0.5;
+  labelText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.label) }];
   labelText.textAutoResize = "WIDTH_AND_HEIGHT";
   labelText.characters = "Hypothesis";
   section.appendChild(labelText);
@@ -1160,7 +1152,7 @@ async function createStoryHypothesis(hypothesis: string): Promise<FrameNode> {
   const hypothesisText = figma.createText();
   hypothesisText.fontName = { family: "Figtree", style: "Regular" };
   hypothesisText.fontSize = TOKENS.fontSizeBodyMd;
-  hypothesisText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+  hypothesisText.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
   hypothesisText.textAutoResize = "WIDTH_AND_HEIGHT";
   hypothesisText.characters = `"${hypothesis}"`;
   section.appendChild(hypothesisText);
@@ -1648,8 +1640,8 @@ function createLinkChip(label: string, url?: string): FrameNode {
   chip.paddingLeft = chip.paddingRight = 8;
   chip.paddingTop = chip.paddingBottom = 8;
   chip.cornerRadius = 4;
-  chip.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-  chip.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+  chip.fills = [{ type: "SOLID", color: getCanvasTokens().sectionTint }];
+  chip.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
   chip.strokeWeight = 1;
   chip.name = "Link Chip";
   

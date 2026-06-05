@@ -3,6 +3,7 @@
 // ===== Imports =====
 import { createExperimentInfoCard } from './experiment-info-card';
 import { TOKENS } from './design-tokens';
+import { initCanvasTheme, getCanvasTokens, createCardShadowEffect } from './canvas-theme';
 import { hexToRgb, getFontStyle } from './layout-utils';
 import {
   createEventCard,
@@ -194,9 +195,6 @@ const CACHED_COLORS = {
   electricViolet600: hexToRgb(TOKENS.electricViolet600),
   textPrimary: hexToRgb(TOKENS.textPrimary),
   textSecondary: hexToRgb(TOKENS.textSecondary),
-  fillsSurface: hexToRgb(TOKENS.fillsSurface),
-  border: hexToRgb(TOKENS.border),
-  azure50: hexToRgb(TOKENS.azure50),
 };
 
 // ===== Type Guards & Safe Type Utilities =====
@@ -2158,6 +2156,8 @@ function getConnectorStyle(
     rolledout?: boolean;  // NEW
   }
 ): ConnectorStyleConfig {
+  const canvas = getCanvasTokens();
+
   // Prioritize rollout over winner for visual distinction
   if (options?.rolledout) {
     switch (type) {
@@ -2166,14 +2166,14 @@ function getConnectorStyle(
       case 'MERGE_LINE':
         return {
           strokeWeight: 3,  // Medium thickness (between normal and winner)
-          color: hexToRgb(TOKENS.electricViolet600), // Purple for rollout
+          color: canvas.connectorRollout,
           dashPattern: undefined, // Solid line for winner
           arrowhead: true,
         };
       default:
         return {
           strokeWeight: 3,
-          color: hexToRgb(TOKENS.electricViolet600),
+          color: canvas.connectorRollout,
           dashPattern: undefined, // Solid line for winner
           arrowhead: true,
         };
@@ -2186,28 +2186,28 @@ function getConnectorStyle(
       case 'PRIMARY_FLOW_LINE':
         return {
           strokeWeight: 3,  // Thicker for winner
-          color: hexToRgb(TOKENS.malachite600), // Green for winner
+          color: canvas.connectorWinner,
           dashPattern: undefined, // Solid line for winner
           arrowhead: true,
         };
       case 'BRANCH_LINE':
         return {
           strokeWeight: 3,
-          color: hexToRgb(TOKENS.malachite600),
+          color: canvas.connectorWinner,
           dashPattern: undefined,
           arrowhead: true,
         };
       case 'MERGE_LINE':
         return {
           strokeWeight: 3,
-          color: hexToRgb(TOKENS.malachite600),
+          color: canvas.connectorWinner,
           dashPattern: undefined,
           arrowhead: true,
         };
       default:
         return {
           strokeWeight: 4,
-          color: hexToRgb(TOKENS.malachite600),
+          color: canvas.connectorWinner,
           dashPattern: undefined,
           arrowhead: true,
         };
@@ -2219,21 +2219,21 @@ function getConnectorStyle(
     case 'PRIMARY_FLOW_LINE':
       return {
         strokeWeight: 3,
-        color: hexToRgb(TOKENS.accentPrimary),
+        color: canvas.connectorPrimary,
         dashPattern: undefined, // Solid line
         arrowhead: true,
       };
     case 'BRANCH_LINE':
       return {
         strokeWeight: 3,
-        color: hexToRgb(TOKENS.accentBrand),
+        color: canvas.connectorBrand,
         dashPattern: undefined, // Solid line
         arrowhead: true,
       };
     case 'MERGE_LINE':
       return {
         strokeWeight: 3,
-        color: hexToRgb(TOKENS.accentBrand),
+        color: canvas.connectorBrand,
         dashPattern: undefined, // Solid line
         arrowhead: true,
       };
@@ -2618,9 +2618,11 @@ if (figma.editorType === 'figma') {
     card.paddingLeft = card.paddingRight = TOKENS.space16;
     card.paddingTop = card.paddingBottom = TOKENS.space16;
     card.cornerRadius = TOKENS.radiusLG;
-    card.fills = [{ type: 'SOLID', color: CACHED_COLORS.fillsSurface }];
-    card.strokes = [{ type: 'SOLID', color: CACHED_COLORS.border }];
+    const canvas = getCanvasTokens();
+    card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
+    card.strokes = [{ type: 'SOLID', color: canvas.border }];
     card.strokeWeight = 1;
+    card.effects = [createCardShadowEffect()];
     card.name = title ? `Node: ${title}` : 'Node';
     card.itemSpacing = TOKENS.space8;
 
@@ -2667,8 +2669,8 @@ if (figma.editorType === 'figma') {
       noteContainer.paddingLeft = noteContainer.paddingRight = TOKENS.space12;
       noteContainer.paddingTop = noteContainer.paddingBottom = TOKENS.space8;
       noteContainer.cornerRadius = TOKENS.radiusSM;
-      noteContainer.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.azure50) }];
-      noteContainer.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+      noteContainer.fills = [{ type: 'SOLID', color: canvas.sectionTint }];
+      noteContainer.strokes = [{ type: 'SOLID', color: canvas.border }];
       noteContainer.strokeWeight = 1;
       noteContainer.name = 'Note Container';
       // Set a reasonable fixed width for note container (will be constrained by card)
@@ -2923,6 +2925,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     // ========================================================================
 
     await loadFonts();
+    initCanvasTheme(figma.currentPage);
 
     // --- PRE-STAGE: VALIDATE FLOW DATA ---
     // Validate that experiment and flow have all required fields before attempting to render

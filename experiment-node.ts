@@ -2,6 +2,7 @@
 // Modularized node creation functions for Figma plugin
 
 import { TOKENS } from './design-tokens';
+import { getCanvasTokens, createCardShadowEffect } from './canvas-theme';
 import { hexToRgb, getFontStyle, createBadge } from './layout-utils';
 import type { MetricDefinition, Variant } from './types';
 
@@ -455,18 +456,11 @@ export async function createEventCard(
   card.paddingTop = 16; // 1rem
   card.paddingBottom = 16; // 0.75rem
   card.cornerRadius = 16; // 1rem
-  card.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.fillsSurface) }];
-  card.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+  const canvas = getCanvasTokens();
+  card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
+  card.strokes = [{ type: 'SOLID', color: canvas.border }];
   card.strokeWeight = 1;
-  card.effects = [{
-    type: 'DROP_SHADOW',
-    color: { r: 0, g: 0, b: 0, a: 0.05 },
-    offset: { x: 0, y: 1 },
-    radius: 2,
-    spread: 0,
-    visible: true,
-    blendMode: 'NORMAL',
-  }];
+  card.effects = [createCardShadowEffect()];
   card.itemSpacing = 8; // 1rem gap
   card.primaryAxisAlignItems = 'MIN';
   card.counterAxisAlignItems = 'MIN';
@@ -610,24 +604,17 @@ export async function createVariantCard(
   card.paddingTop = 16; // 1rem
   card.paddingBottom = 16; // 0.75rem
   card.cornerRadius = 16; // 1rem
-  card.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.fillsSurface) }];
+  const canvas = getCanvasTokens();
+  card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
   // Use green border (2px) if this variant was rolled out - indicates success/shipped
   if (options?.rolledout) {
     card.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.electricViolet500) }];
     card.strokeWeight = 2;
   } else {
-    card.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+    card.strokes = [{ type: 'SOLID', color: canvas.border }];
     card.strokeWeight = 1;
   }
-  card.effects = [{
-    type: 'DROP_SHADOW',
-    color: { r: 0, g: 0, b: 0, a: 0.05 },
-    offset: { x: 0, y: 1 },
-    radius: 2,
-    spread: 0,
-    visible: true,
-    blendMode: 'NORMAL',
-  }];
+  card.effects = [createCardShadowEffect()];
   card.itemSpacing = 8; // 1rem gap
   card.primaryAxisAlignItems = 'MIN';
   card.counterAxisAlignItems = 'MIN';
@@ -749,7 +736,7 @@ export async function createVariantCard(
   linkGoalsSeparator.name = 'Variant Link Goals Separator';
   linkGoalsSeparator.resize(268, 1);
   linkGoalsSeparator.layoutAlign = 'STRETCH';
-  linkGoalsSeparator.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+  linkGoalsSeparator.fills = [{ type: 'SOLID', color: getCanvasTokens().border }];
   linkGoalsSeparator.strokes = [];
   card.appendChild(linkGoalsSeparator);
 
@@ -913,7 +900,7 @@ export function createMetricChip(label: string, value: number): FrameNode {
   chip.paddingTop = chip.paddingBottom = TOKENS.space4 / 2;
   chip.cornerRadius = TOKENS.radiusSM;
   chip.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.fillsBackground) }];
-  chip.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+  chip.strokes = [{ type: 'SOLID', color: getCanvasTokens().border }];
   chip.strokeWeight = 1;
   chip.name = 'Metric Chip';
   const txt = figma.createText();

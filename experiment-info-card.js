@@ -9,7 +9,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 /// <reference types="@figma/plugin-typings" />
 import { TOKENS } from "./design-tokens";
-import { hexToRgb, createBadge, getFontStyle } from "./layout-utils";
+import { getCanvasTokens, createCardShadowEffect } from "./canvas-theme";
+import { hexToRgb } from "./layout-utils";
 import { loadFonts, getLoadedFigtreeSemibold } from "./load-fonts";
 import { createOutcomeCardSections, mapExperimentDataToOutcomeData, } from "./experiment-outcome-card";
 import { EXPERIMENT_STATUS_STYLES, formatDateForDisplay, getExperimentTypeLabel, } from "./experiment-card-shared";
@@ -279,7 +280,6 @@ function createBrandIconVector(brand, size = 14) {
  */
 export function createExperimentInfoCard(experimentName_1) {
     return __awaiter(this, arguments, void 0, function* (experimentName, description = "", figmaLink = "", jiraLink = "", miroLink = "", notionLink = "", amplitudeLink = "", asanaLink = "", LinearLink = "", SlackLink = "", GithubLink = "", ConfluenceLink = "", TrelloLink = "", MondayLink = "", ClickupLink = "", genericLinks = [], metrics, status = 'running', options) {
-        var _a;
         // Ensure all fonts are loaded before creating any text nodes
         yield loadFonts();
         // Container
@@ -292,10 +292,11 @@ export function createExperimentInfoCard(experimentName_1) {
         card.paddingLeft = card.paddingRight = 32;
         card.paddingTop = card.paddingBottom = 32;
         card.cornerRadius = 24;
-        card.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-        card.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        const canvas = getCanvasTokens();
+        card.fills = [{ type: "SOLID", color: canvas.fillsSurface }];
+        card.strokes = [{ type: "SOLID", color: canvas.border }];
         card.strokeWeight = 1;
-        card.effects = [];
+        card.effects = [createCardShadowEffect()];
         card.minWidth = 792;
         card.minHeight = 612;
         const CONTENT_MIN_WIDTH = 728;
@@ -468,41 +469,16 @@ export function createExperimentInfoCard(experimentName_1) {
                 metricsSection.appendChild(metricsLabel);
                 metricsSection.appendChild(outcomeSections.metricsTable);
                 contentStack.appendChild(metricsSection);
-                // Optional variants block in single-column mode: only show when variants include descriptive context
-                const variantsWithDescriptions = ((_a = options === null || options === void 0 ? void 0 : options.variants) === null || _a === void 0 ? void 0 : _a.filter(v => !!v.description && v.description.trim().length > 0)) || [];
-                if (variantsWithDescriptions.length > 0) {
-                    yield appendVariantsSection(contentStack, options.variants);
-                }
             }
             catch (e) {
                 console.error('Error creating inline outcome sections:', e);
             }
         }
-        else {
-            // No outcome block available: still keep key metrics central and full-width.
-            // === METRICS SECTION ===
-            if (metrics && metrics.length > 0) {
-                try {
-                    yield appendMetricsSection(contentStack, metrics);
-                }
-                catch (e) {
-                    console.error('Error creating metrics section:', e);
-                }
-            }
-            // === VARIANTS SECTION ===
-            if ((options === null || options === void 0 ? void 0 : options.variants) && options.variants.length > 0) {
-                try {
-                    yield appendVariantsSection(contentStack, options.variants);
-                }
-                catch (e) {
-                    console.error('Error creating variants section:', e);
-                }
-            }
-        }
         // Move links section from metadata context to final supporting context.
         linksSection.layoutAlign = "STRETCH";
         contentStack.appendChild(linksSection);
-        const contentTargetWidth = Math.min(CONTENT_MAX_WIDTH, Math.max(CONTENT_MIN_WIDTH, contentStack.width));
+        const measuredContentWidth = contentStack.width > 0 ? contentStack.width : CONTENT_MIN_WIDTH;
+        const contentTargetWidth = Math.min(CONTENT_MAX_WIDTH, Math.max(CONTENT_MIN_WIDTH, measuredContentWidth));
         contentStack.minWidth = contentTargetWidth;
         contentStack.maxWidth = contentTargetWidth;
         const cardContentWidth = contentTargetWidth + card.paddingLeft + card.paddingRight;
@@ -678,7 +654,7 @@ function createDivider() {
     divider.primaryAxisSizingMode = "AUTO";
     divider.layoutAlign = 'STRETCH';
     divider.resize(100, 1);
-    divider.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+    divider.fills = [{ type: "SOLID", color: getCanvasTokens().border }];
     divider.opacity = 0.5;
     divider.name = "Divider";
     return divider;
@@ -724,8 +700,8 @@ function appendTargetingSection(parent, audience, sampleSize, layout) {
         detailsContainer.paddingLeft = detailsContainer.paddingRight = 16;
         detailsContainer.paddingTop = detailsContainer.paddingBottom = 16;
         detailsContainer.cornerRadius = 8;
-        detailsContainer.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-        detailsContainer.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        detailsContainer.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
+        detailsContainer.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
         detailsContainer.name = "Targeting Container";
         section.appendChild(detailsContainer);
         // Force a deterministic width so children (and text wrapping) don't collapse to ~100px.
@@ -759,174 +735,6 @@ function appendTargetingSection(parent, audience, sampleSize, layout) {
         const gap = twoColumnRow.itemSpacing || 0;
         const colWidth = rowWidth > 0 ? Math.max(0, Math.floor((rowWidth - gap) / 2)) : 0;
         // ...other targeting fields can be added here
-        parent.appendChild(section);
-    });
-}
-/**
- * Create Metrics section with table format (Name | Goal)
- */
-function appendMetricsSection(parent, metrics) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const section = figma.createFrame();
-        section.layoutMode = "VERTICAL";
-        // ...existing code for metrics table...
-    });
-}
-/**
- * Create Variants section with table format (Name | Figma link)
- */
-function appendVariantsSection(parent, variants) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const section = figma.createFrame();
-        section.layoutMode = "VERTICAL";
-        section.counterAxisSizingMode = "AUTO";
-        section.primaryAxisSizingMode = "AUTO";
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 8;
-        section.fills = [];
-        section.visible = false;
-        section.name = "OLD Section: Goals and Variants";
-        // Section title
-        const titleLabel = figma.createText();
-        titleLabel.fontName = { family: "Figtree", style: "Bold" };
-        titleLabel.fontSize = TOKENS.fontSizeLabel;
-        titleLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        titleLabel.opacity = 1;
-        titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-        titleLabel.characters = "Goals and Variants";
-        section.appendChild(titleLabel);
-        // Table container
-        const tableContainer = figma.createFrame();
-        tableContainer.layoutMode = "VERTICAL";
-        tableContainer.counterAxisSizingMode = "AUTO";
-        tableContainer.primaryAxisSizingMode = "AUTO";
-        tableContainer.layoutAlign = 'STRETCH';
-        tableContainer.itemSpacing = 0;
-        tableContainer.cornerRadius = 8;
-        tableContainer.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-        tableContainer.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-        tableContainer.strokeWeight = 1;
-        tableContainer.name = "Variants Table";
-        // Table header row
-        const headerRow = figma.createFrame();
-        headerRow.layoutMode = "HORIZONTAL";
-        headerRow.counterAxisSizingMode = "FIXED";
-        headerRow.primaryAxisSizingMode = "FIXED";
-        headerRow.resize(100, 32);
-        headerRow.minHeight = 32;
-        headerRow.layoutAlign = 'STRETCH';
-        headerRow.counterAxisAlignItems = "CENTER";
-        headerRow.paddingLeft = headerRow.paddingRight = 16;
-        headerRow.paddingTop = headerRow.paddingBottom = 8;
-        headerRow.fills = [];
-        headerRow.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-        headerRow.strokeWeight = 1;
-        headerRow.strokeTopWeight = 0;
-        headerRow.strokeLeftWeight = 0;
-        headerRow.strokeRightWeight = 0;
-        headerRow.name = "Header Row";
-        // Name header
-        const nameHeader = figma.createText();
-        nameHeader.fontName = { family: "Figtree", style: "Medium" };
-        nameHeader.fontSize = TOKENS.fontSizeBodySm;
-        nameHeader.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-        nameHeader.textAutoResize = "WIDTH_AND_HEIGHT";
-        nameHeader.characters = "Name";
-        nameHeader.layoutGrow = 1;
-        headerRow.appendChild(nameHeader);
-        // Figma Link header
-        const linkHeader = figma.createText();
-        linkHeader.fontName = { family: "Figtree", style: "Medium" };
-        linkHeader.fontSize = TOKENS.fontSizeBodySm;
-        linkHeader.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-        linkHeader.textAutoResize = "WIDTH_AND_HEIGHT";
-        linkHeader.characters = "Figma Link";
-        linkHeader.layoutGrow = 1;
-        headerRow.appendChild(linkHeader);
-        tableContainer.appendChild(headerRow);
-        // Variant rows
-        for (let i = 0; i < variants.length; i++) {
-            const variant = variants[i];
-            const isLast = i === variants.length - 1;
-            const row = figma.createFrame();
-            row.layoutMode = "HORIZONTAL";
-            row.counterAxisSizingMode = "AUTO";
-            row.primaryAxisSizingMode = "FIXED";
-            row.resize(100, 48);
-            row.minHeight = 48;
-            row.layoutAlign = 'STRETCH';
-            row.counterAxisAlignItems = "CENTER";
-            row.paddingLeft = row.paddingRight = 16;
-            row.paddingTop = row.paddingBottom = 8;
-            row.fills = [];
-            if (!isLast) {
-                row.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
-                row.strokeWeight = 1;
-                row.strokeTopWeight = 0;
-                row.strokeLeftWeight = 0;
-                row.strokeRightWeight = 0;
-            }
-            row.name = `Row: ${variant.name}`;
-            // Name cell with color dot
-            const nameCell = figma.createFrame();
-            nameCell.layoutMode = "HORIZONTAL";
-            nameCell.counterAxisSizingMode = "AUTO";
-            nameCell.primaryAxisSizingMode = "AUTO";
-            nameCell.itemSpacing = 8;
-            nameCell.counterAxisAlignItems = "CENTER";
-            nameCell.layoutGrow = 1;
-            nameCell.fills = [];
-            // Color dot
-            const colorDot = figma.createEllipse();
-            colorDot.resize(8, 8);
-            const variantColor = variant.color || TOKENS.royalBlue600;
-            colorDot.fills = [{ type: "SOLID", color: hexToRgb(variantColor) }];
-            nameCell.appendChild(colorDot);
-            // Variant name
-            const nameText = figma.createText();
-            nameText.fontName = { family: "Figtree", style: "Regular" };
-            nameText.fontSize = TOKENS.fontSizeBodySm;
-            nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-            nameText.textAutoResize = "WIDTH_AND_HEIGHT";
-            nameText.characters = variant.name || `Variant ${variant.key}`;
-            nameCell.appendChild(nameText);
-            if (variant.isRolledOut) {
-                const rolledOutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
-                nameCell.appendChild(rolledOutBadge);
-            }
-            row.appendChild(nameCell);
-            // Figma link cell
-            const linkCell = figma.createFrame();
-            linkCell.layoutMode = "HORIZONTAL";
-            linkCell.counterAxisSizingMode = "AUTO";
-            linkCell.primaryAxisSizingMode = "AUTO";
-            linkCell.layoutGrow = 1;
-            linkCell.fills = [];
-            if (variant.figmaLink) {
-                const figmaLinkText = figma.createText();
-                figmaLinkText.fontName = getFontStyle("Medium");
-                figmaLinkText.fontSize = TOKENS.fontSizeBodySm;
-                figmaLinkText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.royalBlue600) }];
-                figmaLinkText.textAutoResize = "WIDTH_AND_HEIGHT";
-                figmaLinkText.characters = "Open in Figma";
-                figmaLinkText.hyperlink = { type: "URL", value: variant.figmaLink.trim() };
-                linkCell.appendChild(figmaLinkText);
-            }
-            else {
-                const placeholder = figma.createText();
-                placeholder.fontName = { family: "Figtree", style: "Regular" };
-                placeholder.fontSize = TOKENS.fontSizeBodySm;
-                placeholder.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
-                placeholder.textAutoResize = "WIDTH_AND_HEIGHT";
-                placeholder.characters = "—";
-                linkCell.appendChild(placeholder);
-            }
-            row.appendChild(linkCell);
-            tableContainer.appendChild(row);
-        }
-        section.appendChild(tableContainer);
         parent.appendChild(section);
     });
 }
@@ -971,8 +779,8 @@ function appendDetailsSection(parent, title, rowsData) {
         detailsContainer.paddingLeft = detailsContainer.paddingRight = 16;
         detailsContainer.paddingTop = detailsContainer.paddingBottom = 16;
         detailsContainer.cornerRadius = 8;
-        detailsContainer.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-        detailsContainer.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+        detailsContainer.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
+        detailsContainer.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
         detailsContainer.opacity = 0.85;
         detailsContainer.name = "Details Container";
         section.appendChild(detailsContainer);
@@ -1113,7 +921,7 @@ function createStoryHypothesis(hypothesis) {
         section.paddingTop = section.paddingBottom = 16;
         section.paddingLeft = section.paddingRight = 16;
         section.cornerRadius = 8;
-        section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.azure50) }];
+        section.fills = [{ type: "SOLID", color: getCanvasTokens().sectionTint }];
         section.strokes = [];
         section.name = "Hypothesis Section";
         // Label with question framing
@@ -1586,8 +1394,8 @@ function createLinkChip(label, url) {
     chip.paddingLeft = chip.paddingRight = 8;
     chip.paddingTop = chip.paddingBottom = 8;
     chip.cornerRadius = 4;
-    chip.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsSurface) }];
-    chip.strokes = [{ type: "SOLID", color: hexToRgb(TOKENS.border) }];
+    chip.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
+    chip.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
     chip.strokeWeight = 1;
     chip.name = "Link Chip";
     // Brand icon (vector) - larger size for this layout

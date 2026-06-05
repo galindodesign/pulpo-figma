@@ -11,8 +11,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 // ===== Imports =====
 import { createExperimentInfoCard } from './experiment-info-card';
 import { TOKENS } from './design-tokens';
+import { initCanvasTheme, getCanvasTokens, createCardShadowEffect } from './canvas-theme';
 import { hexToRgb } from './layout-utils';
-import { createEventCard, createVariantCard } from './experiment-node';
+import { createEventCard, createVariantCard, VARIANT_CARD_LAYOUT_WIDTH, isUnsupportedImageThumbnailSource, isExperimentFlowCardNode, isSupportedThumbnailLinkTarget, THUMBNAIL_CROSS_FILE_TITLE, THUMBNAIL_CROSS_FILE_HELPER, THUMBNAIL_DEFAULT_HELPER, THUMBNAIL_MESSAGES, THUMBNAIL_VALIDATION_MSG, } from './experiment-node';
 import { FEEDBACK_EMAIL } from './plugin-constants';
 // ===== Error Handling System =====
 /**
@@ -146,9 +147,6 @@ const CACHED_COLORS = {
     electricViolet600: hexToRgb(TOKENS.electricViolet600),
     textPrimary: hexToRgb(TOKENS.textPrimary),
     textSecondary: hexToRgb(TOKENS.textSecondary),
-    fillsSurface: hexToRgb(TOKENS.fillsSurface),
-    border: hexToRgb(TOKENS.border),
-    azure50: hexToRgb(TOKENS.azure50),
 };
 // ===== Type Guards & Safe Type Utilities =====
 /**
@@ -475,6 +473,17 @@ function getNodeExtra(node) {
     catch (_a) {
         return undefined;
     }
+}
+/** Auto-layout frames can report width ≈ 0 until mounted and settled; use minWidth/render bounds as fallback. */
+function getReliableFrameWidth(frame) {
+    const reported = frame.width;
+    if (reported >= 200)
+        return reported;
+    const bounds = frame.absoluteRenderBounds;
+    if (bounds && bounds.width >= 200)
+        return bounds.width;
+    const minW = typeof frame.minWidth === 'number' && Number.isFinite(frame.minWidth) ? frame.minWidth : 0;
+    return Math.max(reported, minW, 792);
 }
 // --- Utility: Create a native Figma connector between two nodes, magnetized to edges ---
 /**
@@ -1808,11 +1817,95 @@ function deleteExperimentFlowFrames() {
         frame.remove();
     }
 }
+const GROWTHLAB_FLOW_ROLES = new Set([
+    'experiment-info',
+    'entry',
+    'event',
+    'variant',
+    'exit',
+    'entry-note',
+]);
+/** Top-level canvas nodes created by flow generation (including failed/partial runs). */
+function isGrowthLabFlowSurfaceNode(node) {
+    var _a;
+    if (((_a = node.parent) === null || _a === void 0 ? void 0 : _a.type) !== 'PAGE')
+        return false;
+    if (node.type === 'VECTOR' || node.type === 'CONNECTOR') {
+        return /PRIMARY_FLOW_LINE|BRANCH_LINE|MERGE_LINE/.test(node.name);
+    }
+    if (node.type === 'ELLIPSE' && /^Flow (Start|End) Dot$/.test(node.name)) {
+        return true;
+    }
+    if (node.type === 'FRAME') {
+        return /^(Entry|Exit|Touchpoint|Variant)(:|$)/.test(node.name) || node.name === 'Figma Link Row';
+    }
+    return false;
+}
+/** Remove all canvas artifacts for an experiment (named frames + plugin-tagged nodes). */
+function deleteExperimentCanvasArtifacts(experimentId, experimentName) {
+    const namedFrames = [
+        `Experiment Flow — ${experimentName}`,
+        `Experiment Overview — ${experimentName}`,
+        `Experiment Cards — ${experimentName}`,
+    ];
+    for (const frameName of namedFrames) {
+        const matches = figma.currentPage.findAll((n) => n.name === frameName);
+        for (const node of matches) {
+            node.remove();
+        }
+    }
+    const toRemove = new Set();
+    for (const node of figma.currentPage.findAll((n) => {
+        if (n.type !== 'FRAME')
+            return false;
+        return (/^Experiment (Overview|Flow|Cards)( — |$)/.test(n.name) ||
+            /^Touchpoint/.test(n.name) ||
+            /^(Entry|Exit|Variant)(:|$)/.test(n.name));
+    })) {
+        toRemove.add(node);
+    }
+    for (const child of figma.currentPage.children) {
+        if (isGrowthLabFlowSurfaceNode(child)) {
+            toRemove.add(child);
+        }
+    }
+    const visit = (node) => {
+        if (node.type === 'PAGE') {
+            for (const pageChild of node.children)
+                visit(pageChild);
+            return;
+        }
+        const meta = getNodeMeta(node);
+        const extra = meta === null || meta === void 0 ? void 0 : meta.extra;
+        const role = typeof (extra === null || extra === void 0 ? void 0 : extra.role) === 'string' ? extra.role : undefined;
+        const matchesCurrentExperiment = (extra === null || extra === void 0 ? void 0 : extra.experimentId) === experimentId;
+        const matchesFlowRole = !!role && GROWTHLAB_FLOW_ROLES.has(role);
+        if (matchesCurrentExperiment || matchesFlowRole) {
+            toRemove.add(node);
+            return;
+        }
+        if ('children' in node) {
+            for (const child of node.children)
+                visit(child);
+        }
+    };
+    visit(figma.currentPage);
+    for (const node of toRemove) {
+        try {
+            if (node.parent)
+                node.remove();
+        }
+        catch (_a) {
+            // Node may already be removed with a parent
+        }
+    }
+}
 // --- V2 Experiment Flow Helpers ---
 /**
  * Get connector style configuration based on type
  */
 function getConnectorStyle(type, options) {
+    const canvas = getCanvasTokens();
     // Prioritize rollout over winner for visual distinction
     if (options === null || options === void 0 ? void 0 : options.rolledout) {
         switch (type) {
@@ -1821,14 +1914,14 @@ function getConnectorStyle(type, options) {
             case 'MERGE_LINE':
                 return {
                     strokeWeight: 3, // Medium thickness (between normal and winner)
-                    color: hexToRgb(TOKENS.electricViolet600), // Purple for rollout
+                    color: canvas.connectorRollout,
                     dashPattern: undefined, // Solid line for winner
                     arrowhead: true,
                 };
             default:
                 return {
                     strokeWeight: 3,
-                    color: hexToRgb(TOKENS.electricViolet600),
+                    color: canvas.connectorRollout,
                     dashPattern: undefined, // Solid line for winner
                     arrowhead: true,
                 };
@@ -1840,28 +1933,28 @@ function getConnectorStyle(type, options) {
             case 'PRIMARY_FLOW_LINE':
                 return {
                     strokeWeight: 3, // Thicker for winner
-                    color: hexToRgb(TOKENS.malachite600), // Green for winner
+                    color: canvas.connectorWinner,
                     dashPattern: undefined, // Solid line for winner
                     arrowhead: true,
                 };
             case 'BRANCH_LINE':
                 return {
                     strokeWeight: 3,
-                    color: hexToRgb(TOKENS.malachite600),
+                    color: canvas.connectorWinner,
                     dashPattern: undefined,
                     arrowhead: true,
                 };
             case 'MERGE_LINE':
                 return {
                     strokeWeight: 3,
-                    color: hexToRgb(TOKENS.malachite600),
+                    color: canvas.connectorWinner,
                     dashPattern: undefined,
                     arrowhead: true,
                 };
             default:
                 return {
                     strokeWeight: 4,
-                    color: hexToRgb(TOKENS.malachite600),
+                    color: canvas.connectorWinner,
                     dashPattern: undefined,
                     arrowhead: true,
                 };
@@ -1872,21 +1965,21 @@ function getConnectorStyle(type, options) {
         case 'PRIMARY_FLOW_LINE':
             return {
                 strokeWeight: 3,
-                color: hexToRgb(TOKENS.accentPrimary),
+                color: canvas.connectorPrimary,
                 dashPattern: undefined, // Solid line
                 arrowhead: true,
             };
         case 'BRANCH_LINE':
             return {
                 strokeWeight: 3,
-                color: hexToRgb(TOKENS.accentBrand),
+                color: canvas.connectorBrand,
                 dashPattern: undefined, // Solid line
                 arrowhead: true,
             };
         case 'MERGE_LINE':
             return {
                 strokeWeight: 3,
-                color: hexToRgb(TOKENS.accentBrand),
+                color: canvas.connectorBrand,
                 dashPattern: undefined, // Solid line
                 arrowhead: true,
             };
@@ -2195,6 +2288,10 @@ if (figma.editorType === 'figma') {
     const MIN_UI_WIDTH = 500;
     // Keep in sync with package.json version
     const PLUGIN_VERSION = '1.0.0';
+    let isCreatingFlow = false;
+    function notifyFlowCreateFinished() {
+        figma.ui.postMessage({ type: 'flow-create-finished' });
+    }
     figma.showUI(__html__, {
         width: MIN_UI_WIDTH,
         height: 720,
@@ -2202,11 +2299,13 @@ if (figma.editorType === 'figma') {
         themeColors: true,
     });
     figma.ui.postMessage({ type: 'plugin-version', version: PLUGIN_VERSION });
-    figma.ui.postMessage({ type: 'plugin-config', feedbackEmail: FEEDBACK_EMAIL });
+    const startupFileKey = getPluginFileKey() || '';
     figma.ui.postMessage({
-        type: 'current-file-context',
-        fileKey: figma.fileKey || ''
+        type: 'plugin-config',
+        feedbackEmail: FEEDBACK_EMAIL,
+        fileKey: startupFileKey,
     });
+    figma.ui.postMessage({ type: 'current-file-context', fileKey: startupFileKey });
     function createNodeCard(title, subtitle, trafficLabel, note) {
         const card = figma.createFrame();
         card.layoutMode = 'VERTICAL';
@@ -2215,9 +2314,11 @@ if (figma.editorType === 'figma') {
         card.paddingLeft = card.paddingRight = TOKENS.space16;
         card.paddingTop = card.paddingBottom = TOKENS.space16;
         card.cornerRadius = TOKENS.radiusLG;
-        card.fills = [{ type: 'SOLID', color: CACHED_COLORS.fillsSurface }];
-        card.strokes = [{ type: 'SOLID', color: CACHED_COLORS.border }];
+        const canvas = getCanvasTokens();
+        card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
+        card.strokes = [{ type: 'SOLID', color: canvas.border }];
         card.strokeWeight = 1;
+        card.effects = [createCardShadowEffect()];
         card.name = title ? `Node: ${title}` : 'Node';
         card.itemSpacing = TOKENS.space8;
         const topRow = figma.createFrame();
@@ -2259,8 +2360,8 @@ if (figma.editorType === 'figma') {
             noteContainer.paddingLeft = noteContainer.paddingRight = TOKENS.space12;
             noteContainer.paddingTop = noteContainer.paddingBottom = TOKENS.space8;
             noteContainer.cornerRadius = TOKENS.radiusSM;
-            noteContainer.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.azure50) }];
-            noteContainer.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+            noteContainer.fills = [{ type: 'SOLID', color: canvas.sectionTint }];
+            noteContainer.strokes = [{ type: 'SOLID', color: canvas.border }];
             noteContainer.strokeWeight = 1;
             noteContainer.name = 'Note Container';
             // Set a reasonable fixed width for note container (will be constrained by card)
@@ -2280,6 +2381,10 @@ if (figma.editorType === 'figma') {
         }
         return card;
     }
+    function getPluginFileKey() {
+        const fileKey = figma.fileKey;
+        return fileKey || null;
+    }
     function parseFigmaNodeIdFromUrl(rawUrl) {
         const trimmed = rawUrl.trim();
         if (!trimmed) {
@@ -2294,8 +2399,13 @@ if (figma.editorType === 'figma') {
             return { kind: 'invalid', url: rawUrl, reason: 'URL is not a Figma URL' };
         }
         const path = figmaUrlMatch[2] || '';
+        const branchParentMatch = path.match(/^\/(?:file|design)\/([^/]+)\/branch\/[^/]+/i);
         const fileKeyMatch = path.match(/^\/(?:file|design|proto|board)\/([^/]+)/i);
-        const fileKey = fileKeyMatch ? decodeURIComponent(fileKeyMatch[1]) : undefined;
+        const fileKey = branchParentMatch
+            ? decodeURIComponent(branchParentMatch[1])
+            : fileKeyMatch
+                ? decodeURIComponent(fileKeyMatch[1])
+                : undefined;
         const query = figmaUrlMatch[3] || '';
         const nodeIdMatch = query.match(/(?:^|&)(?:node-id|node_id)=([^&]+)/i);
         const nodeId = nodeIdMatch ? nodeIdMatch[1] : '';
@@ -2317,16 +2427,38 @@ if (figma.editorType === 'figma') {
             if (parsed.kind !== 'node-id')
                 return parsed;
             try {
-                const currentFileKey = figma.fileKey;
-                if (parsed.fileKey && currentFileKey && parsed.fileKey !== currentFileKey) {
-                    return { kind: 'external-url', url: rawUrl.trim(), reason: 'Different Figma file' };
-                }
+                const trimmed = rawUrl.trim();
+                const currentFileKey = getPluginFileKey();
                 const figmaWithLookup = figma;
                 const node = typeof figmaWithLookup.getNodeByIdAsync === 'function'
                     ? yield figmaWithLookup.getNodeByIdAsync(parsed.nodeId)
                     : null;
                 if (node && 'type' in node && node.type !== 'PAGE' && node.type !== 'DOCUMENT') {
-                    return { kind: 'current-file-node', node: node };
+                    const sceneNode = node;
+                    if (sceneNode.type === 'SECTION' || sceneNode.type === 'SLICE' || sceneNode.type === 'CONNECTOR') {
+                        return {
+                            kind: 'invalid',
+                            url: rawUrl,
+                            reason: `Linked layer type "${sceneNode.type}" cannot be used as a thumbnail`,
+                        };
+                    }
+                    return { kind: 'current-file-node', node: sceneNode };
+                }
+                if (parsed.fileKey && currentFileKey && parsed.fileKey !== currentFileKey) {
+                    return {
+                        kind: 'cross-file-link',
+                        fileKey: parsed.fileKey,
+                        nodeId: parsed.nodeId,
+                        url: trimmed,
+                    };
+                }
+                if (parsed.fileKey && !currentFileKey) {
+                    return {
+                        kind: 'cross-file-link',
+                        fileKey: parsed.fileKey,
+                        nodeId: parsed.nodeId,
+                        url: trimmed,
+                    };
                 }
                 return { kind: 'external-url', url: rawUrl.trim(), reason: 'Node was not found in current file' };
             }
@@ -2336,33 +2468,87 @@ if (figma.editorType === 'figma') {
             }
         });
     }
-    function resolveThumbnailSourceFromFigmaLink(rawUrl, label) {
+    function validateFigmaLinkForThumbnail(rawUrl) {
         return __awaiter(this, void 0, void 0, function* () {
-            const resolution = yield resolveFigmaNodeUrl(rawUrl);
-            if (!resolution)
-                return { node: null };
-            if (resolution.kind === 'current-file-node') {
-                return { node: resolution.node };
+            const trimmed = rawUrl === null || rawUrl === void 0 ? void 0 : rawUrl.trim();
+            if (!trimmed)
+                return { ok: true };
+            const resolution = yield resolveFigmaNodeUrl(trimmed);
+            if (!resolution) {
+                return { ok: false, message: THUMBNAIL_VALIDATION_MSG.invalidLink };
             }
-            const suffix = label ? ` for ${label}` : '';
-            if (resolution.kind === 'external-url') {
-                console.warn(`Figma thumbnail link${suffix} could not be resolved in the current file; leaving placeholder.`, resolution.reason, resolution.url);
-                const reason = resolution.reason === 'Different Figma file'
-                    ? 'points to another Figma file'
-                    : 'is not in this file';
-                figma.notify(`Figma frame link${suffix} ${reason}, so the thumbnail stayed as a placeholder.`);
+            if (resolution.kind === 'invalid') {
+                return { ok: false, message: resolution.reason || THUMBNAIL_VALIDATION_MSG.invalidLink };
+            }
+            if (resolution.kind === 'cross-file-link') {
                 return {
-                    node: null,
-                    message: resolution.reason === 'Different Figma file'
-                        ? 'Frame link is from another Figma file'
-                        : 'Frame link could not be found in this file',
+                    ok: true,
+                    normalizedUrl: resolution.url,
+                    linkScope: 'cross_file',
                 };
             }
-            else {
-                console.warn(`Invalid Figma thumbnail link${suffix}; leaving placeholder.`, resolution.reason, resolution.url);
-                figma.notify(`Figma frame link${suffix} could not be used, so the thumbnail stayed as a placeholder.`);
-                return { node: null, message: 'Frame link could not be used' };
+            if (resolution.kind === 'external-url') {
+                if (resolution.reason === 'Missing node id') {
+                    return { ok: false, message: THUMBNAIL_VALIDATION_MSG.missingNode };
+                }
+                return { ok: false, message: THUMBNAIL_VALIDATION_MSG.notFound };
             }
+            if (isExperimentFlowCardNode(resolution.node)) {
+                return { ok: false, message: THUMBNAIL_VALIDATION_MSG.generated };
+            }
+            if (isUnsupportedImageThumbnailSource(resolution.node)) {
+                return { ok: false, message: THUMBNAIL_VALIDATION_MSG.image };
+            }
+            if (!isSupportedThumbnailLinkTarget(resolution.node)) {
+                return { ok: false, message: THUMBNAIL_VALIDATION_MSG.unsupported };
+            }
+            return { ok: true, normalizedUrl: trimmed, linkScope: 'same_file' };
+        });
+    }
+    function resolveThumbnailSourceFromFigmaLink(rawUrl, label) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const linkCheck = yield validateFigmaLinkForThumbnail(rawUrl);
+            if (!(rawUrl === null || rawUrl === void 0 ? void 0 : rawUrl.trim()))
+                return { node: null };
+            if (!linkCheck.ok) {
+                if (label) {
+                    figma.notify(`${linkCheck.message || 'Invalid Figma link'} (${label})`);
+                }
+                else {
+                    figma.notify(linkCheck.message || 'Invalid Figma link');
+                }
+                const isImage = linkCheck.message === THUMBNAIL_VALIDATION_MSG.image;
+                const isGenerated = linkCheck.message === THUMBNAIL_VALIDATION_MSG.generated;
+                const isUnsupported = linkCheck.message === THUMBNAIL_VALIDATION_MSG.unsupported;
+                return {
+                    node: null,
+                    message: isImage
+                        ? THUMBNAIL_MESSAGES.image.title
+                        : isGenerated
+                            ? THUMBNAIL_MESSAGES.generated.title
+                            : isUnsupported
+                                ? THUMBNAIL_MESSAGES.unsupported.title
+                                : THUMBNAIL_MESSAGES.unavailable.title,
+                    helper: isImage
+                        ? THUMBNAIL_MESSAGES.image.helper
+                        : isGenerated
+                            ? THUMBNAIL_MESSAGES.generated.helper
+                            : isUnsupported
+                                ? THUMBNAIL_MESSAGES.unsupported.helper
+                                : linkCheck.message || THUMBNAIL_MESSAGES.unavailable.helper,
+                };
+            }
+            if (linkCheck.linkScope === 'cross_file') {
+                return {
+                    node: null,
+                    message: THUMBNAIL_CROSS_FILE_TITLE,
+                    helper: THUMBNAIL_CROSS_FILE_HELPER,
+                };
+            }
+            const resolution = yield resolveFigmaNodeUrl(rawUrl);
+            if (!resolution || resolution.kind !== 'current-file-node')
+                return { node: null };
+            return { node: resolution.node };
         });
     }
     // --- Unified V2 Flow Creation Function ---
@@ -2395,658 +2581,694 @@ if (figma.editorType === 'figma') {
    */
     function createFlowV2FromData(experiment, flow, metrics) {
         return __awaiter(this, void 0, void 0, function* () {
-            // ========================================================================
-            // FLOW RENDERING PIPELINE
-            // Orchestrates complete experiment flow creation in 5 stages:
-            //   1. SETUP: Load fonts, clean up existing frames
-            //   2. DATA PREP: Collect and normalize variants from all events
-            //   3. NODE CREATION: Create info card and all flow nodes (entry→events→variants→exit)
-            //   4. LAYOUT: Calculate positions with proper spacing and vertical centering
-            //   5. CONNECTORS: Draw connections using dynamic system (native ConnectorNode when possible)
-            // ========================================================================
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15;
-            yield loadFonts();
-            // --- PRE-STAGE: VALIDATE FLOW DATA ---
-            // Validate that experiment and flow have all required fields before attempting to render
-            // Early validation prevents cryptic errors later in the pipeline
-            const validation = validateFlowData(experiment, flow);
-            if (!validation.isValid) {
-                postValidationFailedToUi(validation.issues);
-                console.error('[GrowthLab] createFlowV2FromData validation', validation.issues);
-                const preview = validation.issues.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
-                notifyUser({
-                    type: 'error',
-                    title: 'Fix a few things before creating the flow',
-                    detail: preview + (validation.issues.length > 3 ? `\n(+${validation.issues.length - 3} more in the plugin panel)` : ''),
-                    actionHint: 'Details are listed in the plugin toast.',
-                });
-                return;
-            }
-            // Log warnings if any (non-blocking)
-            if (validation.warnings.length > 0) {
-            }
-            // --- STAGE 1: SETUP & FRAME CLEANUP ---
-            // Remove existing frames to avoid duplicates when re-running the flow builder
-            const flowFrameName = `Experiment Flow — ${experiment.name}`;
-            const infoCardName = `Experiment Overview — ${experiment.name}`;
-            const cardsContainerName = `Experiment Cards — ${experiment.name}`;
-            const existingFlow = figma.currentPage.findOne(n => n.type === 'FRAME' && n.name === flowFrameName);
-            if (existingFlow)
-                existingFlow.remove();
-            let infoCard = figma.currentPage.findOne(n => n.type === 'FRAME' && n.name === infoCardName);
-            if (infoCard)
-                infoCard.remove();
-            // Also remove existing cards container (info + outcome)
-            const existingCardsContainer = figma.currentPage.findOne(n => n.type === 'FRAME' && n.name === cardsContainerName);
-            if (existingCardsContainer)
-                existingCardsContainer.remove();
-            // --- STAGE 2: DATA PREPARATION & VARIANT COLLECTION ---
-            // Collect all variants from all events and normalize their properties
-            // This unified list is used for the outcome card showing all variants with metrics
-            // Normalizing here ensures consistent properties across the flow
-            const allVariants = [];
-            // Iterate through all events and extract variants, applying normalizations
-            for (const event of flow.events) {
-                if (event.variants && event.variants.length > 0) {
-                    event.variants.forEach((variant, index) => {
-                        var _a, _b, _c, _d;
-                        const rolledOutId = (_b = (_a = experiment.outcomes) === null || _a === void 0 ? void 0 : _a.rolledOutVariantId) !== null && _b !== void 0 ? _b : (_c = experiment.outcomes) === null || _c === void 0 ? void 0 : _c.rolledoutVariantId;
-                        // Preserve an explicit comparison flag from older saved data without inventing one.
-                        const finalIsControl = safeGetBoolean(variant, 'isControl');
-                        allVariants.push({
-                            id: variant.id,
-                            key: variant.key,
-                            name: variant.name || `Variant ${variant.key}`, // Fallback if no name provided
-                            description: variant.description,
-                            figmaLink: safeGetString(variant, 'figmaLink'),
-                            isControl: finalIsControl,
-                            traffic: variant.traffic,
-                            metrics: variant.metrics,
-                            // Check if this is the rolled-out (winning) variant from outcomes
-                            isRolledOut: rolledOutId === variant.id,
-                            // Statistical significance marker passed from UI for outcome card display
-                            isStatSig: safeGetBoolean(variant, 'isStatSig'),
-                            // Variant color used for visual identification in cards
-                            color: safeGetString(variant, 'color') || ((_d = variant.style) === null || _d === void 0 ? void 0 : _d.variantColor),
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17;
+            try {
+                // ========================================================================
+                // FLOW RENDERING PIPELINE
+                // Orchestrates complete experiment flow creation in 5 stages:
+                //   1. SETUP: Load fonts, clean up existing frames
+                //   2. DATA PREP: Collect and normalize variants from all events
+                //   3. NODE CREATION: Create info card and all flow nodes (entry→events→variants→exit)
+                //   4. LAYOUT: Calculate positions with proper spacing and vertical centering
+                //   5. CONNECTORS: Draw connections using dynamic system (native ConnectorNode when possible)
+                // ========================================================================
+                yield loadFonts();
+                initCanvasTheme(figma.currentPage);
+                // --- PRE-STAGE: VALIDATE FLOW DATA ---
+                // Validate that experiment and flow have all required fields before attempting to render
+                // Early validation prevents cryptic errors later in the pipeline
+                const validation = validateFlowData(experiment, flow);
+                if (!validation.isValid) {
+                    postValidationFailedToUi(validation.issues);
+                    console.error('[GrowthLab] createFlowV2FromData validation', validation.issues);
+                    const preview = validation.issues.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
+                    notifyUser({
+                        type: 'error',
+                        title: 'Fix a few things before creating the flow',
+                        detail: preview + (validation.issues.length > 3 ? `\n(+${validation.issues.length - 3} more in the plugin panel)` : ''),
+                        actionHint: 'Details are listed in the plugin toast.',
+                    });
+                    return;
+                }
+                // Log warnings if any (non-blocking)
+                if (validation.warnings.length > 0) {
+                }
+                // --- STAGE 1: SETUP & FRAME CLEANUP ---
+                deleteExperimentCanvasArtifacts(experiment.id, experiment.name);
+                const infoCardName = `Experiment Overview — ${experiment.name}`;
+                let infoCard;
+                // --- STAGE 2: DATA PREPARATION & VARIANT COLLECTION ---
+                // Collect all variants from all events and normalize their properties
+                // This unified list is used for the outcome card showing all variants with metrics
+                // Normalizing here ensures consistent properties across the flow
+                const allVariants = [];
+                // Iterate through all events and extract variants, applying normalizations
+                for (const event of flow.events) {
+                    if (event.variants && event.variants.length > 0) {
+                        event.variants.forEach((variant, index) => {
+                            var _a, _b, _c, _d;
+                            const rolledOutId = (_b = (_a = experiment.outcomes) === null || _a === void 0 ? void 0 : _a.rolledOutVariantId) !== null && _b !== void 0 ? _b : (_c = experiment.outcomes) === null || _c === void 0 ? void 0 : _c.rolledoutVariantId;
+                            // Preserve an explicit comparison flag from older saved data without inventing one.
+                            const finalIsControl = safeGetBoolean(variant, 'isControl');
+                            allVariants.push({
+                                id: variant.id,
+                                key: variant.key,
+                                name: variant.name || `Variant ${variant.key}`, // Fallback if no name provided
+                                description: variant.description,
+                                figmaLink: safeGetString(variant, 'figmaLink'),
+                                isControl: finalIsControl,
+                                traffic: variant.traffic,
+                                metrics: variant.metrics,
+                                // Check if this is the rolled-out (winning) variant from outcomes
+                                isRolledOut: rolledOutId === variant.id,
+                                // Statistical significance marker passed from UI for outcome card display
+                                isStatSig: safeGetBoolean(variant, 'isStatSig'),
+                                // Variant color used for visual identification in cards
+                                color: safeGetString(variant, 'color') || ((_d = variant.style) === null || _d === void 0 ? void 0 : _d.variantColor),
+                            });
                         });
+                    }
+                }
+                // Enforce at most one explicit comparison anchor across all variants.
+                // If none is marked, leave all variants unanchored.
+                if (allVariants.length > 0) {
+                    const firstControlIndex = allVariants.findIndex(v => v.isControl === true);
+                    const resolvedControlIndex = firstControlIndex >= 0 ? firstControlIndex : -1;
+                    allVariants.forEach((v, i) => {
+                        v.isControl = resolvedControlIndex >= 0 ? i === resolvedControlIndex : false;
                     });
                 }
-            }
-            // Enforce at most one explicit comparison anchor across all variants.
-            // If none is marked, leave all variants unanchored.
-            if (allVariants.length > 0) {
-                const firstControlIndex = allVariants.findIndex(v => v.isControl === true);
-                const resolvedControlIndex = firstControlIndex >= 0 ? firstControlIndex : -1;
-                allVariants.forEach((v, i) => {
-                    v.isControl = resolvedControlIndex >= 0 ? i === resolvedControlIndex : false;
-                });
-            }
-            // --- STAGE 3: NODE CREATION (Phase A: Info Card) ---
-            // Create experiment info card: Two-panel layout with experiment metadata and resource links
-            // Positioned to the left of main flow to provide context
-            infoCard = yield createExperimentInfoCard(experiment.name, experiment.description || 'e.g., Testing if new CTA increases conversions.', ((_a = experiment.links) === null || _a === void 0 ? void 0 : _a.figma) || '', ((_b = experiment.links) === null || _b === void 0 ? void 0 : _b.jira) || '', ((_c = experiment.links) === null || _c === void 0 ? void 0 : _c.miro) || '', ((_d = experiment.links) === null || _d === void 0 ? void 0 : _d.notion) || '', ((_e = experiment.links) === null || _e === void 0 ? void 0 : _e.amplitude) || '', ((_f = experiment.links) === null || _f === void 0 ? void 0 : _f.asana) || '', ((_g = experiment.links) === null || _g === void 0 ? void 0 : _g.linear) || '', ((_h = experiment.links) === null || _h === void 0 ? void 0 : _h.slack) || '', ((_j = experiment.links) === null || _j === void 0 ? void 0 : _j.github) || '', ((_k = experiment.links) === null || _k === void 0 ? void 0 : _k.confluence) || '', ((_l = experiment.links) === null || _l === void 0 ? void 0 : _l.trello) || '', ((_m = experiment.links) === null || _m === void 0 ? void 0 : _m.monday) || '', ((_o = experiment.links) === null || _o === void 0 ? void 0 : _o.clickup) || '', Array.isArray((_p = experiment.links) === null || _p === void 0 ? void 0 : _p.generic) ? experiment.links.generic : [], metrics, safeGetString(experiment, 'status') || 'running', Object.assign({ showOutcomeCard: allVariants.length > 0, variants: allVariants, owner: safeGetString(experiment, 'owner'), audience: safeGetString(experiment, 'audience'), experimentType: safeGetString(experiment, 'experimentType'), hypothesis: safeGetString(experiment, 'hypothesis'), startDate: safeGetString(experiment, 'startDate'), endDate: safeGetString(experiment, 'endDate'), totalSampleSize: safeGetNumber(experiment, 'sampleSize'), confidenceLevel: safeGetNumber(experiment, 'confidenceLevel'), primaryMetric: (() => {
-                    var _a;
-                    // Find the metric marked as primary, or fall back to first metric
-                    const primaryMetricDef = (metrics === null || metrics === void 0 ? void 0 : metrics.find(m => m.isPrimary)) || (metrics && metrics.length > 0 ? metrics[0] : undefined);
-                    if (!primaryMetricDef)
-                        return undefined;
-                    return ((_a = primaryMetricDef.abbreviation) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || primaryMetricDef.name.replace(/\s+/g, '_').toLowerCase();
-                })() }, (() => {
-                var _a, _b, _c;
-                const rolledOutId = (_b = (_a = experiment.outcomes) === null || _a === void 0 ? void 0 : _a.rolledOutVariantId) !== null && _b !== void 0 ? _b : (_c = experiment.outcomes) === null || _c === void 0 ? void 0 : _c.rolledoutVariantId;
-                if (!rolledOutId)
-                    return { rolledOutVariantName: undefined, rolledOutVariantColor: undefined };
-                const rolledOutVariant = allVariants.find(v => v.id === rolledOutId);
-                return {
-                    rolledOutVariantName: rolledOutVariant === null || rolledOutVariant === void 0 ? void 0 : rolledOutVariant.name,
-                    rolledOutVariantColor: rolledOutVariant === null || rolledOutVariant === void 0 ? void 0 : rolledOutVariant.color
-                };
-            })()));
-            attachNodeMeta(infoCard, {
-                name: infoCardName,
-                type: 'frame',
-                description: experiment.description || 'e.g., Testing if new CTA increases conversions.',
-                extra: { experimentId: experiment.id, role: 'experiment-info' },
-            });
-            const center = figma.viewport.center;
-            // Mount the overview card before reading its size for the flow spine. Auto-layout frames
-            // that are not on the page often report width ≈ 0, so the spine was placed on top of the
-            // card and connectors pointed at the wrong bounds.
-            if (infoCard && infoCard.parent === null) {
-                infoCard.x = 100;
-                infoCard.y = center.y;
-                figma.currentPage.appendChild(infoCard);
-                yield new Promise((resolve) => setTimeout(resolve, 100));
-            }
-            // --- STAGE 4: LAYOUT POSITIONING & NODE PLACEMENT ---
-            // All nodes positioned directly on page (not in container frame) for ConnectorNode magnetic anchors
-            //
-            // Layout strategy:
-            //   - Horizontal spine: Entry → Events → Exit (same Y line, centered vertically)
-            //   - Variants: Below their parent event, in horizontal row
-            //   - All positioned with precise X,Y coordinates for deterministic output
-            //
-            const eventSpacing = (_r = (_q = flow.layout) === null || _q === void 0 ? void 0 : _q.eventSpacing) !== null && _r !== void 0 ? _r : 80; // Horizontal space between events (configurable)
-            const variantSpacing = (_t = (_s = flow.layout) === null || _s === void 0 ? void 0 : _s.variantSpacing) !== null && _t !== void 0 ? _t : 40; // Horizontal space between variants in a row
-            const eventToVariantSpacing = 100; // Vertical space from event to variant row
-            const baseX = infoCard ? infoCard.x + infoCard.width + 200 : 600; // Entry starts after info card
-            const baseY = infoCard ? infoCard.y : center.y; // Align to info card or viewport center
-            // Track all created nodes: used for layout calc, connector lookup, and viewport zoom
-            const allNodes = [];
-            // --- STAGE 4a: Create Entry Node (Flow Spine Start) ---
-            // Entry node is leftmost on horizontal spine - represents where users enter the experiment
-            const entry = flow.entry;
-            const entryCard = createNodeCard(entry.label, undefined, undefined, entry.note);
-            entryCard.name = 'Entry';
-            attachNodeMeta(entryCard, {
-                name: entry.label,
-                type: 'frame',
-                description: entry.note || '',
-                extra: {
-                    role: 'entry',
-                    entryId: entry.id,
-                    experimentId: experiment.id,
-                    nodeType: 'ENTRY_NODE',
-                },
-            });
-            // Position on the main flow axis; it will be vertically centered later in Stage 4f.
-            entryCard.x = baseX;
-            entryCard.y = baseY;
-            figma.currentPage.appendChild(entryCard);
-            allNodes.push({ node: entryCard, id: entry.id, type: 'ENTRY_NODE' });
-            // --- STAGE 4b: Pre-calculate Variant Widths (Layout Phase 1) ---
-            // Create all variant cards off-screen first to measure their actual widths
-            // This allows us to calculate event spacing that accounts for variant row width
-            // Why: Events with many variants need more horizontal space
-            const variantWidthsByEvent = new Map();
-            const variantCardsByEvent = new Map();
-            // Generate metric key from abbreviation or name (same logic as UI)
-            const getMetricKey = (metric) => {
-                if (metric.abbreviation) {
-                    return metric.abbreviation.toLowerCase();
-                }
-                return metric.name.replace(/\s+/g, '_').toLowerCase();
-            };
-            // Iterate through events and pre-create variant cards to measure widths
-            for (const event of flow.events) {
-                if (event.variants && event.variants.length > 0) {
-                    let totalVariantWidth = 0; // Accumulate total width including spacing
-                    const variantCards = [];
-                    for (const [vIdx, variant] of event.variants.entries()) {
-                        const safeVariantName = typeof variant.name === 'string' && variant.name.trim().length > 0
-                            ? variant.name
-                            : `Variant ${vIdx + 1}`;
-                        const variantColor = variant.color || ((_u = variant.style) === null || _u === void 0 ? void 0 : _u.variantColor);
-                        // Check if this variant is rolled out
-                        const rolledOutVariantId = (_w = (_v = experiment.outcomes) === null || _v === void 0 ? void 0 : _v.rolledOutVariantId) !== null && _w !== void 0 ? _w : (_x = experiment.outcomes) === null || _x === void 0 ? void 0 : _x.rolledoutVariantId;
-                        const isRolledout = rolledOutVariantId === variant.id;
-                        const variantForCard = Object.assign(Object.assign({}, variant), { name: safeVariantName, status: isRolledout ? 'winner' : (variant.status || 'none'), metrics: variant.metrics || {}, color: variantColor });
-                        const variantThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(variant, 'figmaLink'), `variant "${safeVariantName}"`);
-                        const variantCard = yield createVariantCard(variantForCard, vIdx, {
-                            rolledout: isRolledout,
-                            metrics: metrics,
-                            thumbnailSource: variantThumbnail.node,
-                            thumbnailMessage: variantThumbnail.message,
-                        });
-                        // Position off-screen temporarily (will be positioned correctly in Stage 4d)
-                        // We need to add to page to get accurate measurements from Figma's layout engine
-                        variantCard.x = -10000;
-                        variantCard.y = -10000;
-                        figma.currentPage.appendChild(variantCard);
-                        // Accumulate total width: spacing between variants + card width
-                        if (vIdx > 0) {
-                            totalVariantWidth += variantSpacing; // Gap between this and previous variant
-                        }
-                        totalVariantWidth += variantCard.width;
-                        variantCards.push(variantCard);
-                    }
-                    variantWidthsByEvent.set(event.id, totalVariantWidth);
-                    variantCardsByEvent.set(event.id, variantCards);
-                }
-            }
-            // --- STAGE 4c: Create Event Nodes (Flow Spine Middle) ---
-            // Event nodes represent touchpoints where variants are tested
-            // Positioned on horizontal spine between Entry and Exit
-            // Horizontal spacing accounts for variant row widths to prevent overlaps
-            //
-            let currentX = baseX + entryCard.width + eventSpacing; // Start after entry node
-            let maxEventHeight = 0; // Track max height for vertical centering later
-            const eventPositions = [];
-            for (const [eventIdx, event] of flow.events.entries()) {
-                const safeEventName = typeof event.name === 'string' && event.name.trim().length > 0
-                    ? event.name
-                    : `Touchpoint ${eventIdx + 1}`;
-                const eventThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(event, 'figmaLink'), `touchpoint "${safeEventName}"`);
-                // Create event card
-                const eventCard = createEventCard(safeEventName, (_z = (_y = event.variants) === null || _y === void 0 ? void 0 : _y.length) !== null && _z !== void 0 ? _z : 0, eventIdx, eventThumbnail.node, eventThumbnail.message, {
-                    figmaLink: safeGetString(event, 'figmaLink'),
-                    showFigmaLink: event.showFigmaLink,
-                });
-                // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
-                eventCard.name = `Touchpoint`;
-                // eventCard.name = `Touchpoint: ${safeEventName}`;
-                attachNodeMeta(eventCard, {
-                    name: safeEventName,
+                // --- STAGE 3: NODE CREATION (Phase A: Info Card) ---
+                // Create experiment info card: Two-panel layout with experiment metadata and resource links
+                // Positioned to the left of main flow to provide context
+                infoCard = yield createExperimentInfoCard(experiment.name, experiment.description || 'e.g., Testing if new CTA increases conversions.', ((_a = experiment.links) === null || _a === void 0 ? void 0 : _a.figma) || '', ((_b = experiment.links) === null || _b === void 0 ? void 0 : _b.jira) || '', ((_c = experiment.links) === null || _c === void 0 ? void 0 : _c.miro) || '', ((_d = experiment.links) === null || _d === void 0 ? void 0 : _d.notion) || '', ((_e = experiment.links) === null || _e === void 0 ? void 0 : _e.amplitude) || '', ((_f = experiment.links) === null || _f === void 0 ? void 0 : _f.asana) || '', ((_g = experiment.links) === null || _g === void 0 ? void 0 : _g.linear) || '', ((_h = experiment.links) === null || _h === void 0 ? void 0 : _h.slack) || '', ((_j = experiment.links) === null || _j === void 0 ? void 0 : _j.github) || '', ((_k = experiment.links) === null || _k === void 0 ? void 0 : _k.confluence) || '', ((_l = experiment.links) === null || _l === void 0 ? void 0 : _l.trello) || '', ((_m = experiment.links) === null || _m === void 0 ? void 0 : _m.monday) || '', ((_o = experiment.links) === null || _o === void 0 ? void 0 : _o.clickup) || '', Array.isArray((_p = experiment.links) === null || _p === void 0 ? void 0 : _p.generic) ? experiment.links.generic : [], metrics, safeGetString(experiment, 'status') || 'running', Object.assign({ showOutcomeCard: allVariants.length > 0, variants: allVariants, owner: safeGetString(experiment, 'owner'), audience: safeGetString(experiment, 'audience'), experimentType: safeGetString(experiment, 'experimentType'), hypothesis: safeGetString(experiment, 'hypothesis'), startDate: safeGetString(experiment, 'startDate'), endDate: safeGetString(experiment, 'endDate'), totalSampleSize: safeGetNumber(experiment, 'sampleSize'), confidenceLevel: safeGetNumber(experiment, 'confidenceLevel'), primaryMetric: (() => {
+                        var _a;
+                        // Find the metric marked as primary, or fall back to first metric
+                        const primaryMetricDef = (metrics === null || metrics === void 0 ? void 0 : metrics.find(m => m.isPrimary)) || (metrics && metrics.length > 0 ? metrics[0] : undefined);
+                        if (!primaryMetricDef)
+                            return undefined;
+                        return ((_a = primaryMetricDef.abbreviation) === null || _a === void 0 ? void 0 : _a.toLowerCase()) || primaryMetricDef.name.replace(/\s+/g, '_').toLowerCase();
+                    })() }, (() => {
+                    var _a, _b, _c;
+                    const rolledOutId = (_b = (_a = experiment.outcomes) === null || _a === void 0 ? void 0 : _a.rolledOutVariantId) !== null && _b !== void 0 ? _b : (_c = experiment.outcomes) === null || _c === void 0 ? void 0 : _c.rolledoutVariantId;
+                    if (!rolledOutId)
+                        return { rolledOutVariantName: undefined, rolledOutVariantColor: undefined };
+                    const rolledOutVariant = allVariants.find(v => v.id === rolledOutId);
+                    return {
+                        rolledOutVariantName: rolledOutVariant === null || rolledOutVariant === void 0 ? void 0 : rolledOutVariant.name,
+                        rolledOutVariantColor: rolledOutVariant === null || rolledOutVariant === void 0 ? void 0 : rolledOutVariant.color
+                    };
+                })()));
+                attachNodeMeta(infoCard, {
+                    name: infoCardName,
                     type: 'frame',
-                    description: ((_0 = event.entryNote) === null || _0 === void 0 ? void 0 : _0.text) || '',
+                    description: experiment.description || 'e.g., Testing if new CTA increases conversions.',
+                    extra: { experimentId: experiment.id, role: 'experiment-info' },
+                });
+                const center = figma.viewport.center;
+                // Mount the overview card before reading its size for the flow spine. Auto-layout frames
+                // that are not on the page often report width ≈ 0, so the spine was placed on top of the
+                // card and connectors pointed at the wrong bounds.
+                if (infoCard && infoCard.parent === null) {
+                    infoCard.x = 0;
+                    infoCard.y = center.y;
+                    figma.currentPage.appendChild(infoCard);
+                    yield new Promise((resolve) => setTimeout(resolve, 150));
+                }
+                const overviewWidth = infoCard ? getReliableFrameWidth(infoCard) : 0;
+                // --- STAGE 4: LAYOUT POSITIONING & NODE PLACEMENT ---
+                // All nodes positioned directly on page (not in container frame) for ConnectorNode magnetic anchors
+                //
+                // Layout strategy:
+                //   - Horizontal spine: Entry → Events → Exit (same Y line, centered vertically)
+                //   - Variants: Below their parent event, in horizontal row
+                //   - All positioned with precise X,Y coordinates for deterministic output
+                //
+                const eventSpacing = (_r = (_q = flow.layout) === null || _q === void 0 ? void 0 : _q.eventSpacing) !== null && _r !== void 0 ? _r : 80; // Horizontal space between events (configurable)
+                const variantSpacing = (_t = (_s = flow.layout) === null || _s === void 0 ? void 0 : _s.variantSpacing) !== null && _t !== void 0 ? _t : 40; // Horizontal space between variants in a row
+                const eventToVariantSpacing = 100; // Vertical space from event to variant row
+                const baseX = infoCard ? infoCard.x + overviewWidth + 200 : 600; // Entry starts after overview card
+                const baseY = infoCard ? infoCard.y : center.y; // Align to info card or viewport center
+                // Track all created nodes: used for layout calc, connector lookup, and viewport zoom
+                const allNodes = [];
+                // --- STAGE 4a: Create Entry Node (Flow Spine Start) ---
+                // Entry node is leftmost on horizontal spine - represents where users enter the experiment
+                const entry = flow.entry;
+                const entryCard = createNodeCard(entry.label, undefined, undefined, entry.note);
+                entryCard.name = 'Entry';
+                attachNodeMeta(entryCard, {
+                    name: entry.label,
+                    type: 'frame',
+                    description: entry.note || '',
                     extra: {
-                        role: 'event',
-                        eventId: event.id,
+                        role: 'entry',
+                        entryId: entry.id,
                         experimentId: experiment.id,
-                        hasVariants: !!((_1 = event.variants) === null || _1 === void 0 ? void 0 : _1.length),
-                        nodeType: 'EVENT_NODE',
-                        entryNoteId: (_2 = event.entryNote) === null || _2 === void 0 ? void 0 : _2.id,
-                        figmaLink: safeGetString(event, 'figmaLink'),
+                        nodeType: 'ENTRY_NODE',
                     },
                 });
-                // Position this event at calculated X, aligned to baseY (will be centered vertically in Stage 4f)
-                eventCard.x = currentX;
-                eventCard.y = baseY;
-                figma.currentPage.appendChild(eventCard);
-                allNodes.push({ node: eventCard, id: event.id, type: 'EVENT_NODE' });
-                // Store position: used in next stage to position variants directly below this event
-                eventPositions.push({ event, eventCard, x: currentX, y: baseY });
-                // Track max height: all spine nodes will be centered to this height
-                maxEventHeight = Math.max(maxEventHeight, eventCard.height);
-                // Calculate spacing to next event: account for variant row width
-                // This prevents variants from overlapping with the next event
-                const eventWidth = eventCard.width;
-                const variantRowWidth = variantWidthsByEvent.get(event.id) || 0; // Total width of variant row
-                const effectiveWidth = Math.max(eventWidth, variantRowWidth); // Use whichever is wider
-                const extraSpacingForVariants = event.variants && event.variants.length > 0 ? eventSpacing * 0.5 : 0; // Add extra space for variants
-                // Advance X cursor: past effective width + normal spacing + extra spacing
-                currentX += effectiveWidth + eventSpacing + extraSpacingForVariants;
-            }
-            // --- STAGE 4d: Position Variant Nodes (Rows Below Events) ---
-            // Reposition variant cards from off-screen to their final locations
-            // Each event's variants are positioned in a horizontal row below the event
-            // All variants for an event are aligned to the same Y coordinate
-            for (const { event, eventCard, x: eventX, y: eventY } of eventPositions) {
-                const variantCards = variantCardsByEvent.get(event.id);
-                if (variantCards && variantCards.length > 0) {
-                    let variantX = eventX; // Start variants aligned to event's left edge
-                    const variantY = eventY + eventCard.height + eventToVariantSpacing; // Position below event
-                    for (const [vIdx, variantCard] of variantCards.entries()) {
-                        const variant = (_3 = event.variants) === null || _3 === void 0 ? void 0 : _3[vIdx];
-                        if (!variant)
-                            continue;
-                        const safeVariantName = typeof variant.name === 'string' && variant.name.trim().length > 0
-                            ? variant.name
-                            : `Variant ${vIdx + 1}`;
-                        // Set variant card metadata (if not already set)
-                        variantCard.name = `Variant`;
-                        // variantCard.name = `Variant: ${safeVariantName}`;
-                        attachNodeMeta(variantCard, {
-                            name: safeVariantName,
-                            type: 'frame',
-                            description: variant.description || '',
-                            extra: {
-                                role: 'variant',
-                                eventId: event.id,
-                                variantId: variant.id,
-                                experimentId: experiment.id,
-                                variantIndex: vIdx,
-                                traffic: variant.traffic,
-                                nodeType: 'VARIANT_NODE',
-                                parentEventId: variant.parentEventId,
-                                figmaLink: safeGetString(variant, 'figmaLink'),
-                            },
-                        });
-                        // Position variant in horizontal row below event
-                        variantCard.x = variantX;
-                        variantCard.y = variantY;
-                        allNodes.push({ node: variantCard, id: variant.id, type: 'VARIANT_NODE' });
-                        variantX += variantCard.width + variantSpacing;
+                // Position on the main flow axis; it will be vertically centered later in Stage 4f.
+                entryCard.x = baseX;
+                entryCard.y = baseY;
+                figma.currentPage.appendChild(entryCard);
+                allNodes.push({ node: entryCard, id: entry.id, type: 'ENTRY_NODE' });
+                // --- STAGE 4b: Pre-calculate Variant Widths (Layout Phase 1) ---
+                // Create all variant cards off-screen first to measure their actual widths
+                // This allows us to calculate event spacing that accounts for variant row width
+                // Why: Events with many variants need more horizontal space
+                const variantWidthsByEvent = new Map();
+                const variantCardsByEvent = new Map();
+                // Generate metric key from abbreviation or name (same logic as UI)
+                const getMetricKey = (metric) => {
+                    if (metric.abbreviation) {
+                        return metric.abbreviation.toLowerCase();
                     }
-                }
-            }
-            // --- STAGE 4e: Create Exit Node (Flow Spine End) ---
-            // Exit node is rightmost on horizontal spine - represents where users exit the experiment
-            const exit = flow.exit;
-            const exitCard = createNodeCard(exit.label);
-            exitCard.name = 'Exit';
-            attachNodeMeta(exitCard, {
-                name: exit.label,
-                type: 'frame',
-                description: '',
-                extra: {
-                    role: 'exit',
-                    exitId: exit.id,
-                    experimentId: experiment.id,
-                    nodeType: 'EXIT_NODE',
-                },
-            });
-            // Position exit at calculated X position after all events on the main flow axis.
-            exitCard.x = currentX;
-            exitCard.y = baseY;
-            figma.currentPage.appendChild(exitCard);
-            allNodes.push({ node: exitCard, id: exit.id, type: 'EXIT_NODE' });
-            // --- STAGE 4f: Vertical Alignment (Center All Spine Nodes) ---
-            // Ensure Entry → Events → Exit are all vertically centered as a group
-            // This creates a clean horizontal spine regardless of individual node heights
-            // Strategy: Find tallest spine node, then center all others around it
-            //
-            const spineNodes = [entryCard, ...eventPositions.map(ep => ep.eventCard), exitCard];
-            const maxSpineHeight = Math.max(...spineNodes.map(n => n.height));
-            // Center Entry node: move up by half the height difference
-            const entryCenterOffset = (maxSpineHeight - entryCard.height) / 2;
-            entryCard.y = baseY + entryCenterOffset;
-            // Center each Event node vertically and cascade adjustments to variants
-            // When an event moves, its variants must move with it to maintain relative positioning
-            for (const { event, eventCard } of eventPositions) {
-                const oldEventY = eventCard.y; // Remember old position before centering
-                const eventCenterOffset = (maxSpineHeight - eventCard.height) / 2;
-                const newEventY = baseY + eventCenterOffset;
-                eventCard.y = newEventY;
-                // Cascade Y adjustment to variants: move them by same delta as their event
-                if (event.variants && event.variants.length > 0) {
-                    const yDelta = newEventY - oldEventY; // How much did event move?
-                    for (const variant of event.variants) {
-                        const variantNode = allNodes.find(n => n.id === variant.id);
-                        if (variantNode) {
-                            variantNode.node.y += yDelta; // Move variant by same amount
+                    return metric.name.replace(/\s+/g, '_').toLowerCase();
+                };
+                // Iterate through events and pre-create variant cards to measure widths
+                for (const event of flow.events) {
+                    if (event.variants && event.variants.length > 0) {
+                        let totalVariantWidth = 0; // Accumulate total width including spacing
+                        const variantCards = [];
+                        for (const [vIdx, variant] of event.variants.entries()) {
+                            const safeVariantName = typeof variant.name === 'string' && variant.name.trim().length > 0
+                                ? variant.name
+                                : `Variant ${vIdx + 1}`;
+                            const variantColor = variant.color || ((_u = variant.style) === null || _u === void 0 ? void 0 : _u.variantColor);
+                            // Check if this variant is rolled out
+                            const rolledOutVariantId = (_w = (_v = experiment.outcomes) === null || _v === void 0 ? void 0 : _v.rolledOutVariantId) !== null && _w !== void 0 ? _w : (_x = experiment.outcomes) === null || _x === void 0 ? void 0 : _x.rolledoutVariantId;
+                            const isRolledout = rolledOutVariantId === variant.id;
+                            const variantForCard = Object.assign(Object.assign({}, variant), { name: safeVariantName, status: isRolledout ? 'winner' : (variant.status || 'none'), metrics: variant.metrics || {}, color: variantColor });
+                            const variantThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(variant, 'figmaLink'), `variant "${safeVariantName}"`);
+                            let variantCard;
+                            try {
+                                variantCard = yield createVariantCard(variantForCard, vIdx, {
+                                    rolledout: isRolledout,
+                                    metrics: metrics,
+                                    thumbnailSource: variantThumbnail.node,
+                                    thumbnailMessage: variantThumbnail.message,
+                                    thumbnailHelper: variantThumbnail.helper,
+                                });
+                            }
+                            catch (error) {
+                                console.warn(`Variant card failed for "${safeVariantName}", retrying without thumbnail`, error);
+                                variantCard = yield createVariantCard(variantForCard, vIdx, {
+                                    rolledout: isRolledout,
+                                    metrics: metrics,
+                                    thumbnailMessage: 'Preview unavailable',
+                                    thumbnailHelper: THUMBNAIL_DEFAULT_HELPER,
+                                });
+                            }
+                            variantCard.name = `Variant`;
+                            attachNodeMeta(variantCard, {
+                                name: safeVariantName,
+                                type: 'frame',
+                                description: variant.description || '',
+                                extra: {
+                                    role: 'variant',
+                                    eventId: event.id,
+                                    variantId: variant.id,
+                                    experimentId: experiment.id,
+                                    variantIndex: vIdx,
+                                    traffic: variant.traffic,
+                                    nodeType: 'VARIANT_NODE',
+                                    parentEventId: variant.parentEventId,
+                                    figmaLink: safeGetString(variant, 'figmaLink'),
+                                },
+                            });
+                            // Keep off-canvas until Stage 4d — early append caused orphans when later stages failed.
+                            const layoutWidth = Math.max(variantCard.width, VARIANT_CARD_LAYOUT_WIDTH);
+                            if (vIdx > 0) {
+                                totalVariantWidth += variantSpacing;
+                            }
+                            totalVariantWidth += layoutWidth;
+                            variantCards.push(variantCard);
                         }
+                        variantWidthsByEvent.set(event.id, totalVariantWidth);
+                        variantCardsByEvent.set(event.id, variantCards);
                     }
                 }
-            }
-            // Center Exit node: move up by half the height difference
-            const exitCenterOffset = (maxSpineHeight - exitCard.height) / 2;
-            exitCard.y = baseY + exitCenterOffset;
-            // --- STAGE 5: CONNECTOR RENDERING SETUP ---
-            // Build a quick lookup map: node ID → node object
-            // This is used to find source/target nodes when drawing connectors
-            const nodeMap = {};
-            for (const { node, id } of allNodes) {
-                nodeMap[id] = node;
-            }
-            // Overview frame is mounted before spine layout so width is real; settle once more before connectors.
-            if (infoCard) {
-                yield new Promise(resolve => setTimeout(resolve, 50));
-            }
-            // --- STAGE 5a: Dynamic Connector Rendering ---
-            // Creates connectors between nodes using the smart dynamic system:
-            //   1. Tries native ConnectorNode first (FigJam): automatic updates when nodes move! ✨
-            //   2. Falls back to VectorNode (regular Figma): manual refresh via refreshConnectors()
-            // For VectorNode connectors, call refreshConnectors() or send 'refresh-connectors' message when nodes move
-            const createdConnectors = [];
-            const connectorErrors = []; // Track errors for reporting
-            if (flow.connectors && Array.isArray(flow.connectors) && flow.connectors.length > 0) {
-                // Categorize connectors into two groups based on their structure:
-                //   1. Merge connectors (MERGE_LINE): Multiple sources → single target, uses merge+trunk pattern
-                //   2. Direct connectors (PRIMARY_FLOW_LINE, BRANCH_LINE): Simple one-to-one or one-to-many connections
-                const mergeGroups = new Map(); // Group merges by target ID
-                const directConnectors = []; // PRIMARY_FLOW_LINE and BRANCH_LINE connectors
-                for (const connector of flow.connectors) {
-                    if (connector.type === 'MERGE_LINE') {
-                        const toId = connector.to.id;
-                        if (!mergeGroups.has(toId)) {
-                            mergeGroups.set(toId, []);
-                        }
-                        mergeGroups.get(toId).push(connector);
-                    }
-                    else {
-                        // PRIMARY_FLOW_LINE and BRANCH_LINE use direct connections (no grouping)
-                        directConnectors.push(connector);
-                    }
-                }
-                // Render direct connectors (PRIMARY_FLOW_LINE: spine connections; BRANCH_LINE: event to variant)
-                // Direct connectors use simple one-to-one paths without merging
-                for (const connector of directConnectors) {
-                    const fromNode = nodeMap[connector.from.id];
-                    const toNode = nodeMap[connector.to.id];
-                    if (!fromNode || !toNode) {
-                        // Skip: one or both endpoints missing (normal for optional connectors)
-                        connectorErrors.push({
-                            connectorId: connector.id,
-                            from: connector.from.id,
-                            to: connector.to.id,
-                            error: `Missing node endpoint: ${fromNode ? 'to' : 'from'} node not found`
-                        });
-                        continue;
-                    }
+                // --- STAGE 4c: Create Event Nodes (Flow Spine Middle) ---
+                // Event nodes represent touchpoints where variants are tested
+                // Positioned on horizontal spine between Entry and Exit
+                // Horizontal spacing accounts for variant row widths to prevent overlaps
+                //
+                let currentX = baseX + entryCard.width + eventSpacing; // Start after entry node
+                let maxEventHeight = 0; // Track max height for vertical centering later
+                const eventPositions = [];
+                for (const [eventIdx, event] of flow.events.entries()) {
+                    const safeEventName = typeof event.name === 'string' && event.name.trim().length > 0
+                        ? event.name
+                        : `Touchpoint ${eventIdx + 1}`;
+                    const eventThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(event, 'figmaLink'), `touchpoint "${safeEventName}"`);
+                    let eventCard;
                     try {
-                        // Determine connector styling: is one endpoint a rolled-out (winning) variant?
-                        // Rolled-out variants get special styling to highlight the chosen path
-                        const fromNodeId = connector.from.id;
-                        const toNodeId = connector.to.id;
-                        const rolledOutVariantId = (_5 = (_4 = experiment.outcomes) === null || _4 === void 0 ? void 0 : _4.rolledOutVariantId) !== null && _5 !== void 0 ? _5 : (_6 = experiment.outcomes) === null || _6 === void 0 ? void 0 : _6.rolledoutVariantId;
-                        // Check if either endpoint is the rolled-out variant
-                        const isRolledout = rolledOutVariantId && (fromNodeId === rolledOutVariantId || toNodeId === rolledOutVariantId);
-                        // Rolled-out styling takes priority over generic winner styling
-                        const isWinner = isRolledout || false;
-                        // Create connector using dynamic system (tries native → VectorNode fallback)
-                        // Native connectors in FigJam will automatically update when nodes move!
-                        const connectorNode = createDynamicConnector(fromNode, toNode, connector.type, {
-                            label: connector.label,
-                            winner: isWinner, // Rolled-out variant is the winner
-                            variantColor: undefined,
-                            index: 0,
-                            rolledout: isRolledout || false, // Rollout styling takes priority over winner
-                            useNativeConnector: true, // Try native connectors for automatic updates
+                        eventCard = yield createEventCard(safeEventName, (_z = (_y = event.variants) === null || _y === void 0 ? void 0 : _y.length) !== null && _z !== void 0 ? _z : 0, eventIdx, eventThumbnail.node, eventThumbnail.message, eventThumbnail.helper, {
+                            figmaLink: safeGetString(event, 'figmaLink'),
+                            showFigmaLink: event.showFigmaLink,
                         });
-                        if (connectorNode) {
-                            // Store additional metadata on the connector
-                            try {
-                                const existingMeta = connectorNode.getPluginData('connectorMeta');
-                                let meta = existingMeta ? JSON.parse(existingMeta) : {};
-                                meta = Object.assign(Object.assign({}, meta), { connectorId: connector.id, fromNodeType: connector.from.nodeType, toNodeType: connector.to.nodeType, experimentId: experiment.id });
-                                connectorNode.setPluginData('connectorMeta', JSON.stringify(meta));
+                    }
+                    catch (error) {
+                        console.error(`Touchpoint card failed for "${safeEventName}", using placeholder thumbnail`, error);
+                        eventCard = yield createEventCard(safeEventName, (_1 = (_0 = event.variants) === null || _0 === void 0 ? void 0 : _0.length) !== null && _1 !== void 0 ? _1 : 0, eventIdx, eventThumbnail.node, eventThumbnail.message || 'Preview unavailable', eventThumbnail.helper || THUMBNAIL_DEFAULT_HELPER, {
+                            figmaLink: safeGetString(event, 'figmaLink'),
+                            showFigmaLink: event.showFigmaLink,
+                        });
+                    }
+                    // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
+                    eventCard.name = `Touchpoint`;
+                    // eventCard.name = `Touchpoint: ${safeEventName}`;
+                    attachNodeMeta(eventCard, {
+                        name: safeEventName,
+                        type: 'frame',
+                        description: ((_2 = event.entryNote) === null || _2 === void 0 ? void 0 : _2.text) || '',
+                        extra: {
+                            role: 'event',
+                            eventId: event.id,
+                            experimentId: experiment.id,
+                            hasVariants: !!((_3 = event.variants) === null || _3 === void 0 ? void 0 : _3.length),
+                            nodeType: 'EVENT_NODE',
+                            entryNoteId: (_4 = event.entryNote) === null || _4 === void 0 ? void 0 : _4.id,
+                            figmaLink: safeGetString(event, 'figmaLink'),
+                        },
+                    });
+                    // Position this event at calculated X, aligned to baseY (will be centered vertically in Stage 4f)
+                    eventCard.x = currentX;
+                    eventCard.y = baseY;
+                    figma.currentPage.appendChild(eventCard);
+                    allNodes.push({ node: eventCard, id: event.id, type: 'EVENT_NODE' });
+                    // Store position: used in next stage to position variants directly below this event
+                    eventPositions.push({ event, eventCard, x: currentX, y: baseY });
+                    // Track max height: all spine nodes will be centered to this height
+                    maxEventHeight = Math.max(maxEventHeight, eventCard.height);
+                    // Calculate spacing to next event: account for variant row width
+                    // This prevents variants from overlapping with the next event
+                    const eventWidth = eventCard.width;
+                    const variantRowWidth = variantWidthsByEvent.get(event.id) || 0; // Total width of variant row
+                    const effectiveWidth = Math.max(eventWidth, variantRowWidth); // Use whichever is wider
+                    const extraSpacingForVariants = event.variants && event.variants.length > 0 ? eventSpacing * 0.5 : 0; // Add extra space for variants
+                    // Advance X cursor: past effective width + normal spacing + extra spacing
+                    currentX += effectiveWidth + eventSpacing + extraSpacingForVariants;
+                }
+                // --- STAGE 4d: Position Variant Nodes (Rows Below Events) ---
+                // Reposition variant cards from off-screen to their final locations
+                // Each event's variants are positioned in a horizontal row below the event
+                // All variants for an event are aligned to the same Y coordinate
+                for (const { event, eventCard, x: eventX, y: eventY } of eventPositions) {
+                    const variantCards = variantCardsByEvent.get(event.id);
+                    if (variantCards && variantCards.length > 0) {
+                        let variantX = eventX; // Start variants aligned to event's left edge
+                        const variantY = eventY + eventCard.height + eventToVariantSpacing; // Position below event
+                        for (const [vIdx, variantCard] of variantCards.entries()) {
+                            const variant = (_5 = event.variants) === null || _5 === void 0 ? void 0 : _5[vIdx];
+                            if (!variant)
+                                continue;
+                            const safeVariantName = typeof variant.name === 'string' && variant.name.trim().length > 0
+                                ? variant.name
+                                : `Variant ${vIdx + 1}`;
+                            // Position variant in horizontal row below event, then mount on canvas
+                            variantCard.x = variantX;
+                            variantCard.y = variantY;
+                            if (variantCard.parent === null) {
+                                figma.currentPage.appendChild(variantCard);
                             }
-                            catch (metaError) {
-                                // Non-critical: metadata storage failed, but connector was created
+                            allNodes.push({ node: variantCard, id: variant.id, type: 'VARIANT_NODE' });
+                            variantX += variantCard.width + variantSpacing;
+                        }
+                    }
+                }
+                // --- STAGE 4e: Create Exit Node (Flow Spine End) ---
+                // Exit node is rightmost on horizontal spine - represents where users exit the experiment
+                const exit = flow.exit;
+                const exitCard = createNodeCard(exit.label);
+                exitCard.name = 'Exit';
+                attachNodeMeta(exitCard, {
+                    name: exit.label,
+                    type: 'frame',
+                    description: '',
+                    extra: {
+                        role: 'exit',
+                        exitId: exit.id,
+                        experimentId: experiment.id,
+                        nodeType: 'EXIT_NODE',
+                    },
+                });
+                // Position exit at calculated X position after all events on the main flow axis.
+                exitCard.x = currentX;
+                exitCard.y = baseY;
+                figma.currentPage.appendChild(exitCard);
+                allNodes.push({ node: exitCard, id: exit.id, type: 'EXIT_NODE' });
+                // --- STAGE 4f: Vertical Alignment (Center All Spine Nodes) ---
+                // Ensure Entry → Events → Exit are all vertically centered as a group
+                // This creates a clean horizontal spine regardless of individual node heights
+                // Strategy: Find tallest spine node, then center all others around it
+                //
+                const spineNodes = [entryCard, ...eventPositions.map(ep => ep.eventCard), exitCard];
+                const maxSpineHeight = Math.max(...spineNodes.map(n => n.height));
+                // Center Entry node: move up by half the height difference
+                const entryCenterOffset = (maxSpineHeight - entryCard.height) / 2;
+                entryCard.y = baseY + entryCenterOffset;
+                // Center each Event node vertically and cascade adjustments to variants
+                // When an event moves, its variants must move with it to maintain relative positioning
+                for (const { event, eventCard } of eventPositions) {
+                    const oldEventY = eventCard.y; // Remember old position before centering
+                    const eventCenterOffset = (maxSpineHeight - eventCard.height) / 2;
+                    const newEventY = baseY + eventCenterOffset;
+                    eventCard.y = newEventY;
+                    // Cascade Y adjustment to variants: move them by same delta as their event
+                    if (event.variants && event.variants.length > 0) {
+                        const yDelta = newEventY - oldEventY; // How much did event move?
+                        for (const variant of event.variants) {
+                            const variantNode = allNodes.find(n => n.id === variant.id);
+                            if (variantNode) {
+                                variantNode.node.y += yDelta; // Move variant by same amount
                             }
-                            // Name the connector for easy identification
-                            try {
-                                if (!connectorNode.name.includes('Dynamic') && !connectorNode.name.includes('Static')) {
-                                    connectorNode.name = `${connector.type}: ${connector.from.nodeType} → ${connector.to.nodeType}`;
-                                }
+                        }
+                    }
+                }
+                // Center Exit node: move up by half the height difference
+                const exitCenterOffset = (maxSpineHeight - exitCard.height) / 2;
+                exitCard.y = baseY + exitCenterOffset;
+                // Safety net: if layout still under-reported overview width, spine nodes can overlap the card.
+                if (infoCard) {
+                    const minSpineX = infoCard.x + getReliableFrameWidth(infoCard) + 200;
+                    const spineXs = [entryCard.x, exitCard.x, ...eventPositions.map((ep) => ep.eventCard.x)];
+                    const spineStartX = Math.min(...spineXs);
+                    const shiftX = minSpineX - spineStartX;
+                    if (shiftX > 0) {
+                        for (const { node } of allNodes) {
+                            node.x += shiftX;
+                        }
+                    }
+                }
+                // --- STAGE 5: CONNECTOR RENDERING SETUP ---
+                // Build a quick lookup map: node ID → node object
+                // This is used to find source/target nodes when drawing connectors
+                const nodeMap = {};
+                for (const { node, id } of allNodes) {
+                    nodeMap[id] = node;
+                }
+                // Overview frame is mounted before spine layout so width is real; settle once more before connectors.
+                if (infoCard) {
+                    yield new Promise(resolve => setTimeout(resolve, 50));
+                }
+                // --- STAGE 5a: Dynamic Connector Rendering ---
+                // Creates connectors between nodes using the smart dynamic system:
+                //   1. Tries native ConnectorNode first (FigJam): automatic updates when nodes move! ✨
+                //   2. Falls back to VectorNode (regular Figma): manual refresh via refreshConnectors()
+                // For VectorNode connectors, call refreshConnectors() or send 'refresh-connectors' message when nodes move
+                const createdConnectors = [];
+                const connectorErrors = []; // Track errors for reporting
+                if (flow.connectors && Array.isArray(flow.connectors) && flow.connectors.length > 0) {
+                    // Categorize connectors into two groups based on their structure:
+                    //   1. Merge connectors (MERGE_LINE): Multiple sources → single target, uses merge+trunk pattern
+                    //   2. Direct connectors (PRIMARY_FLOW_LINE, BRANCH_LINE): Simple one-to-one or one-to-many connections
+                    const mergeGroups = new Map(); // Group merges by target ID
+                    const directConnectors = []; // PRIMARY_FLOW_LINE and BRANCH_LINE connectors
+                    for (const connector of flow.connectors) {
+                        if (connector.type === 'MERGE_LINE') {
+                            const toId = connector.to.id;
+                            if (!mergeGroups.has(toId)) {
+                                mergeGroups.set(toId, []);
                             }
-                            catch (nameError) {
-                                // Non-critical: naming failed, but connector was created
-                            }
-                            createdConnectors.push(connectorNode);
+                            mergeGroups.get(toId).push(connector);
                         }
                         else {
-                            // Connector creation returned null (likely FigJam unavailable or VectorNode creation failed)
+                            // PRIMARY_FLOW_LINE and BRANCH_LINE use direct connections (no grouping)
+                            directConnectors.push(connector);
+                        }
+                    }
+                    // Render direct connectors (PRIMARY_FLOW_LINE: spine connections; BRANCH_LINE: event to variant)
+                    // Direct connectors use simple one-to-one paths without merging
+                    for (const connector of directConnectors) {
+                        const fromNode = nodeMap[connector.from.id];
+                        const toNode = nodeMap[connector.to.id];
+                        if (!fromNode || !toNode) {
+                            // Skip: one or both endpoints missing (normal for optional connectors)
+                            connectorErrors.push({
+                                connectorId: connector.id,
+                                from: connector.from.id,
+                                to: connector.to.id,
+                                error: `Missing node endpoint: ${fromNode ? 'to' : 'from'} node not found`
+                            });
+                            continue;
+                        }
+                        try {
+                            // Determine connector styling: is one endpoint a rolled-out (winning) variant?
+                            // Rolled-out variants get special styling to highlight the chosen path
+                            const fromNodeId = connector.from.id;
+                            const toNodeId = connector.to.id;
+                            const rolledOutVariantId = (_7 = (_6 = experiment.outcomes) === null || _6 === void 0 ? void 0 : _6.rolledOutVariantId) !== null && _7 !== void 0 ? _7 : (_8 = experiment.outcomes) === null || _8 === void 0 ? void 0 : _8.rolledoutVariantId;
+                            // Check if either endpoint is the rolled-out variant
+                            const isRolledout = rolledOutVariantId && (fromNodeId === rolledOutVariantId || toNodeId === rolledOutVariantId);
+                            // Rolled-out styling takes priority over generic winner styling
+                            const isWinner = isRolledout || false;
+                            // Create connector using dynamic system (tries native → VectorNode fallback)
+                            // Native connectors in FigJam will automatically update when nodes move!
+                            const connectorNode = createDynamicConnector(fromNode, toNode, connector.type, {
+                                label: connector.label,
+                                winner: isWinner, // Rolled-out variant is the winner
+                                variantColor: undefined,
+                                index: 0,
+                                rolledout: isRolledout || false, // Rollout styling takes priority over winner
+                                useNativeConnector: true, // Try native connectors for automatic updates
+                            });
+                            if (connectorNode) {
+                                // Store additional metadata on the connector
+                                try {
+                                    const existingMeta = connectorNode.getPluginData('connectorMeta');
+                                    let meta = existingMeta ? JSON.parse(existingMeta) : {};
+                                    meta = Object.assign(Object.assign({}, meta), { connectorId: connector.id, fromNodeType: connector.from.nodeType, toNodeType: connector.to.nodeType, experimentId: experiment.id });
+                                    connectorNode.setPluginData('connectorMeta', JSON.stringify(meta));
+                                }
+                                catch (metaError) {
+                                    // Non-critical: metadata storage failed, but connector was created
+                                }
+                                // Name the connector for easy identification
+                                try {
+                                    if (!connectorNode.name.includes('Dynamic') && !connectorNode.name.includes('Static')) {
+                                        connectorNode.name = `${connector.type}: ${connector.from.nodeType} → ${connector.to.nodeType}`;
+                                    }
+                                }
+                                catch (nameError) {
+                                    // Non-critical: naming failed, but connector was created
+                                }
+                                createdConnectors.push(connectorNode);
+                            }
+                            else {
+                                // Connector creation returned null (likely FigJam unavailable or VectorNode creation failed)
+                                connectorErrors.push({
+                                    connectorId: connector.id,
+                                    from: connector.from.nodeType,
+                                    to: connector.to.nodeType,
+                                    error: 'Failed to create connector (likely environment incompatibility)'
+                                });
+                            }
+                        }
+                        catch (error) {
+                            // Connector creation threw an error: log but continue with remaining connectors
+                            // This prevents one bad connector from breaking the entire flow
                             connectorErrors.push({
                                 connectorId: connector.id,
                                 from: connector.from.nodeType,
                                 to: connector.to.nodeType,
-                                error: 'Failed to create connector (likely environment incompatibility)'
+                                error: `Connector creation failed: ${error instanceof Error ? error.message : 'unknown error'}`
                             });
                         }
                     }
-                    catch (error) {
-                        // Connector creation threw an error: log but continue with remaining connectors
-                        // This prevents one bad connector from breaking the entire flow
-                        connectorErrors.push({
-                            connectorId: connector.id,
-                            from: connector.from.nodeType,
-                            to: connector.to.nodeType,
-                            error: `Connector creation failed: ${error instanceof Error ? error.message : 'unknown error'}`
-                        });
+                    // Render merge connectors as merge+trunk patterns
+                    // Merge pattern: Multiple variants connect via branches to a common trunk, then trunk to target
+                    // This creates cleaner visualization than many separate connectors
+                    for (const [targetId, merges] of mergeGroups.entries()) {
+                        const targetNode = nodeMap[targetId];
+                        if (!targetNode) {
+                            // Skip: target node missing (unlikely, but handle gracefully)
+                            connectorErrors.push({
+                                from: `${merges.length} variant(s)`,
+                                to: targetId,
+                                error: 'Target node not found - merge cannot be created'
+                            });
+                            continue;
+                        }
+                        // Collect all variant source nodes for this merge group
+                        const variantNodes = merges
+                            .map(m => ({ connector: m, node: nodeMap[m.from.id] }))
+                            .filter(v => v.node !== undefined);
+                        if (variantNodes.length === 0) {
+                            // Skip: no valid source nodes (all missing)
+                            connectorErrors.push({
+                                from: `${merges.length} variant(s)`,
+                                to: targetId,
+                                error: 'All source nodes missing - merge cannot be created'
+                            });
+                            continue;
+                        }
+                        // Log if some variants were filtered out
+                        if (variantNodes.length < merges.length) {
+                            const missingCount = merges.length - variantNodes.length;
+                            connectorErrors.push({
+                                error: `Merge group: ${missingCount} of ${merges.length} source nodes missing, creating merge with ${variantNodes.length} available node(s)`
+                            });
+                        }
+                        try {
+                            // Create merge+trunk structure: branches from variants converge on trunk, then to target
+                            // This produces cleaner visualization than many separate connectors
+                            const mergeConnectors = createMergingTree(variantNodes, targetNode, experiment.id);
+                            createdConnectors.push(...mergeConnectors);
+                        }
+                        catch (error) {
+                            // Merge tree creation failed: log but continue with remaining connectors
+                            // Partial failure doesn't prevent the flow from rendering
+                            connectorErrors.push({
+                                from: `${variantNodes.length} variant(s)`,
+                                to: targetId,
+                                error: `Merge tree creation failed: ${error instanceof Error ? error.message : 'unknown error'}`
+                            });
+                            // Continue to next merge group instead of stopping
+                        }
                     }
-                }
-                // Render merge connectors as merge+trunk patterns
-                // Merge pattern: Multiple variants connect via branches to a common trunk, then trunk to target
-                // This creates cleaner visualization than many separate connectors
-                for (const [targetId, merges] of mergeGroups.entries()) {
-                    const targetNode = nodeMap[targetId];
-                    if (!targetNode) {
-                        // Skip: target node missing (unlikely, but handle gracefully)
-                        connectorErrors.push({
-                            from: `${merges.length} variant(s)`,
-                            to: targetId,
-                            error: 'Target node not found - merge cannot be created'
-                        });
-                        continue;
-                    }
-                    // Collect all variant source nodes for this merge group
-                    const variantNodes = merges
-                        .map(m => ({ connector: m, node: nodeMap[m.from.id] }))
-                        .filter(v => v.node !== undefined);
-                    if (variantNodes.length === 0) {
-                        // Skip: no valid source nodes (all missing)
-                        connectorErrors.push({
-                            from: `${merges.length} variant(s)`,
-                            to: targetId,
-                            error: 'All source nodes missing - merge cannot be created'
-                        });
-                        continue;
-                    }
-                    // Log if some variants were filtered out
-                    if (variantNodes.length < merges.length) {
-                        const missingCount = merges.length - variantNodes.length;
-                        connectorErrors.push({
-                            error: `Merge group: ${missingCount} of ${merges.length} source nodes missing, creating merge with ${variantNodes.length} available node(s)`
-                        });
-                    }
-                    try {
-                        // Create merge+trunk structure: branches from variants converge on trunk, then to target
-                        // This produces cleaner visualization than many separate connectors
-                        const mergeConnectors = createMergingTree(variantNodes, targetNode, experiment.id);
-                        createdConnectors.push(...mergeConnectors);
-                    }
-                    catch (error) {
-                        // Merge tree creation failed: log but continue with remaining connectors
-                        // Partial failure doesn't prevent the flow from rendering
-                        connectorErrors.push({
-                            from: `${variantNodes.length} variant(s)`,
-                            to: targetId,
-                            error: `Merge tree creation failed: ${error instanceof Error ? error.message : 'unknown error'}`
-                        });
-                        // Continue to next merge group instead of stopping
-                    }
-                }
-            }
-            else {
-            }
-            // Notify user about connector creation results
-            // Report success, partial failure, or complete failure with detailed information
-            if (createdConnectors.length > 0) {
-                const nativeCount = createdConnectors.filter(c => c.type === 'CONNECTOR').length;
-                const vectorCount = createdConnectors.length - nativeCount;
-                let message = `Created ${createdConnectors.length} connector${createdConnectors.length !== 1 ? 's' : ''}`;
-                if (nativeCount > 0) {
-                    message += ` (${nativeCount} dynamic${nativeCount !== 1 ? 's' : ''} - auto-update when cards move)`;
-                }
-                if (vectorCount > 0) {
-                    if (isFigJam()) {
-                        message += `. ${vectorCount} static connector${vectorCount !== 1 ? 's' : ''} - use "Refresh Connectors" to update`;
-                    }
-                    else {
-                        message += `. ${vectorCount} connector${vectorCount !== 1 ? 's' : ''} - auto-refreshing when cards move`;
-                    }
-                }
-                // If there were errors during connector creation, report them as a warning
-                if (connectorErrors.length > 0) {
-                    notifyUser({
-                        type: 'warning',
-                        title: `⚠️ ${message}`,
-                        detail: `However, ${connectorErrors.length} connector(s) failed to create.`,
-                        actionHint: 'The flow is complete, but some connections are missing. Check console for details.'
-                    });
                 }
                 else {
-                    notifyUser({ type: 'success', title: `✓ ${message}` });
                 }
-            }
-            else {
-                // No connectors created at all
-                if (connectorErrors.length > 0) {
-                    notifyUser({
-                        type: 'error',
-                        title: '❌ No connectors created',
-                        detail: `All ${connectorErrors.length} connector creation attempt(s) failed.`,
-                        actionHint: 'Flow structure is intact. Check console for detailed error information.'
-                    });
-                }
-                else {
-                    notifyUser(ERRORS.NO_CONNECTORS_CREATED);
-                }
-            }
-            // Select info card and zoom to view all nodes
-            if (infoCard) {
-                const allPageNodes = allNodes.map(n => n.node);
-                figma.viewport.scrollAndZoomIntoView([infoCard, ...allPageNodes]);
-            }
-            // --- Entry Notes Rendering ---
-            // In v2 schema, entry notes may be on flow.entryNotes or experiment.flow.entryNotes or not present
-            const entryNotesV2 = flow.entryNotes || experiment.entryNotes || [];
-            // Reuse nodeMap for anchor lookup (already built above for connectors)
-            // nodeMap is already populated with all nodes from connector rendering
-            if (Array.isArray(entryNotesV2)) {
-                for (const note of entryNotesV2) {
-                    // Create a sticky note frame
-                    const noteFrame = figma.createFrame();
-                    noteFrame.layoutMode = 'VERTICAL';
-                    noteFrame.counterAxisSizingMode = 'AUTO';
-                    noteFrame.primaryAxisSizingMode = 'AUTO';
-                    noteFrame.paddingLeft = noteFrame.paddingRight = TOKENS.space12;
-                    noteFrame.paddingTop = noteFrame.paddingBottom = TOKENS.space8;
-                    noteFrame.cornerRadius = TOKENS.radiusSM;
-                    noteFrame.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow50) }];
-                    noteFrame.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow300) }];
-                    noteFrame.strokeWeight = 1;
-                    noteFrame.name = `EntryNote: ${note.text}`;
-                    const noteText = figma.createText();
-                    noteText.fontName = { family: 'Figtree', style: 'Regular' };
-                    noteText.fontSize = TOKENS.fontSizeBodySm;
-                    noteText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow900) }];
-                    noteText.characters = note.text;
-                    noteText.textAutoResize = 'WIDTH_AND_HEIGHT';
-                    noteFrame.appendChild(noteText);
-                    attachNodeMeta(noteFrame, {
-                        name: note.text,
-                        type: 'frame',
-                        description: 'Entry Note',
-                        extra: {
-                            role: 'entry-note',
-                            entryNoteId: note.id,
-                            anchor: note.attachTo,
-                            experimentId: experiment.id,
-                        },
-                    });
-                    // Position note based on attachTo
-                    let anchorNode = undefined;
-                    const anchorType = (_7 = note.attachTo) === null || _7 === void 0 ? void 0 : _7.target;
-                    const anchorId = (_8 = note.attachTo) === null || _8 === void 0 ? void 0 : _8.targetId;
-                    if (anchorType === 'EVENT_NODE' && anchorId) {
-                        anchorNode = nodeMap[anchorId];
+                // Notify user about connector creation results
+                // Report success, partial failure, or complete failure with detailed information
+                if (createdConnectors.length > 0) {
+                    const nativeCount = createdConnectors.filter(c => c.type === 'CONNECTOR').length;
+                    const vectorCount = createdConnectors.length - nativeCount;
+                    let message = `Created ${createdConnectors.length} connector${createdConnectors.length !== 1 ? 's' : ''}`;
+                    if (nativeCount > 0) {
+                        message += ` (${nativeCount} dynamic${nativeCount !== 1 ? 's' : ''} - auto-update when cards move)`;
                     }
-                    if (anchorNode) {
-                        // Place note above or to the left of anchor node, depending on layout
-                        // For horizontal spine, place above; for vertical, place left
-                        if (((_9 = flow.layout) === null || _9 === void 0 ? void 0 : _9.direction) === 'VERTICAL') {
-                            noteFrame.x = ((_10 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _10 !== void 0 ? _10 : 0) - noteFrame.width - 24;
-                            noteFrame.y = ((_11 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _11 !== void 0 ? _11 : 0) + ((_12 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.height) !== null && _12 !== void 0 ? _12 : 0) / 2 - noteFrame.height / 2;
+                    if (vectorCount > 0) {
+                        if (isFigJam()) {
+                            message += `. ${vectorCount} static connector${vectorCount !== 1 ? 's' : ''} - use "Refresh Connectors" to update`;
                         }
                         else {
-                            noteFrame.x = ((_13 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _13 !== void 0 ? _13 : 0) + ((_14 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.width) !== null && _14 !== void 0 ? _14 : 0) / 2 - noteFrame.width / 2;
-                            noteFrame.y = ((_15 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _15 !== void 0 ? _15 : 0) - noteFrame.height - 24;
+                            message += `. ${vectorCount} connector${vectorCount !== 1 ? 's' : ''} - auto-refreshing when cards move`;
                         }
+                    }
+                    // If there were errors during connector creation, report them as a warning
+                    if (connectorErrors.length > 0) {
+                        notifyUser({
+                            type: 'warning',
+                            title: `⚠️ ${message}`,
+                            detail: `However, ${connectorErrors.length} connector(s) failed to create.`,
+                            actionHint: 'The flow is complete, but some connections are missing. Check console for details.'
+                        });
                     }
                     else {
-                        // Default: place near first event
-                        const firstNode = allNodes[0];
-                        if (firstNode) {
-                            noteFrame.x = firstNode.node.x - noteFrame.width - 24;
-                            noteFrame.y = firstNode.node.y;
+                        notifyUser({ type: 'success', title: `✓ ${message}` });
+                    }
+                }
+                else {
+                    // No connectors created at all
+                    if (connectorErrors.length > 0) {
+                        notifyUser({
+                            type: 'error',
+                            title: '❌ No connectors created',
+                            detail: `All ${connectorErrors.length} connector creation attempt(s) failed.`,
+                            actionHint: 'Flow structure is intact. Check console for detailed error information.'
+                        });
+                    }
+                    else {
+                        notifyUser(ERRORS.NO_CONNECTORS_CREATED);
+                    }
+                }
+                // Select info card and zoom to view all nodes
+                if (infoCard) {
+                    const allPageNodes = allNodes.map(n => n.node);
+                    figma.viewport.scrollAndZoomIntoView([infoCard, ...allPageNodes]);
+                }
+                // --- Entry Notes Rendering ---
+                // In v2 schema, entry notes may be on flow.entryNotes or experiment.flow.entryNotes or not present
+                const entryNotesV2 = flow.entryNotes || experiment.entryNotes || [];
+                // Reuse nodeMap for anchor lookup (already built above for connectors)
+                // nodeMap is already populated with all nodes from connector rendering
+                if (Array.isArray(entryNotesV2)) {
+                    for (const note of entryNotesV2) {
+                        // Create a sticky note frame
+                        const noteFrame = figma.createFrame();
+                        noteFrame.layoutMode = 'VERTICAL';
+                        noteFrame.counterAxisSizingMode = 'AUTO';
+                        noteFrame.primaryAxisSizingMode = 'AUTO';
+                        noteFrame.paddingLeft = noteFrame.paddingRight = TOKENS.space12;
+                        noteFrame.paddingTop = noteFrame.paddingBottom = TOKENS.space8;
+                        noteFrame.cornerRadius = TOKENS.radiusSM;
+                        noteFrame.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow50) }];
+                        noteFrame.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow300) }];
+                        noteFrame.strokeWeight = 1;
+                        noteFrame.name = `EntryNote: ${note.text}`;
+                        const noteText = figma.createText();
+                        noteText.fontName = { family: 'Figtree', style: 'Regular' };
+                        noteText.fontSize = TOKENS.fontSizeBodySm;
+                        noteText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow900) }];
+                        noteText.characters = note.text;
+                        noteText.textAutoResize = 'WIDTH_AND_HEIGHT';
+                        noteFrame.appendChild(noteText);
+                        attachNodeMeta(noteFrame, {
+                            name: note.text,
+                            type: 'frame',
+                            description: 'Entry Note',
+                            extra: {
+                                role: 'entry-note',
+                                entryNoteId: note.id,
+                                anchor: note.attachTo,
+                                experimentId: experiment.id,
+                            },
+                        });
+                        // Position note based on attachTo
+                        let anchorNode = undefined;
+                        const anchorType = (_9 = note.attachTo) === null || _9 === void 0 ? void 0 : _9.target;
+                        const anchorId = (_10 = note.attachTo) === null || _10 === void 0 ? void 0 : _10.targetId;
+                        if (anchorType === 'EVENT_NODE' && anchorId) {
+                            anchorNode = nodeMap[anchorId];
+                        }
+                        if (anchorNode) {
+                            // Place note above or to the left of anchor node, depending on layout
+                            // For horizontal spine, place above; for vertical, place left
+                            if (((_11 = flow.layout) === null || _11 === void 0 ? void 0 : _11.direction) === 'VERTICAL') {
+                                noteFrame.x = ((_12 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _12 !== void 0 ? _12 : 0) - noteFrame.width - 24;
+                                noteFrame.y = ((_13 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _13 !== void 0 ? _13 : 0) + ((_14 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.height) !== null && _14 !== void 0 ? _14 : 0) / 2 - noteFrame.height / 2;
+                            }
+                            else {
+                                noteFrame.x = ((_15 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _15 !== void 0 ? _15 : 0) + ((_16 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.width) !== null && _16 !== void 0 ? _16 : 0) / 2 - noteFrame.width / 2;
+                                noteFrame.y = ((_17 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _17 !== void 0 ? _17 : 0) - noteFrame.height - 24;
+                            }
                         }
                         else {
-                            noteFrame.x = baseX - 60;
-                            noteFrame.y = baseY - 60;
+                            // Default: place near first event
+                            const firstNode = allNodes[0];
+                            if (firstNode) {
+                                noteFrame.x = firstNode.node.x - noteFrame.width - 24;
+                                noteFrame.y = firstNode.node.y;
+                            }
+                            else {
+                                noteFrame.x = baseX - 60;
+                                noteFrame.y = baseY - 60;
+                            }
                         }
+                        figma.currentPage.appendChild(noteFrame);
                     }
-                    figma.currentPage.appendChild(noteFrame);
                 }
+                // Outcome Note removed
+                notifyUser(ERRORS.FLOW_CREATED_SUCCESSFULLY);
+                // Set up auto-refresh for connectors in regular Figma
+                // (In FigJam, native connectors auto-update, so this isn't needed)
+                setupAutoRefreshConnectors().catch(err => {
+                });
             }
-            // Outcome Note removed
-            notifyUser(ERRORS.FLOW_CREATED_SUCCESSFULLY);
-            // Set up auto-refresh for connectors in regular Figma
-            // (In FigJam, native connectors auto-update, so this isn't needed)
-            setupAutoRefreshConnectors().catch(err => {
-            });
+            catch (error) {
+                console.error('[GrowthLab] createFlowV2FromData failed', error);
+                notifyUser({
+                    type: 'error',
+                    title: 'Could not finish the experiment flow',
+                    detail: error instanceof Error ? error.message : 'An unexpected error occurred while building the canvas.',
+                    actionHint: 'Reload the plugin and try again. Orphaned nodes were cleared at the start of this run.',
+                });
+            }
+            finally {
+                notifyFlowCreateFinished();
+            }
         });
     }
     /**
@@ -3066,7 +3288,26 @@ if (figma.editorType === 'figma') {
                 return;
             }
             // Handle V2 flow creation (primary handler with full type safety)
+            if (msg.type === 'validate-figma-link') {
+                const requestId = safeGetString(msg, 'requestId');
+                const url = safeGetString(msg, 'url');
+                const result = yield validateFigmaLinkForThumbnail(url);
+                figma.ui.postMessage({
+                    type: 'figma-link-validation',
+                    requestId,
+                    ok: result.ok,
+                    message: result.message,
+                    normalizedUrl: result.normalizedUrl,
+                    linkScope: result.linkScope,
+                });
+                return;
+            }
             if (msg.type === 'create-flow-v2') {
+                if (isCreatingFlow) {
+                    figma.notify('Flow is still being created — please wait.');
+                    notifyFlowCreateFinished();
+                    return;
+                }
                 const payload = safeGetProperty(msg, 'payload');
                 if (payload && isCreateFlowV2Payload(payload)) {
                     const { experiment, flow, metrics } = payload;
@@ -3084,6 +3325,7 @@ if (figma.editorType === 'figma') {
                             detail: preview + (merged.length > 3 ? `\n(+${merged.length - 3} more in the plugin panel)` : ''),
                             actionHint: 'Details are listed in the plugin toast.',
                         });
+                        notifyFlowCreateFinished();
                         return;
                     }
                     if (metrics && !isMetricDefinitionArray(metrics)) {
@@ -3095,9 +3337,49 @@ if (figma.editorType === 'figma') {
                             title: 'Fix goals before creating the flow',
                             detail: goalsIssues[0].message,
                         });
+                        notifyFlowCreateFinished();
                         return;
                     }
-                    yield createFlowV2FromData(experiment, flow, metrics);
+                    const invalidLinks = [];
+                    for (const event of flow.events) {
+                        const eventLink = safeGetString(event, 'figmaLink');
+                        if (eventLink) {
+                            const check = yield validateFigmaLinkForThumbnail(eventLink);
+                            if (!check.ok) {
+                                invalidLinks.push(`Touchpoint "${event.name}": ${check.message || 'invalid link'}`);
+                            }
+                        }
+                        for (const variant of event.variants || []) {
+                            const variantLink = safeGetString(variant, 'figmaLink');
+                            if (variantLink) {
+                                const check = yield validateFigmaLinkForThumbnail(variantLink);
+                                if (!check.ok) {
+                                    invalidLinks.push(`Variant "${variant.name}": ${check.message || 'invalid link'}`);
+                                }
+                            }
+                        }
+                    }
+                    if (invalidLinks.length > 0) {
+                        const preview = invalidLinks.slice(0, 2).join('\n');
+                        notifyUser({
+                            type: 'error',
+                            title: 'Fix Figma frame links before creating the flow',
+                            detail: preview + (invalidLinks.length > 2 ? `\n(+${invalidLinks.length - 2} more)` : ''),
+                            actionHint: 'Use Copy link to selection on a Frame — not on images or experiment cards.',
+                        });
+                        notifyFlowCreateFinished();
+                        return;
+                    }
+                    isCreatingFlow = true;
+                    try {
+                        yield createFlowV2FromData(experiment, flow, metrics);
+                    }
+                    finally {
+                        isCreatingFlow = false;
+                    }
+                }
+                else {
+                    notifyFlowCreateFinished();
                 }
                 return;
             }
@@ -3171,7 +3453,7 @@ if (figma.editorType === 'figma') {
                 entryCard.name = 'Entry Variant Node';
             }
             else {
-                entryCard = createEventCard(entryLabel, 0, undefined);
+                entryCard = yield createEventCard(entryLabel, 0, undefined, undefined, undefined);
                 entryCard.name = 'Entry Event Node';
             }
             flowFrame.appendChild(entryCard);

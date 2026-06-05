@@ -9,6 +9,15 @@ export interface ExperimentStatusConfig {
   textColor: string;
 }
 
+/** Unified text colors for experiment summary panels (labels, body, bullets). */
+export const SUMMARY_TYPOGRAPHY = {
+  label: TOKENS.textTertiary,
+  body: TOKENS.textPrimary,
+} as const;
+
+/** Bullet diameter for summary list rows (matches body text color). */
+export const SUMMARY_BULLET_PX = 5;
+
 export const EXPERIMENT_STATUS_STYLES: Record<ExperimentStatus, ExperimentStatusConfig> = {
   draft: {
     label: "Draft",

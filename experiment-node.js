@@ -10,9 +10,95 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { TOKENS } from './design-tokens';
+import { getCanvasTokens, createCardShadowEffect } from './canvas-theme';
 import { hexToRgb, getFontStyle, createBadge } from './layout-utils';
 const THUMBNAIL_WIDTH = 368;
+/** Used for flow spacing when cards are not yet on the canvas. */
+export const VARIANT_CARD_LAYOUT_WIDTH = 400;
 const THUMBNAIL_HEIGHT = 260;
+/** Shared hint for canvas placeholders and link validation. */
+export const THUMBNAIL_LINK_HINT = 'Right-click a frame → Copy link to selection.';
+/** Canvas placeholder copy (title + optional helper line). */
+export const THUMBNAIL_MESSAGES = {
+    default: {
+        title: 'Link a Figma frame',
+        helper: 'Paste a frame link for a preview.',
+    },
+    image: {
+        title: 'Use a frame, not an image',
+        helper: THUMBNAIL_LINK_HINT,
+    },
+    generated: {
+        title: "Can't use experiment cards",
+        helper: 'Link a design frame instead.',
+    },
+    unsupported: {
+        title: 'Link a frame',
+        helper: THUMBNAIL_LINK_HINT,
+    },
+    crossFile: {
+        title: 'Frame in another file',
+        helper: 'Open the link in Figma.',
+    },
+    unavailable: {
+        title: 'Preview unavailable',
+        helper: THUMBNAIL_LINK_HINT,
+    },
+};
+/** Single-line errors from the link field (keep in sync with checks in code.ts). */
+export const THUMBNAIL_VALIDATION_MSG = {
+    invalidLink: 'Enter a valid Figma link.',
+    missingNode: `Add a frame to the link. ${THUMBNAIL_LINK_HINT}`,
+    notFound: 'Frame not found in this file.',
+    generated: THUMBNAIL_MESSAGES.generated.helper,
+    image: 'Link a frame — not an image or screenshot.',
+    unsupported: THUMBNAIL_MESSAGES.unsupported.helper,
+};
+export const THUMBNAIL_DEFAULT_HELPER = THUMBNAIL_MESSAGES.default.helper;
+export const THUMBNAIL_IMAGE_UNSUPPORTED_TITLE = THUMBNAIL_MESSAGES.image.title;
+export const THUMBNAIL_IMAGE_UNSUPPORTED_HELPER = THUMBNAIL_MESSAGES.image.helper;
+export const THUMBNAIL_CANNOT_LINK_GENERATED_TITLE = THUMBNAIL_MESSAGES.generated.title;
+export const THUMBNAIL_CANNOT_LINK_GENERATED_HELPER = THUMBNAIL_MESSAGES.generated.helper;
+export const THUMBNAIL_REQUIRES_FRAME_TITLE = THUMBNAIL_MESSAGES.unsupported.title;
+export const THUMBNAIL_REQUIRES_FRAME_HELPER = THUMBNAIL_MESSAGES.unsupported.helper;
+export const THUMBNAIL_CROSS_FILE_TITLE = THUMBNAIL_MESSAGES.crossFile.title;
+export const THUMBNAIL_CROSS_FILE_HELPER = THUMBNAIL_MESSAGES.crossFile.helper;
+const GROWTHLAB_FLOW_ROLES = new Set([
+    'experiment-info',
+    'entry',
+    'event',
+    'variant',
+    'exit',
+    'entry-note',
+]);
+/** True when the node is (or is inside) a GrowthLab-generated flow card — unsafe as a thumbnail source. */
+export function isExperimentFlowCardNode(node) {
+    var _a;
+    let current = node;
+    while (current && current.type !== 'PAGE' && current.type !== 'DOCUMENT') {
+        if (current.type === 'FRAME') {
+            const frameName = current.name;
+            if (/^(Entry|Exit|Touchpoint|Variant)(:|$)/.test(frameName))
+                return true;
+            if (/^Experiment (Overview|Flow|Cards)( — |$)/.test(frameName))
+                return true;
+        }
+        const metaRaw = current.getPluginData('meta');
+        if (metaRaw) {
+            try {
+                const meta = JSON.parse(metaRaw);
+                const role = (_a = meta === null || meta === void 0 ? void 0 : meta.extra) === null || _a === void 0 ? void 0 : _a.role;
+                if (typeof role === 'string' && GROWTHLAB_FLOW_ROLES.has(role))
+                    return true;
+            }
+            catch (_b) {
+                // ignore malformed plugin data
+            }
+        }
+        current = current.parent;
+    }
+    return false;
+}
 const ROLLED_OUT_BADGE_BG = '#fffbb5';
 const ROLLED_OUT_BADGE_TEXT = '#484122';
 const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
@@ -77,80 +163,128 @@ function createRolledOutIcon() {
     icon.fills = [];
     return icon;
 }
-function canCloneThumbnailSource(node) {
-    return !!node && typeof node.clone === 'function';
+/** True when the layer can be exported as a touchpoint / variant preview. */
+export function isSupportedThumbnailLinkTarget(node) {
+    if (isExperimentFlowCardNode(node) || isUnsupportedImageThumbnailSource(node))
+        return false;
+    return node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE';
 }
-function resizeThumbnailChild(node, width, height) {
-    const resizable = node;
-    if (typeof resizable.resize === 'function') {
-        resizable.resize(width, height);
-    }
-    else if (typeof resizable.resizeWithoutConstraints === 'function') {
-        resizable.resizeWithoutConstraints(width, height);
-    }
-}
-function createThumbnailFrame(sourceNode, options = {}) {
-    var _a;
-    const thumb = figma.createFrame();
-    thumb.layoutMode = 'NONE';
-    thumb.resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
-    thumb.cornerRadius = (_a = options.cornerRadius) !== null && _a !== void 0 ? _a : TOKENS.radiusMD;
-    thumb.name = 'Thumbnail - Link Figma frame or replace with image';
-    thumb.layoutAlign = 'MIN';
-    thumb.clipsContent = true;
-    if (!canCloneThumbnailSource(sourceNode)) {
-        thumb.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue100) }];
-        thumb.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue200) }];
-        thumb.strokeWeight = 1;
-        if (options.placeholderMessage) {
-            const title = figma.createText();
-            title.fontName = getFontStyle("Bold");
-            title.fontSize = TOKENS.fontSizeBodySm;
-            title.lineHeight = { value: 16, unit: "PIXELS" };
-            title.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
-            title.textAlignHorizontal = 'CENTER';
-            title.textAutoResize = 'HEIGHT';
-            title.characters = options.placeholderMessage;
-            title.resize(THUMBNAIL_WIDTH - 48, title.height);
-            title.name = 'Thumbnail Message Title';
-            const helper = figma.createText();
-            helper.fontName = getFontStyle("Regular");
-            helper.fontSize = TOKENS.fontSizeLabel;
-            helper.lineHeight = { value: 14, unit: "PIXELS" };
-            helper.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
-            helper.textAlignHorizontal = 'CENTER';
-            helper.textAutoResize = 'HEIGHT';
-            helper.characters = 'Use a frame from this Figma file to render a preview.';
-            helper.resize(THUMBNAIL_WIDTH - 48, helper.height);
-            helper.name = 'Thumbnail Message Helper';
-            const contentHeight = title.height + 8 + helper.height;
-            title.x = 24;
-            title.y = (THUMBNAIL_HEIGHT - contentHeight) / 2;
-            helper.x = 24;
-            helper.y = title.y + title.height + 8;
-            thumb.appendChild(title);
-            thumb.appendChild(helper);
+/** Image layers (screenshots, bitmap fills) are not supported — use {@link isUnsupportedImageThumbnailSource}. */
+export function isUnsupportedImageThumbnailSource(node) {
+    if (node.type === 'ROUNDED_RECTANGLE')
+        return true;
+    if (node.type === 'RECTANGLE') {
+        const fills = node.fills;
+        if (fills !== figma.mixed && Array.isArray(fills)) {
+            return fills.some((fill) => fill.type === 'IMAGE' && fill.visible !== false);
         }
+    }
+    return false;
+}
+function appendThumbnailPlaceholder(thumb, options) {
+    thumb.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue100) }];
+    thumb.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue200) }];
+    thumb.strokeWeight = 1;
+    if (!options.placeholderMessage)
+        return;
+    const title = figma.createText();
+    title.fontName = getFontStyle('Bold');
+    title.fontSize = TOKENS.fontSizeBodySm;
+    title.lineHeight = { value: 16, unit: 'PIXELS' };
+    title.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+    title.textAlignHorizontal = 'CENTER';
+    title.textAutoResize = 'HEIGHT';
+    title.characters = options.placeholderMessage;
+    title.resize(THUMBNAIL_WIDTH - 48, title.height);
+    title.name = 'Thumbnail Message Title';
+    const helper = figma.createText();
+    helper.fontName = getFontStyle('Regular');
+    helper.fontSize = TOKENS.fontSizeLabel;
+    helper.lineHeight = { value: 14, unit: 'PIXELS' };
+    helper.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
+    helper.textAlignHorizontal = 'CENTER';
+    helper.textAutoResize = 'HEIGHT';
+    helper.characters = options.placeholderHelper || THUMBNAIL_DEFAULT_HELPER;
+    helper.resize(THUMBNAIL_WIDTH - 48, helper.height);
+    helper.name = 'Thumbnail Message Helper';
+    const contentHeight = title.height + 8 + helper.height;
+    title.x = 24;
+    title.y = (THUMBNAIL_HEIGHT - contentHeight) / 2;
+    helper.x = 24;
+    helper.y = title.y + title.height + 8;
+    thumb.appendChild(title);
+    thumb.appendChild(helper);
+}
+function createRasterThumbnailLayer(sourceNode) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const bytes = yield sourceNode.exportAsync({
+                format: 'PNG',
+                constraint: { type: 'WIDTH', value: THUMBNAIL_WIDTH * 2 },
+            });
+            const image = figma.createImage(bytes);
+            const imgRect = figma.createRectangle();
+            imgRect.resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
+            imgRect.cornerRadius = TOKENS.radiusSM;
+            imgRect.fills = [{ type: 'IMAGE', imageHash: image.hash, scaleMode: 'FILL' }];
+            imgRect.strokes = [];
+            imgRect.name = 'Thumbnail Image';
+            return imgRect;
+        }
+        catch (error) {
+            console.warn('Failed to rasterize thumbnail source', error);
+            return null;
+        }
+    });
+}
+function createThumbnailFrame(sourceNode_1) {
+    return __awaiter(this, arguments, void 0, function* (sourceNode, options = {}) {
+        var _a;
+        const thumb = figma.createFrame();
+        thumb.layoutMode = 'NONE';
+        thumb.resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
+        thumb.cornerRadius = (_a = options.cornerRadius) !== null && _a !== void 0 ? _a : TOKENS.radiusMD;
+        thumb.name = 'Thumbnail - Link Figma frame or replace with image';
+        thumb.layoutAlign = 'MIN';
+        thumb.clipsContent = true;
+        if (!sourceNode) {
+            appendThumbnailPlaceholder(thumb, options);
+            return thumb;
+        }
+        if (isUnsupportedImageThumbnailSource(sourceNode)) {
+            appendThumbnailPlaceholder(thumb, {
+                placeholderMessage: options.placeholderMessage || THUMBNAIL_IMAGE_UNSUPPORTED_TITLE,
+                placeholderHelper: options.placeholderHelper || THUMBNAIL_IMAGE_UNSUPPORTED_HELPER,
+            });
+            return thumb;
+        }
+        if (!isSupportedThumbnailLinkTarget(sourceNode)) {
+            appendThumbnailPlaceholder(thumb, {
+                placeholderMessage: options.placeholderMessage || THUMBNAIL_REQUIRES_FRAME_TITLE,
+                placeholderHelper: options.placeholderHelper || THUMBNAIL_REQUIRES_FRAME_HELPER,
+            });
+            return thumb;
+        }
+        if (isExperimentFlowCardNode(sourceNode)) {
+            appendThumbnailPlaceholder(thumb, {
+                placeholderMessage: THUMBNAIL_CANNOT_LINK_GENERATED_TITLE,
+                placeholderHelper: THUMBNAIL_CANNOT_LINK_GENERATED_HELPER,
+            });
+            return thumb;
+        }
+        const rasterLayer = yield createRasterThumbnailLayer(sourceNode);
+        if (rasterLayer) {
+            thumb.fills = [];
+            thumb.strokes = [];
+            thumb.appendChild(rasterLayer);
+            return thumb;
+        }
+        appendThumbnailPlaceholder(thumb, {
+            placeholderMessage: options.placeholderMessage || THUMBNAIL_MESSAGES.unavailable.title,
+            placeholderHelper: options.placeholderHelper || THUMBNAIL_DEFAULT_HELPER,
+        });
         return thumb;
-    }
-    thumb.fills = [];
-    thumb.strokes = [];
-    const clone = sourceNode.clone();
-    clone.name = 'Thumbnail Source';
-    const sourceWidth = Math.max(1, sourceNode.width || THUMBNAIL_WIDTH);
-    const sourceHeight = Math.max(1, sourceNode.height || THUMBNAIL_HEIGHT);
-    const scale = Math.max(THUMBNAIL_WIDTH / sourceWidth, THUMBNAIL_HEIGHT / sourceHeight);
-    const resizedWidth = sourceWidth * scale;
-    const resizedHeight = sourceHeight * scale;
-    resizeThumbnailChild(clone, resizedWidth, resizedHeight);
-    clone.x = (THUMBNAIL_WIDTH - resizedWidth) / 2;
-    clone.y = (THUMBNAIL_HEIGHT - resizedHeight) / 2;
-    const roundedClone = clone;
-    if (typeof roundedClone.cornerRadius === 'number') {
-        roundedClone.cornerRadius = TOKENS.radiusSM;
-    }
-    thumb.appendChild(clone);
-    return thumb;
+    });
 }
 /**
  * Creates an icon frame from an SVG string using Figma's importSVGAsync
@@ -273,89 +407,96 @@ function createIconFromSVG(svgString_1) {
  * eventCard.y = 200;
  * figma.currentPage.appendChild(eventCard);
  */
-export function createEventCard(eventName, _variantCount, _eventIndex, thumbnailSource, thumbnailMessage, options) {
-    const card = figma.createFrame();
-    card.layoutMode = 'VERTICAL';
-    card.counterAxisSizingMode = 'AUTO';
-    card.primaryAxisSizingMode = 'AUTO';
-    card.minWidth = 300; // 18.75rem
-    card.maxWidth = 400; // 25rem
-    // No fixed height: primaryAxisSizingMode AUTO hugs thumbnail + header + optional Figma row (like variant cards)
-    card.paddingLeft = 16;
-    card.paddingRight = 16;
-    card.paddingTop = 16; // 1rem
-    card.paddingBottom = 16; // 0.75rem
-    card.cornerRadius = 16; // 1rem
-    card.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.fillsSurface) }];
-    card.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
-    card.strokeWeight = 1;
-    card.effects = [{
-            type: 'DROP_SHADOW',
-            color: { r: 0, g: 0, b: 0, a: 0.05 },
-            offset: { x: 0, y: 1 },
-            radius: 2,
-            spread: 0,
-            visible: true,
-            blendMode: 'NORMAL',
-        }];
-    card.itemSpacing = 8; // 1rem gap
-    card.primaryAxisAlignItems = 'MIN';
-    card.counterAxisAlignItems = 'MIN';
-    // Naming shows up in the Layers panel; use user-facing "Touchpoint" vocabulary.
-    card.name = `Touchpoint: ${eventName}`;
-    const selection = figma.currentPage.selection;
-    // Check if user has selected a Frame or Rectangle to use as thumbnail
-    // Only use FRAME or RECTANGLE types - ignore TEXT and other node types
-    // to prevent accidentally cloning text content (like pasted URLs) into thumbnails
-    const selectedNode = selection && selection.length > 0 ? selection[0] : null;
-    const isValidThumbnailSource = selectedNode &&
-        (selectedNode.type === 'FRAME' || selectedNode.type === 'RECTANGLE');
-    const resolvedThumbnailSource = thumbnailSource || (isValidThumbnailSource ? selectedNode : null);
-    const thumb = createThumbnailFrame(resolvedThumbnailSource, {
-        cornerRadius: TOKENS.radiusMD,
-        placeholderMessage: thumbnailMessage,
+export function createEventCard(eventName, _variantCount, _eventIndex, thumbnailSource, thumbnailMessage, thumbnailHelper, options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const card = figma.createFrame();
+        card.layoutMode = 'VERTICAL';
+        card.counterAxisSizingMode = 'AUTO';
+        card.primaryAxisSizingMode = 'AUTO';
+        card.minWidth = 300; // 18.75rem
+        card.maxWidth = 400; // 25rem
+        // No fixed height: primaryAxisSizingMode AUTO hugs thumbnail + header + optional Figma row (like variant cards)
+        card.paddingLeft = 16;
+        card.paddingRight = 16;
+        card.paddingTop = 16; // 1rem
+        card.paddingBottom = 16; // 0.75rem
+        card.cornerRadius = 16; // 1rem
+        const canvas = getCanvasTokens();
+        card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
+        card.strokes = [{ type: 'SOLID', color: canvas.border }];
+        card.strokeWeight = 1;
+        card.effects = [createCardShadowEffect()];
+        card.itemSpacing = 8; // 1rem gap
+        card.primaryAxisAlignItems = 'MIN';
+        card.counterAxisAlignItems = 'MIN';
+        card.name = 'Touchpoint';
+        const selection = figma.currentPage.selection;
+        // Check if user has selected a Frame or Rectangle to use as thumbnail
+        // Only use FRAME or RECTANGLE types - ignore TEXT and other node types
+        // to prevent accidentally cloning text content (like pasted URLs) into thumbnails
+        const selectedNode = selection && selection.length > 0 ? selection[0] : null;
+        const hasFigmaLink = !!((options === null || options === void 0 ? void 0 : options.figmaLink) && options.figmaLink.trim());
+        const isValidThumbnailSource = !hasFigmaLink &&
+            selectedNode &&
+            !isExperimentFlowCardNode(selectedNode) &&
+            (selectedNode.type === 'FRAME' ||
+                selectedNode.type === 'RECTANGLE' ||
+                selectedNode.type === 'ROUNDED_RECTANGLE');
+        const candidateSource = thumbnailSource !== null && thumbnailSource !== void 0 ? thumbnailSource : (isValidThumbnailSource ? selectedNode : null);
+        const resolvedThumbnailSource = candidateSource && !isUnsupportedImageThumbnailSource(candidateSource) ? candidateSource : null;
+        const thumb = yield createThumbnailFrame(resolvedThumbnailSource, {
+            cornerRadius: TOKENS.radiusMD,
+            placeholderMessage: thumbnailMessage ||
+                (candidateSource && isUnsupportedImageThumbnailSource(candidateSource)
+                    ? THUMBNAIL_IMAGE_UNSUPPORTED_TITLE
+                    : undefined),
+            placeholderHelper: thumbnailHelper ||
+                (candidateSource && isUnsupportedImageThumbnailSource(candidateSource)
+                    ? THUMBNAIL_IMAGE_UNSUPPORTED_HELPER
+                    : undefined),
+        });
+        card.appendChild(thumb);
+        // Group touchpoint name text
+        const eventDetailsContainer = figma.createFrame();
+        eventDetailsContainer.layoutMode = 'HORIZONTAL';
+        eventDetailsContainer.counterAxisSizingMode = 'AUTO';
+        eventDetailsContainer.primaryAxisSizingMode = 'FIXED';
+        eventDetailsContainer.primaryAxisAlignItems = 'MIN';
+        eventDetailsContainer.counterAxisAlignItems = 'CENTER';
+        eventDetailsContainer.itemSpacing = 8;
+        eventDetailsContainer.fills = [];
+        eventDetailsContainer.strokes = [];
+        eventDetailsContainer.name = 'Touchpoint Details Container';
+        eventDetailsContainer.layoutAlign = 'STRETCH';
+        eventDetailsContainer.resize(300 - 32, 32); // Match card width minus padding
+        eventDetailsContainer.paddingBottom = 8;
+        eventDetailsContainer.paddingTop = 8;
+        const eventNameText = figma.createText();
+        eventNameText.fontName = getFontStyle("Bold");
+        eventNameText.fontSize = TOKENS.fontSizeBodyLg;
+        eventNameText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+        eventNameText.textAutoResize = 'WIDTH_AND_HEIGHT';
+        eventNameText.textAlignHorizontal = 'LEFT';
+        eventNameText.layoutGrow = 1;
+        // Auto-number fallback: if eventName is empty, use 'Touchpoint <n>'
+        // Try to extract a number from the card name if possible
+        let fallbackEventNumber = 1;
+        // Try to parse an explicit number from the card name (if present)
+        const match = card.name.match(/(?:Touchpoint): (\d+)/);
+        if (!eventName && match && match[1]) {
+            fallbackEventNumber = parseInt(match[1], 10);
+        }
+        eventNameText.characters = eventName || `Touchpoint ${fallbackEventNumber}`;
+        eventNameText.name = 'Touchpoint Name Text';
+        eventDetailsContainer.appendChild(eventNameText);
+        card.appendChild(eventDetailsContainer);
+        const rawFigmaLink = options === null || options === void 0 ? void 0 : options.figmaLink;
+        const trimmedFigma = typeof rawFigmaLink === 'string' && rawFigmaLink.trim().length > 0 ? rawFigmaLink.trim() : '';
+        if (trimmedFigma && (options === null || options === void 0 ? void 0 : options.showFigmaLink) !== false) {
+            card.appendChild(createOpenInFigmaLinkRow(trimmedFigma));
+        }
+        return card;
     });
-    card.appendChild(thumb);
-    // Group touchpoint name text
-    const eventDetailsContainer = figma.createFrame();
-    eventDetailsContainer.layoutMode = 'HORIZONTAL';
-    eventDetailsContainer.counterAxisSizingMode = 'AUTO';
-    eventDetailsContainer.primaryAxisSizingMode = 'FIXED';
-    eventDetailsContainer.primaryAxisAlignItems = 'MIN';
-    eventDetailsContainer.counterAxisAlignItems = 'CENTER';
-    eventDetailsContainer.itemSpacing = 8;
-    eventDetailsContainer.fills = [];
-    eventDetailsContainer.strokes = [];
-    eventDetailsContainer.name = 'Touchpoint Details Container';
-    eventDetailsContainer.layoutAlign = 'STRETCH';
-    eventDetailsContainer.resize(300 - 32, 32); // Match card width minus padding
-    eventDetailsContainer.paddingBottom = 8;
-    eventDetailsContainer.paddingTop = 8;
-    const eventNameText = figma.createText();
-    eventNameText.fontName = getFontStyle("Bold");
-    eventNameText.fontSize = TOKENS.fontSizeBodyLg;
-    eventNameText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
-    eventNameText.textAutoResize = 'WIDTH_AND_HEIGHT';
-    eventNameText.textAlignHorizontal = 'LEFT';
-    eventNameText.layoutGrow = 1;
-    // Auto-number fallback: if eventName is empty, use 'Touchpoint <n>'
-    // Try to extract a number from the card name if possible
-    let fallbackEventNumber = 1;
-    // Try to parse an explicit number from the card name (if present)
-    const match = card.name.match(/(?:Touchpoint): (\d+)/);
-    if (!eventName && match && match[1]) {
-        fallbackEventNumber = parseInt(match[1], 10);
-    }
-    eventNameText.characters = eventName || `Touchpoint ${fallbackEventNumber}`;
-    eventNameText.name = 'Touchpoint Name Text';
-    eventDetailsContainer.appendChild(eventNameText);
-    card.appendChild(eventDetailsContainer);
-    const rawFigmaLink = options === null || options === void 0 ? void 0 : options.figmaLink;
-    const trimmedFigma = typeof rawFigmaLink === 'string' && rawFigmaLink.trim().length > 0 ? rawFigmaLink.trim() : '';
-    if (trimmedFigma && (options === null || options === void 0 ? void 0 : options.showFigmaLink) !== false) {
-        card.appendChild(createOpenInFigmaLinkRow(trimmedFigma));
-    }
-    return card;
 }
 /**
  * Creates a Variant card displaying experiment variant details and performance metrics
@@ -390,6 +531,7 @@ export function createEventCard(eventName, _variantCount, _eventIndex, thumbnail
  */
 export function createVariantCard(variant, variantIndex, options) {
     return __awaiter(this, void 0, void 0, function* () {
+        var _a;
         const card = figma.createFrame();
         card.layoutMode = 'VERTICAL';
         card.counterAxisSizingMode = 'AUTO';
@@ -402,31 +544,33 @@ export function createVariantCard(variant, variantIndex, options) {
         card.paddingTop = 16; // 1rem
         card.paddingBottom = 16; // 0.75rem
         card.cornerRadius = 16; // 1rem
-        card.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.fillsSurface) }];
+        const canvas = getCanvasTokens();
+        card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
         // Use green border (2px) if this variant was rolled out - indicates success/shipped
         if (options === null || options === void 0 ? void 0 : options.rolledout) {
             card.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.electricViolet500) }];
             card.strokeWeight = 2;
         }
         else {
-            card.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+            card.strokes = [{ type: 'SOLID', color: canvas.border }];
             card.strokeWeight = 1;
         }
-        card.effects = [{
-                type: 'DROP_SHADOW',
-                color: { r: 0, g: 0, b: 0, a: 0.05 },
-                offset: { x: 0, y: 1 },
-                radius: 2,
-                spread: 0,
-                visible: true,
-                blendMode: 'NORMAL',
-            }];
+        card.effects = [createCardShadowEffect()];
         card.itemSpacing = 8; // 1rem gap
         card.primaryAxisAlignItems = 'MIN';
         card.counterAxisAlignItems = 'MIN';
-        const thumb = createThumbnailFrame(options === null || options === void 0 ? void 0 : options.thumbnailSource, {
+        const candidateSource = (_a = options === null || options === void 0 ? void 0 : options.thumbnailSource) !== null && _a !== void 0 ? _a : null;
+        const resolvedThumbnailSource = candidateSource && !isUnsupportedImageThumbnailSource(candidateSource) ? candidateSource : null;
+        const thumb = yield createThumbnailFrame(resolvedThumbnailSource, {
             cornerRadius: TOKENS.radiusSM,
-            placeholderMessage: options === null || options === void 0 ? void 0 : options.thumbnailMessage,
+            placeholderMessage: (options === null || options === void 0 ? void 0 : options.thumbnailMessage) ||
+                (candidateSource && isUnsupportedImageThumbnailSource(candidateSource)
+                    ? THUMBNAIL_IMAGE_UNSUPPORTED_TITLE
+                    : undefined),
+            placeholderHelper: (options === null || options === void 0 ? void 0 : options.thumbnailHelper) ||
+                (candidateSource && isUnsupportedImageThumbnailSource(candidateSource)
+                    ? THUMBNAIL_IMAGE_UNSUPPORTED_HELPER
+                    : undefined),
         });
         card.appendChild(thumb);
         // Variant details section: name row and traffic
@@ -518,7 +662,7 @@ export function createVariantCard(variant, variantIndex, options) {
         linkGoalsSeparator.name = 'Variant Link Goals Separator';
         linkGoalsSeparator.resize(268, 1);
         linkGoalsSeparator.layoutAlign = 'STRETCH';
-        linkGoalsSeparator.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+        linkGoalsSeparator.fills = [{ type: 'SOLID', color: getCanvasTokens().border }];
         linkGoalsSeparator.strokes = [];
         card.appendChild(linkGoalsSeparator);
         // Metrics section - displays available metrics for this variant (e.g. conversion rate, click-through rate)
@@ -666,7 +810,7 @@ export function createMetricChip(label, value) {
     chip.paddingTop = chip.paddingBottom = TOKENS.space4 / 2;
     chip.cornerRadius = TOKENS.radiusSM;
     chip.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.fillsBackground) }];
-    chip.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.border) }];
+    chip.strokes = [{ type: 'SOLID', color: getCanvasTokens().border }];
     chip.strokeWeight = 1;
     chip.name = 'Metric Chip';
     const txt = figma.createText();
