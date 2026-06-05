@@ -10,8 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { TOKENS } from './design-tokens';
-import { getCanvasTokens, createCardShadowEffect } from './canvas-theme';
-import { hexToRgb, getFontStyle, createBadge } from './layout-utils';
+import { applyPluginCard, applyPluginSubtleChip, getCanvasTokens } from './canvas-theme';
+import { styleOverviewText, SUMMARY_TYPOGRAPHY, createRolledOutBadge } from './experiment-card-shared';
+import { hexToRgb } from './layout-utils';
 const THUMBNAIL_WIDTH = 368;
 /** Used for flow spacing when cards are not yet on the canvas. */
 export const VARIANT_CARD_LAYOUT_WIDTH = 400;
@@ -99,16 +100,6 @@ export function isExperimentFlowCardNode(node) {
     }
     return false;
 }
-const ROLLED_OUT_BADGE_BG = '#fffbb5';
-const ROLLED_OUT_BADGE_TEXT = '#484122';
-const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4 22h16" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
 /** Official Figma multi-color mark (paths align with plugin UI `brandIcons.figma`) */
 const FIGMA_BRAND_LOGO_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4z" fill="#0ACF83"/>
@@ -146,22 +137,13 @@ function createOpenInFigmaLinkRow(figmaLink) {
         linkRow.appendChild(fallbackIcon);
     }
     const linkText = figma.createText();
-    linkText.fontName = getFontStyle('Medium');
-    linkText.fontSize = TOKENS.fontSizeBodySm;
-    linkText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.royalBlue600) }];
+    styleOverviewText(linkText, 'link');
     linkText.textAutoResize = 'WIDTH_AND_HEIGHT';
     linkText.hyperlink = { type: 'URL', value: trimmed };
     linkText.characters = 'Open in Figma';
     linkText.name = 'Figma Link';
     linkRow.appendChild(linkText);
     return linkRow;
-}
-function createRolledOutIcon() {
-    const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
-    icon.name = 'Rolled Out Icon';
-    icon.resize(10, 10);
-    icon.fills = [];
-    return icon;
 }
 /** True when the layer can be exported as a touchpoint / variant preview. */
 export function isSupportedThumbnailLinkTarget(node) {
@@ -188,20 +170,16 @@ function appendThumbnailPlaceholder(thumb, options) {
     if (!options.placeholderMessage)
         return;
     const title = figma.createText();
-    title.fontName = getFontStyle('Bold');
-    title.fontSize = TOKENS.fontSizeBodySm;
+    styleOverviewText(title, 'bodyEmphasis');
     title.lineHeight = { value: 16, unit: 'PIXELS' };
-    title.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
     title.textAlignHorizontal = 'CENTER';
     title.textAutoResize = 'HEIGHT';
     title.characters = options.placeholderMessage;
     title.resize(THUMBNAIL_WIDTH - 48, title.height);
     title.name = 'Thumbnail Message Title';
     const helper = figma.createText();
-    helper.fontName = getFontStyle('Regular');
-    helper.fontSize = TOKENS.fontSizeLabel;
+    styleOverviewText(helper, 'caption');
     helper.lineHeight = { value: 14, unit: 'PIXELS' };
-    helper.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
     helper.textAlignHorizontal = 'CENTER';
     helper.textAutoResize = 'HEIGHT';
     helper.characters = options.placeholderHelper || THUMBNAIL_DEFAULT_HELPER;
@@ -416,17 +394,12 @@ export function createEventCard(eventName, _variantCount, _eventIndex, thumbnail
         card.minWidth = 300; // 18.75rem
         card.maxWidth = 400; // 25rem
         // No fixed height: primaryAxisSizingMode AUTO hugs thumbnail + header + optional Figma row (like variant cards)
-        card.paddingLeft = 16;
-        card.paddingRight = 16;
-        card.paddingTop = 16; // 1rem
-        card.paddingBottom = 16; // 0.75rem
-        card.cornerRadius = 16; // 1rem
-        const canvas = getCanvasTokens();
-        card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
-        card.strokes = [{ type: 'SOLID', color: canvas.border }];
-        card.strokeWeight = 1;
-        card.effects = [createCardShadowEffect()];
-        card.itemSpacing = 8; // 1rem gap
+        card.paddingLeft = TOKENS.space16;
+        card.paddingRight = TOKENS.space16;
+        card.paddingTop = TOKENS.space16;
+        card.paddingBottom = TOKENS.space16;
+        applyPluginCard(card);
+        card.itemSpacing = TOKENS.space8;
         card.primaryAxisAlignItems = 'MIN';
         card.counterAxisAlignItems = 'MIN';
         card.name = 'Touchpoint';
@@ -463,7 +436,7 @@ export function createEventCard(eventName, _variantCount, _eventIndex, thumbnail
         eventDetailsContainer.primaryAxisSizingMode = 'FIXED';
         eventDetailsContainer.primaryAxisAlignItems = 'MIN';
         eventDetailsContainer.counterAxisAlignItems = 'CENTER';
-        eventDetailsContainer.itemSpacing = 8;
+        eventDetailsContainer.itemSpacing = TOKENS.space8;
         eventDetailsContainer.fills = [];
         eventDetailsContainer.strokes = [];
         eventDetailsContainer.name = 'Touchpoint Details Container';
@@ -472,9 +445,7 @@ export function createEventCard(eventName, _variantCount, _eventIndex, thumbnail
         eventDetailsContainer.paddingBottom = 8;
         eventDetailsContainer.paddingTop = 8;
         const eventNameText = figma.createText();
-        eventNameText.fontName = getFontStyle("Bold");
-        eventNameText.fontSize = TOKENS.fontSizeBodyLg;
-        eventNameText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+        styleOverviewText(eventNameText, 'headline');
         eventNameText.textAutoResize = 'WIDTH_AND_HEIGHT';
         eventNameText.textAlignHorizontal = 'LEFT';
         eventNameText.layoutGrow = 1;
@@ -539,24 +510,12 @@ export function createVariantCard(variant, variantIndex, options) {
         card.minWidth = 400; // 25rem
         card.maxWidth = 640; // 40rem
         // Height will hug content automatically with primaryAxisSizingMode = 'AUTO'
-        card.paddingLeft = 16;
-        card.paddingRight = 16;
-        card.paddingTop = 16; // 1rem
-        card.paddingBottom = 16; // 0.75rem
-        card.cornerRadius = 16; // 1rem
-        const canvas = getCanvasTokens();
-        card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
-        // Use green border (2px) if this variant was rolled out - indicates success/shipped
-        if (options === null || options === void 0 ? void 0 : options.rolledout) {
-            card.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.electricViolet500) }];
-            card.strokeWeight = 2;
-        }
-        else {
-            card.strokes = [{ type: 'SOLID', color: canvas.border }];
-            card.strokeWeight = 1;
-        }
-        card.effects = [createCardShadowEffect()];
-        card.itemSpacing = 8; // 1rem gap
+        card.paddingLeft = TOKENS.space16;
+        card.paddingRight = TOKENS.space16;
+        card.paddingTop = TOKENS.space16;
+        card.paddingBottom = TOKENS.space16;
+        applyPluginCard(card, (options === null || options === void 0 ? void 0 : options.rolledout) ? { emphasis: 'brand' } : {});
+        card.itemSpacing = TOKENS.space8;
         card.primaryAxisAlignItems = 'MIN';
         card.counterAxisAlignItems = 'MIN';
         const candidateSource = (_a = options === null || options === void 0 ? void 0 : options.thumbnailSource) !== null && _a !== void 0 ? _a : null;
@@ -578,7 +537,7 @@ export function createVariantCard(variant, variantIndex, options) {
         variantDetailsContainer.layoutMode = 'VERTICAL';
         variantDetailsContainer.counterAxisSizingMode = 'AUTO';
         variantDetailsContainer.primaryAxisSizingMode = 'AUTO';
-        variantDetailsContainer.itemSpacing = 8;
+        variantDetailsContainer.itemSpacing = TOKENS.space8;
         variantDetailsContainer.fills = [];
         variantDetailsContainer.strokes = [];
         variantDetailsContainer.name = 'Variant Details';
@@ -598,7 +557,7 @@ export function createVariantCard(variant, variantIndex, options) {
         nameRow.strokes = [];
         nameRow.name = 'Name Row';
         nameRow.layoutAlign = 'STRETCH';
-        nameRow.resize(300 - 32, 16); // Match card width minus padding
+        // Width from parent STRETCH; height hugs badge (20px) and headline text — do not fix at 16px.
         // Left: radio button + variant name
         const nameLeft = figma.createFrame();
         nameLeft.layoutMode = 'HORIZONTAL';
@@ -621,9 +580,7 @@ export function createVariantCard(variant, variantIndex, options) {
         nameLeft.appendChild(radioButton);
         // Variant name (with fallback logic always applied)
         const variantNameText = figma.createText();
-        variantNameText.fontName = getFontStyle("Bold");
-        variantNameText.fontSize = TOKENS.fontSizeBodyLg;
-        variantNameText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+        styleOverviewText(variantNameText, 'headline');
         variantNameText.textAutoResize = 'WIDTH_AND_HEIGHT';
         // Always apply fallback: if name is empty, whitespace, or missing, use 'Variant <index+1>'
         const displayName = (typeof variant.name === 'string' && variant.name.trim().length > 0)
@@ -634,17 +591,14 @@ export function createVariantCard(variant, variantIndex, options) {
         nameLeft.appendChild(variantNameText);
         nameRow.appendChild(nameLeft);
         if (options === null || options === void 0 ? void 0 : options.rolledout) {
-            const rolledoutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
-            nameRow.appendChild(rolledoutBadge);
+            nameRow.appendChild(createRolledOutBadge());
         }
         variantDetailsContainer.appendChild(nameRow);
         // Variant description is intentionally hidden on canvas nodes for now.
         // (We keep description in the data model / metadata; just don't render it.)
         if (options === null || options === void 0 ? void 0 : options.showDescription) {
             const variantLabel = figma.createText();
-            variantLabel.fontName = getFontStyle("Regular");
-            variantLabel.fontSize = TOKENS.fontSizeBodyMd;
-            variantLabel.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+            styleOverviewText(variantLabel, 'fieldValue');
             variantLabel.textAutoResize = 'WIDTH_AND_HEIGHT';
             const description = variant.description;
             variantLabel.characters = description || '';
@@ -678,10 +632,7 @@ export function createVariantCard(variant, variantIndex, options) {
         metricsSection.layoutAlign = 'STRETCH';
         // Metrics header (label above metrics list)
         const metricsHeader = figma.createText();
-        metricsHeader.fontName = getFontStyle("Bold");
-        metricsHeader.fontSize = TOKENS.fontSizeBodySm;
-        metricsHeader.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
-        metricsHeader.opacity = 0.5;
+        styleOverviewText(metricsHeader, 'sectionTitle');
         metricsHeader.textAutoResize = 'WIDTH_AND_HEIGHT';
         metricsHeader.characters = 'Goals';
         metricsHeader.name = 'Goals Header';
@@ -705,7 +656,7 @@ export function createVariantCard(variant, variantIndex, options) {
             metricItem.primaryAxisSizingMode = 'AUTO';
             metricItem.layoutAlign = 'STRETCH'; // Stretch to parent width
             metricItem.primaryAxisAlignItems = 'SPACE_BETWEEN'; // Space between label (left) and value badge (right)
-            metricItem.itemSpacing = 8;
+            metricItem.itemSpacing = TOKENS.space8;
             metricItem.fills = [];
             metricItem.strokes = [];
             metricItem.name = `${metricName} Metric Item`;
@@ -713,9 +664,7 @@ export function createVariantCard(variant, variantIndex, options) {
             // metricItem.height = 24; // Removed because .height is read-only for auto layout frames
             // Label: metric name (abbreviation):
             const labelText = figma.createText();
-            labelText.fontName = getFontStyle("Regular");
-            labelText.fontSize = TOKENS.fontSizeBodyMd;
-            labelText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+            styleOverviewText(labelText, 'fieldLabel');
             labelText.textAutoResize = 'WIDTH_AND_HEIGHT';
             labelText.characters = `${metricName} (${abbreviation}):`;
             labelText.name = `${metricName} Label`;
@@ -733,10 +682,7 @@ export function createVariantCard(variant, variantIndex, options) {
             valueContainer.strokes = [];
             valueContainer.name = `${metricName} Value`;
             const valueText = figma.createText();
-            // Consistent styling matching outcome card table
-            valueText.fontName = getFontStyle("Medium");
-            valueText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
-            valueText.fontSize = TOKENS.fontSizeBodyMd;
+            styleOverviewText(valueText, 'fieldValue');
             valueText.textAutoResize = 'WIDTH_AND_HEIGHT';
             valueText.characters = value;
             valueText.name = `${metricName} Value Text`;
@@ -808,20 +754,11 @@ export function createMetricChip(label, value) {
     chip.primaryAxisSizingMode = 'AUTO';
     chip.paddingLeft = chip.paddingRight = TOKENS.space8;
     chip.paddingTop = chip.paddingBottom = TOKENS.space4 / 2;
-    chip.cornerRadius = TOKENS.radiusSM;
-    chip.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.fillsBackground) }];
-    chip.strokes = [{ type: 'SOLID', color: getCanvasTokens().border }];
-    chip.strokeWeight = 1;
+    applyPluginSubtleChip(chip);
     chip.name = 'Metric Chip';
     const txt = figma.createText();
-    txt.fontSize = TOKENS.fontSizeBodyLg;
-    try {
-        txt.fontName = getFontStyle("Bold");
-    }
-    catch (_a) {
-        txt.fontName = getFontStyle("Medium");
-    }
-    txt.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
+    styleOverviewText(txt, 'fieldValue');
+    txt.fills = [{ type: 'SOLID', color: hexToRgb(SUMMARY_TYPOGRAPHY.muted) }];
     txt.textAutoResize = 'WIDTH_AND_HEIGHT';
     txt.characters = `${label}: ${value}`;
     chip.appendChild(txt);

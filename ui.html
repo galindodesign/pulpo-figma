@@ -1566,22 +1566,6 @@
       transition: opacity 0.15s;
     }
 
-    /* Always-visible slot for Primary chip (keep delete hover-only) */
-    .goal-primary-slot {
-      display: flex;
-      align-items: center;
-      flex-shrink: 0;
-      width: 76px;
-    }
-
-    .goal-primary-chip {
-      pointer-events: none;
-    }
-
-    .goal-primary-chip.is-inactive {
-      visibility: hidden;
-    }
-
     /* Match Steps: show actions on hover */
     .goal-row-header:hover .goal-actions {
       opacity: 1;
@@ -1594,15 +1578,6 @@
 
     .metrics-list.is-dragging .goal-row {
       user-select: none;
-    }
-
-    /* Goal primary toggle (star icon) */
-    .goal-primary-btn {
-      color: var(--text-secondary);
-    }
-
-    .goal-primary-btn.is-primary {
-      color: var(--text-primary);
     }
 
     .goal-row-body {
@@ -3098,6 +3073,12 @@
       opacity: 1;
     }
 
+    .SelectField__label--with-info {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-4);
+    }
+
     /* Color Picker Popover */
     .color-popover {
       position: absolute;
@@ -3566,6 +3547,14 @@
     }
 
     .rolledout-field.hidden {
+      display: none;
+    }
+
+    .decision-rationale-field {
+      width: 100%;
+    }
+
+    .decision-rationale-field.hidden {
       display: none;
     }
 
@@ -4590,6 +4579,8 @@
 
     /* Multiline variant (textarea) */
     .InputField.multiline .InputField__wrapper {
+      height: auto;
+      min-height: 24px;
       max-height: none;
       align-items: flex-start;
       padding: var(--input-field-padding-y) var(--input-field-padding-x);
@@ -4597,8 +4588,12 @@
 
     .InputField__textarea {
       resize: none;
-      min-height: 18px;
-      line-height: 1.4;
+      width: 100%;
+      min-height: calc(var(--body-md-line-height) * 3);
+      line-height: var(--body-md-line-height);
+      padding: 0;
+      box-sizing: border-box;
+      overflow: hidden;
     }
 
     /* ============================================
@@ -5014,7 +5009,7 @@
           <div class="InputField" data-state="default" data-variant="vertical">
             <label class="InputField__label">Description</label>
             <div class="InputField__wrapper">
-              <input class="InputField__input" type="text" id="experimentDescription" placeholder="Changing the CTA copy will increase click-through rate">
+              <input class="InputField__input" type="text" id="experimentDescription" placeholder="What change are you testing and where?">
             </div>
           </div>
 
@@ -5115,7 +5110,16 @@
                   <!-- Rolled-out Variant Dropdown (shown only when status is "Concluded") -->
                   <div class="rolledout-field hidden" id="rolledoutField">
                     <div class="SelectField">
-                      <label class="SelectField__label">Rolled out</label>
+                      <label class="SelectField__label SelectField__label--with-info">
+                        <span>Rolled out</span>
+                        <span class="section-info-icon" data-tooltip="Marking a rolled-out variant records the team decision on the overview card." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Marking a rolled-out variant records the team decision on the overview card.">
+                          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
+                            <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
+                            <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                            <circle cx="8" cy="5.25" r="0.75" fill="currentColor"/>
+                          </svg>
+                        </span>
+                      </label>
                       <div class="CustomDropdown" id="rolledoutVariantDropdown">
                         <button type="button" class="CustomDropdown__trigger placeholder" id="rolledoutVariantTrigger">
                           <span class="CustomDropdown__text">Add variants first</span>
@@ -5131,18 +5135,25 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Decision rationale (shown when status is Concluded) -->
+                <div class="decision-rationale-field hidden" id="decisionRationaleField">
+                  <div class="InputField" data-state="default" data-variant="vertical">
+                    <label class="InputField__label">Decision rationale</label>
+                    <div class="InputField__wrapper">
+                      <input class="InputField__input" type="text" id="experimentDecisionRationale" placeholder="Optional: why you chose this outcome">
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Hypothesis -->
-                <!-- Hypothesis field hidden -->
-                <!--
                 <div class="InputField" data-state="default" data-variant="vertical">
                   <label class="InputField__label">Hypothesis</label>
                   <div class="InputField__wrapper">
                     <input class="InputField__input" type="text" id="experimentHypothesis" placeholder="If we [change], then [metric] will [improve], because [reason]">
                   </div>
                 </div>
-                -->
 
               <!-- Confidence Level (hardcoded to 95%) -->
               <input type="hidden" id="experimentConfidenceLevel" value="95">
@@ -5188,7 +5199,7 @@
           <div class="section-block-left">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Goals</h2>
-              <span class="section-info-icon" data-tooltip="Track the metrics that define success and shape your experiment outcome." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Track the metrics that define success and shape your experiment outcome.">
+              <span class="section-info-icon" data-tooltip="Track the metrics that define success. The first goal is the primary decision goal — it drives the overview readout and table highlighting." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Track the metrics that define success. The first goal is the primary decision goal.">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -5411,7 +5422,7 @@
           var form = document.getElementById('exp-form');
           if (form) delete form.dataset.experimentId;
           ['experimentName','experimentDescription','experimentHypothesis',
-           'experimentAudience','experimentSampleSize','experimentOwner'].forEach(function(id) {
+           'experimentAudience','experimentSampleSize','experimentOwner','experimentDecisionRationale'].forEach(function(id) {
             var el = document.getElementById(id); if (el) el.value = '';
           });
           try { if (window._setDateRange) window._setDateRange('', ''); } catch(_) {}
@@ -6218,7 +6229,9 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
 
       const stepBadge = document.createElement('div');
       stepBadge.className = 'step-drag-badge step-drag-badge--metrics';
-      stepBadge.setAttribute('aria-label', `Priority ${index + 1}. Drag to reorder priority`);
+      stepBadge.setAttribute('aria-label', index === 0
+        ? `Primary decision goal, priority ${index + 1}. Drag to reorder priority`
+        : `Priority ${index + 1}. Drag to reorder priority`);
       stepBadge.setAttribute('data-tooltip', 'Drag to reorder priority');
       stepBadge.setAttribute('data-tooltip-position', 'bottom');
       stepBadge.setAttribute('data-tooltip-align', 'start');
@@ -9065,7 +9078,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const experimentDescription = document.getElementById('experimentDescription').value.trim();
       const experimentOwner = document.getElementById('experimentOwner').value.trim();
       const experimentAudience = document.getElementById('experimentAudience').value.trim();
-      // const experimentHypothesis = document.getElementById('experimentHypothesis').value.trim();
+      const experimentHypothesis = document.getElementById('experimentHypothesis').value.trim();
       const experimentStartDate = document.getElementById('experimentStartDate').value;
       const experimentEndDate = document.getElementById('experimentEndDate').value;
       const experimentSampleSize = parseInt(document.getElementById('experimentSampleSize').value) || 0;
@@ -9073,6 +9086,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       const experimentType = document.getElementById('experimentType').value;
       const experimentStatus = document.getElementById('experimentStatus').value;
       const rolledoutVariant = document.getElementById('rolledoutVariant').value;
+      const experimentDecisionRationale = (document.getElementById('experimentDecisionRationale')?.value || '').trim();
 
       // --- Build experiment object (v2 schema) ---
       // Reuse one id per form session so canvas cleanup can remove prior flow nodes on regenerate.
@@ -9087,7 +9101,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         description: experimentDescription,
         owner: experimentOwner, // Include owner for info card
         audience: experimentAudience, // Include audience for info card
-        // hypothesis: experimentHypothesis, // (hidden)
+        hypothesis: experimentHypothesis,
         startDate: experimentStartDate, // Include start date for timeline
         endDate: experimentEndDate, // Include end date for timeline
         sampleSize: experimentSampleSize, // Include total sample size
@@ -9112,10 +9126,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           // Include all generic links as an array
           generic: relatedLinks.filter(l => l.provider === 'generic').map(l => l.url)
         },
-        outcomes: experimentStatus === 'completed' && rolledoutVariant ? {
-          winningPaths: [], // Could be filled if you want
-          notes: '', // Could be filled if you want
-          rolledOutVariantId: rolledoutVariant // Save the rolled-out variant ID
+        outcomes: experimentStatus === 'completed' ? {
+          winningPaths: [],
+          notes: experimentDecisionRationale,
+          ...(rolledoutVariant ? { rolledOutVariantId: rolledoutVariant } : {})
         } : undefined
       };
 
@@ -9551,15 +9565,18 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     function handleStatusChange() {
       const statusInput = document.getElementById('experimentStatus');
       const rolledoutField = document.getElementById('rolledoutField');
+      const decisionRationaleField = document.getElementById('decisionRationaleField');
       const statusArrow = document.getElementById('statusArrow');
       
       if (statusInput.value === 'completed') {
         statusArrow.classList.remove('hidden');
         rolledoutField.classList.remove('hidden');
+        if (decisionRationaleField) decisionRationaleField.classList.remove('hidden');
         updateRolledoutOptions();
       } else {
         statusArrow.classList.add('hidden');
         rolledoutField.classList.add('hidden');
+        if (decisionRationaleField) decisionRationaleField.classList.add('hidden');
       }
 
       renderEvents(events);
@@ -9690,13 +9707,15 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         renderMetrics(metrics, true);
         renderEvents(events);
         ['experimentName','experimentDescription','experimentHypothesis',
-         'experimentAudience','experimentSampleSize','experimentOwner'].forEach(id => {
+         'experimentAudience','experimentSampleSize','experimentOwner','experimentDecisionRationale'].forEach(id => {
           const el = document.getElementById(id); if (el) el.value = '';
         });
         if (window._setDateRange) try { window._setDateRange('', ''); } catch(_) {}
         try { selectStatus('running', '#506179', 'Running'); } catch(_) {}
         const rolledoutInput = document.getElementById('rolledoutVariant');
         if (rolledoutInput) rolledoutInput.value = '';
+        const decisionRationaleInput = document.getElementById('experimentDecisionRationale');
+        if (decisionRationaleInput) decisionRationaleInput.value = '';
         relatedLinks = [];
         renderLinks();
         const linkInputEl = document.getElementById('linkInput');
@@ -9752,6 +9771,10 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         try { selectRolledoutVariant('var-1', '#FF3838', 'Red button'); } catch(_) {
           const rolledoutInput = document.getElementById('rolledoutVariant');
           if (rolledoutInput) rolledoutInput.value = 'var-1';
+        }
+        const decisionRationaleInput = document.getElementById('experimentDecisionRationale');
+        if (decisionRationaleInput) {
+          decisionRationaleInput.value = 'Red button met Goal #1 and supporting goals; rolling out to all pricing-page traffic.';
         }
         relatedLinks = [];
         renderLinks();

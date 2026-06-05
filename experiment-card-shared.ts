@@ -40,7 +40,7 @@ export const SECTION_PANEL_LAYOUT = {
  * - headline: touchpoint / variant / entry / exit card title
  * - sectionTitle: Summary, Goals and Variants, Outcome summary, table column headers
  * - fieldLabel: Description, Goals, metric names
- * - fieldValue: summary values, metric values, table body cells, notes
+ * - fieldValue: summary values, metric values, table body cells, decision rationale
  * - link: Open in Figma rows
  */
 export type OverviewTextRole =
@@ -142,6 +142,17 @@ export function createRolledOutIcon(): FrameNode {
 }
 
 /** Rolled-out badge with label + trophy icon (canvas cards). */
+/** Use Rolled out badge when a rollout variant is recorded, even if status is completed. */
+export function resolveExperimentDisplayStatus(
+  status: ExperimentStatus,
+  hasRollout: boolean,
+): ExperimentStatus {
+  if (hasRollout && status === "completed") {
+    return "rolled_out";
+  }
+  return status;
+}
+
 export function createRolledOutBadge(): FrameNode {
   const icon = createRolledOutIcon();
   return createBadge(

@@ -11,8 +11,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 // ===== Imports =====
 import { createExperimentInfoCard } from './experiment-info-card';
 import { TOKENS } from './design-tokens';
-import { initCanvasTheme, getCanvasTokens, createCardShadowEffect } from './canvas-theme';
+import { initCanvasTheme, getCanvasTokens, applyPluginCard, applyPluginMetaPanel } from './canvas-theme';
 import { hexToRgb } from './layout-utils';
+import { styleOverviewText } from './experiment-card-shared';
 import { createEventCard, createVariantCard, VARIANT_CARD_LAYOUT_WIDTH, isUnsupportedImageThumbnailSource, isExperimentFlowCardNode, isSupportedThumbnailLinkTarget, THUMBNAIL_CROSS_FILE_TITLE, THUMBNAIL_CROSS_FILE_HELPER, THUMBNAIL_DEFAULT_HELPER, THUMBNAIL_MESSAGES, THUMBNAIL_VALIDATION_MSG, } from './experiment-node';
 import { FEEDBACK_EMAIL } from './plugin-constants';
 // ===== Error Handling System =====
@@ -1899,6 +1900,24 @@ function deleteExperimentCanvasArtifacts(experimentId, experimentName) {
             // Node may already be removed with a parent
         }
     }
+    // Remove orphaned resource/link frames leaked by older builds (created before parenting).
+    for (const node of figma.currentPage.children) {
+        if (node.name === "Links Section" ||
+            node.name === "Links" ||
+            node.name === "Link Chip" ||
+            node.name === "Link Text" ||
+            node.name === "Metrics Tables" ||
+            node.name === "Section: Outcome summary" ||
+            node.name === "Section: Results" ||
+            (node.type === "TEXT" && node.name === "Link Title")) {
+            try {
+                node.remove();
+            }
+            catch (_b) {
+                // Node may already be removed
+            }
+        }
+    }
 }
 // --- V2 Experiment Flow Helpers ---
 /**
@@ -2313,12 +2332,7 @@ if (figma.editorType === 'figma') {
         card.primaryAxisSizingMode = 'AUTO';
         card.paddingLeft = card.paddingRight = TOKENS.space16;
         card.paddingTop = card.paddingBottom = TOKENS.space16;
-        card.cornerRadius = TOKENS.radiusLG;
-        const canvas = getCanvasTokens();
-        card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
-        card.strokes = [{ type: 'SOLID', color: canvas.border }];
-        card.strokeWeight = 1;
-        card.effects = [createCardShadowEffect()];
+        applyPluginCard(card);
         card.name = title ? `Node: ${title}` : 'Node';
         card.itemSpacing = TOKENS.space8;
         const topRow = figma.createFrame();
@@ -2330,9 +2344,7 @@ if (figma.editorType === 'figma') {
         topRow.strokes = [];
         topRow.name = 'Top Row';
         const titleText = figma.createText();
-        titleText.fontName = { family: "Figtree", style: "Bold" };
-        titleText.fontSize = TOKENS.fontSizeBodyLg;
-        titleText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textPrimary) }];
+        styleOverviewText(titleText, 'headline');
         titleText.textAutoResize = 'WIDTH_AND_HEIGHT';
         titleText.characters = title && title.length > 0 ? title : '';
         topRow.appendChild(titleText);
@@ -2343,9 +2355,7 @@ if (figma.editorType === 'figma') {
         // Subtitle (if provided)
         if (subtitle && subtitle.length > 0) {
             const subtitleText = figma.createText();
-            subtitleText.fontName = { family: "Figtree", style: "Regular" };
-            subtitleText.fontSize = TOKENS.fontSizeBodyMd;
-            subtitleText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textSecondary) }];
+            styleOverviewText(subtitleText, 'caption');
             subtitleText.textAutoResize = 'WIDTH_AND_HEIGHT';
             subtitleText.characters = subtitle;
             subtitleText.name = 'Subtitle';
@@ -2359,17 +2369,12 @@ if (figma.editorType === 'figma') {
             noteContainer.primaryAxisSizingMode = 'AUTO';
             noteContainer.paddingLeft = noteContainer.paddingRight = TOKENS.space12;
             noteContainer.paddingTop = noteContainer.paddingBottom = TOKENS.space8;
-            noteContainer.cornerRadius = TOKENS.radiusSM;
-            noteContainer.fills = [{ type: 'SOLID', color: canvas.sectionTint }];
-            noteContainer.strokes = [{ type: 'SOLID', color: canvas.border }];
-            noteContainer.strokeWeight = 1;
+            applyPluginMetaPanel(noteContainer);
             noteContainer.name = 'Note Container';
             // Set a reasonable fixed width for note container (will be constrained by card)
             noteContainer.resize(200, noteContainer.height);
             const noteText = figma.createText();
-            noteText.fontName = { family: "Figtree", style: "Regular" };
-            noteText.fontSize = TOKENS.fontSizeBodySm;
-            noteText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.textTertiary) }];
+            styleOverviewText(noteText, 'caption');
             noteText.textAutoResize = 'HEIGHT'; // Allow wrapping
             noteText.characters = note;
             noteText.name = 'Note Text';
@@ -2581,7 +2586,7 @@ if (figma.editorType === 'figma') {
    */
     function createFlowV2FromData(experiment, flow, metrics) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19;
             try {
                 // ========================================================================
                 // FLOW RENDERING PIPELINE
@@ -2626,7 +2631,7 @@ if (figma.editorType === 'figma') {
                 for (const event of flow.events) {
                     if (event.variants && event.variants.length > 0) {
                         event.variants.forEach((variant, index) => {
-                            var _a, _b, _c, _d;
+                            var _a, _b, _c, _d, _e;
                             const rolledOutId = (_b = (_a = experiment.outcomes) === null || _a === void 0 ? void 0 : _a.rolledOutVariantId) !== null && _b !== void 0 ? _b : (_c = experiment.outcomes) === null || _c === void 0 ? void 0 : _c.rolledoutVariantId;
                             // Preserve an explicit comparison flag from older saved data without inventing one.
                             const finalIsControl = safeGetBoolean(variant, 'isControl');
@@ -2645,6 +2650,7 @@ if (figma.editorType === 'figma') {
                                 isStatSig: safeGetBoolean(variant, 'isStatSig'),
                                 // Variant color used for visual identification in cards
                                 color: safeGetString(variant, 'color') || ((_d = variant.style) === null || _d === void 0 ? void 0 : _d.variantColor),
+                                parentEventName: ((_e = event.name) === null || _e === void 0 ? void 0 : _e.trim()) || undefined,
                             });
                         });
                     }
@@ -2661,7 +2667,7 @@ if (figma.editorType === 'figma') {
                 // --- STAGE 3: NODE CREATION (Phase A: Info Card) ---
                 // Create experiment info card: Two-panel layout with experiment metadata and resource links
                 // Positioned to the left of main flow to provide context
-                infoCard = yield createExperimentInfoCard(experiment.name, experiment.description || 'e.g., Testing if new CTA increases conversions.', ((_a = experiment.links) === null || _a === void 0 ? void 0 : _a.figma) || '', ((_b = experiment.links) === null || _b === void 0 ? void 0 : _b.jira) || '', ((_c = experiment.links) === null || _c === void 0 ? void 0 : _c.miro) || '', ((_d = experiment.links) === null || _d === void 0 ? void 0 : _d.notion) || '', ((_e = experiment.links) === null || _e === void 0 ? void 0 : _e.amplitude) || '', ((_f = experiment.links) === null || _f === void 0 ? void 0 : _f.asana) || '', ((_g = experiment.links) === null || _g === void 0 ? void 0 : _g.linear) || '', ((_h = experiment.links) === null || _h === void 0 ? void 0 : _h.slack) || '', ((_j = experiment.links) === null || _j === void 0 ? void 0 : _j.github) || '', ((_k = experiment.links) === null || _k === void 0 ? void 0 : _k.confluence) || '', ((_l = experiment.links) === null || _l === void 0 ? void 0 : _l.trello) || '', ((_m = experiment.links) === null || _m === void 0 ? void 0 : _m.monday) || '', ((_o = experiment.links) === null || _o === void 0 ? void 0 : _o.clickup) || '', Array.isArray((_p = experiment.links) === null || _p === void 0 ? void 0 : _p.generic) ? experiment.links.generic : [], metrics, safeGetString(experiment, 'status') || 'running', Object.assign({ showOutcomeCard: allVariants.length > 0, variants: allVariants, owner: safeGetString(experiment, 'owner'), audience: safeGetString(experiment, 'audience'), experimentType: safeGetString(experiment, 'experimentType'), hypothesis: safeGetString(experiment, 'hypothesis'), startDate: safeGetString(experiment, 'startDate'), endDate: safeGetString(experiment, 'endDate'), totalSampleSize: safeGetNumber(experiment, 'sampleSize'), confidenceLevel: safeGetNumber(experiment, 'confidenceLevel'), primaryMetric: (() => {
+                infoCard = yield createExperimentInfoCard(experiment.name, experiment.description || '', ((_a = experiment.links) === null || _a === void 0 ? void 0 : _a.figma) || '', ((_b = experiment.links) === null || _b === void 0 ? void 0 : _b.jira) || '', ((_c = experiment.links) === null || _c === void 0 ? void 0 : _c.miro) || '', ((_d = experiment.links) === null || _d === void 0 ? void 0 : _d.notion) || '', ((_e = experiment.links) === null || _e === void 0 ? void 0 : _e.amplitude) || '', ((_f = experiment.links) === null || _f === void 0 ? void 0 : _f.asana) || '', ((_g = experiment.links) === null || _g === void 0 ? void 0 : _g.linear) || '', ((_h = experiment.links) === null || _h === void 0 ? void 0 : _h.slack) || '', ((_j = experiment.links) === null || _j === void 0 ? void 0 : _j.github) || '', ((_k = experiment.links) === null || _k === void 0 ? void 0 : _k.confluence) || '', ((_l = experiment.links) === null || _l === void 0 ? void 0 : _l.trello) || '', ((_m = experiment.links) === null || _m === void 0 ? void 0 : _m.monday) || '', ((_o = experiment.links) === null || _o === void 0 ? void 0 : _o.clickup) || '', Array.isArray((_p = experiment.links) === null || _p === void 0 ? void 0 : _p.generic) ? experiment.links.generic : [], metrics, safeGetString(experiment, 'status') || 'running', Object.assign(Object.assign({ showOutcomeCard: allVariants.length > 0, variants: allVariants, owner: safeGetString(experiment, 'owner'), audience: safeGetString(experiment, 'audience'), experimentType: safeGetString(experiment, 'experimentType'), hypothesis: safeGetString(experiment, 'hypothesis'), startDate: safeGetString(experiment, 'startDate'), endDate: safeGetString(experiment, 'endDate'), totalSampleSize: safeGetNumber(experiment, 'sampleSize'), confidenceLevel: safeGetNumber(experiment, 'confidenceLevel'), primaryMetric: (() => {
                         var _a;
                         // Find the metric marked as primary, or fall back to first metric
                         const primaryMetricDef = (metrics === null || metrics === void 0 ? void 0 : metrics.find(m => m.isPrimary)) || (metrics && metrics.length > 0 ? metrics[0] : undefined);
@@ -2678,11 +2684,11 @@ if (figma.editorType === 'figma') {
                         rolledOutVariantName: rolledOutVariant === null || rolledOutVariant === void 0 ? void 0 : rolledOutVariant.name,
                         rolledOutVariantColor: rolledOutVariant === null || rolledOutVariant === void 0 ? void 0 : rolledOutVariant.color
                     };
-                })()));
+                })()), { outcomeNotes: ((_r = (_q = experiment.outcomes) === null || _q === void 0 ? void 0 : _q.notes) === null || _r === void 0 ? void 0 : _r.trim()) || undefined }));
                 attachNodeMeta(infoCard, {
                     name: infoCardName,
                     type: 'frame',
-                    description: experiment.description || 'e.g., Testing if new CTA increases conversions.',
+                    description: experiment.description || '',
                     extra: { experimentId: experiment.id, role: 'experiment-info' },
                 });
                 const center = figma.viewport.center;
@@ -2704,8 +2710,8 @@ if (figma.editorType === 'figma') {
                 //   - Variants: Below their parent event, in horizontal row
                 //   - All positioned with precise X,Y coordinates for deterministic output
                 //
-                const eventSpacing = (_r = (_q = flow.layout) === null || _q === void 0 ? void 0 : _q.eventSpacing) !== null && _r !== void 0 ? _r : 80; // Horizontal space between events (configurable)
-                const variantSpacing = (_t = (_s = flow.layout) === null || _s === void 0 ? void 0 : _s.variantSpacing) !== null && _t !== void 0 ? _t : 40; // Horizontal space between variants in a row
+                const eventSpacing = (_t = (_s = flow.layout) === null || _s === void 0 ? void 0 : _s.eventSpacing) !== null && _t !== void 0 ? _t : 80; // Horizontal space between events (configurable)
+                const variantSpacing = (_v = (_u = flow.layout) === null || _u === void 0 ? void 0 : _u.variantSpacing) !== null && _v !== void 0 ? _v : 40; // Horizontal space between variants in a row
                 const eventToVariantSpacing = 100; // Vertical space from event to variant row
                 const baseX = infoCard ? infoCard.x + overviewWidth + 200 : 600; // Entry starts after overview card
                 const baseY = infoCard ? infoCard.y : center.y; // Align to info card or viewport center
@@ -2754,9 +2760,9 @@ if (figma.editorType === 'figma') {
                             const safeVariantName = typeof variant.name === 'string' && variant.name.trim().length > 0
                                 ? variant.name
                                 : `Variant ${vIdx + 1}`;
-                            const variantColor = variant.color || ((_u = variant.style) === null || _u === void 0 ? void 0 : _u.variantColor);
+                            const variantColor = variant.color || ((_w = variant.style) === null || _w === void 0 ? void 0 : _w.variantColor);
                             // Check if this variant is rolled out
-                            const rolledOutVariantId = (_w = (_v = experiment.outcomes) === null || _v === void 0 ? void 0 : _v.rolledOutVariantId) !== null && _w !== void 0 ? _w : (_x = experiment.outcomes) === null || _x === void 0 ? void 0 : _x.rolledoutVariantId;
+                            const rolledOutVariantId = (_y = (_x = experiment.outcomes) === null || _x === void 0 ? void 0 : _x.rolledOutVariantId) !== null && _y !== void 0 ? _y : (_z = experiment.outcomes) === null || _z === void 0 ? void 0 : _z.rolledoutVariantId;
                             const isRolledout = rolledOutVariantId === variant.id;
                             const variantForCard = Object.assign(Object.assign({}, variant), { name: safeVariantName, status: isRolledout ? 'winner' : (variant.status || 'none'), metrics: variant.metrics || {}, color: variantColor });
                             const variantThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(variant, 'figmaLink'), `variant "${safeVariantName}"`);
@@ -2823,14 +2829,14 @@ if (figma.editorType === 'figma') {
                     const eventThumbnail = yield resolveThumbnailSourceFromFigmaLink(safeGetString(event, 'figmaLink'), `touchpoint "${safeEventName}"`);
                     let eventCard;
                     try {
-                        eventCard = yield createEventCard(safeEventName, (_z = (_y = event.variants) === null || _y === void 0 ? void 0 : _y.length) !== null && _z !== void 0 ? _z : 0, eventIdx, eventThumbnail.node, eventThumbnail.message, eventThumbnail.helper, {
+                        eventCard = yield createEventCard(safeEventName, (_1 = (_0 = event.variants) === null || _0 === void 0 ? void 0 : _0.length) !== null && _1 !== void 0 ? _1 : 0, eventIdx, eventThumbnail.node, eventThumbnail.message, eventThumbnail.helper, {
                             figmaLink: safeGetString(event, 'figmaLink'),
                             showFigmaLink: event.showFigmaLink,
                         });
                     }
                     catch (error) {
                         console.error(`Touchpoint card failed for "${safeEventName}", using placeholder thumbnail`, error);
-                        eventCard = yield createEventCard(safeEventName, (_1 = (_0 = event.variants) === null || _0 === void 0 ? void 0 : _0.length) !== null && _1 !== void 0 ? _1 : 0, eventIdx, eventThumbnail.node, eventThumbnail.message || 'Preview unavailable', eventThumbnail.helper || THUMBNAIL_DEFAULT_HELPER, {
+                        eventCard = yield createEventCard(safeEventName, (_3 = (_2 = event.variants) === null || _2 === void 0 ? void 0 : _2.length) !== null && _3 !== void 0 ? _3 : 0, eventIdx, eventThumbnail.node, eventThumbnail.message || 'Preview unavailable', eventThumbnail.helper || THUMBNAIL_DEFAULT_HELPER, {
                             figmaLink: safeGetString(event, 'figmaLink'),
                             showFigmaLink: event.showFigmaLink,
                         });
@@ -2841,14 +2847,14 @@ if (figma.editorType === 'figma') {
                     attachNodeMeta(eventCard, {
                         name: safeEventName,
                         type: 'frame',
-                        description: ((_2 = event.entryNote) === null || _2 === void 0 ? void 0 : _2.text) || '',
+                        description: ((_4 = event.entryNote) === null || _4 === void 0 ? void 0 : _4.text) || '',
                         extra: {
                             role: 'event',
                             eventId: event.id,
                             experimentId: experiment.id,
-                            hasVariants: !!((_3 = event.variants) === null || _3 === void 0 ? void 0 : _3.length),
+                            hasVariants: !!((_5 = event.variants) === null || _5 === void 0 ? void 0 : _5.length),
                             nodeType: 'EVENT_NODE',
-                            entryNoteId: (_4 = event.entryNote) === null || _4 === void 0 ? void 0 : _4.id,
+                            entryNoteId: (_6 = event.entryNote) === null || _6 === void 0 ? void 0 : _6.id,
                             figmaLink: safeGetString(event, 'figmaLink'),
                         },
                     });
@@ -2880,12 +2886,9 @@ if (figma.editorType === 'figma') {
                         let variantX = eventX; // Start variants aligned to event's left edge
                         const variantY = eventY + eventCard.height + eventToVariantSpacing; // Position below event
                         for (const [vIdx, variantCard] of variantCards.entries()) {
-                            const variant = (_5 = event.variants) === null || _5 === void 0 ? void 0 : _5[vIdx];
+                            const variant = (_7 = event.variants) === null || _7 === void 0 ? void 0 : _7[vIdx];
                             if (!variant)
                                 continue;
-                            const safeVariantName = typeof variant.name === 'string' && variant.name.trim().length > 0
-                                ? variant.name
-                                : `Variant ${vIdx + 1}`;
                             // Position variant in horizontal row below event, then mount on canvas
                             variantCard.x = variantX;
                             variantCard.y = variantY;
@@ -3018,7 +3021,7 @@ if (figma.editorType === 'figma') {
                             // Rolled-out variants get special styling to highlight the chosen path
                             const fromNodeId = connector.from.id;
                             const toNodeId = connector.to.id;
-                            const rolledOutVariantId = (_7 = (_6 = experiment.outcomes) === null || _6 === void 0 ? void 0 : _6.rolledOutVariantId) !== null && _7 !== void 0 ? _7 : (_8 = experiment.outcomes) === null || _8 === void 0 ? void 0 : _8.rolledoutVariantId;
+                            const rolledOutVariantId = (_9 = (_8 = experiment.outcomes) === null || _8 === void 0 ? void 0 : _8.rolledOutVariantId) !== null && _9 !== void 0 ? _9 : (_10 = experiment.outcomes) === null || _10 === void 0 ? void 0 : _10.rolledoutVariantId;
                             // Check if either endpoint is the rolled-out variant
                             const isRolledout = rolledOutVariantId && (fromNodeId === rolledOutVariantId || toNodeId === rolledOutVariantId);
                             // Rolled-out styling takes priority over generic winner styling
@@ -3199,8 +3202,7 @@ if (figma.editorType === 'figma') {
                         noteFrame.strokeWeight = 1;
                         noteFrame.name = `EntryNote: ${note.text}`;
                         const noteText = figma.createText();
-                        noteText.fontName = { family: 'Figtree', style: 'Regular' };
-                        noteText.fontSize = TOKENS.fontSizeBodySm;
+                        styleOverviewText(noteText, 'caption');
                         noteText.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.yellow900) }];
                         noteText.characters = note.text;
                         noteText.textAutoResize = 'WIDTH_AND_HEIGHT';
@@ -3218,21 +3220,21 @@ if (figma.editorType === 'figma') {
                         });
                         // Position note based on attachTo
                         let anchorNode = undefined;
-                        const anchorType = (_9 = note.attachTo) === null || _9 === void 0 ? void 0 : _9.target;
-                        const anchorId = (_10 = note.attachTo) === null || _10 === void 0 ? void 0 : _10.targetId;
+                        const anchorType = (_11 = note.attachTo) === null || _11 === void 0 ? void 0 : _11.target;
+                        const anchorId = (_12 = note.attachTo) === null || _12 === void 0 ? void 0 : _12.targetId;
                         if (anchorType === 'EVENT_NODE' && anchorId) {
                             anchorNode = nodeMap[anchorId];
                         }
                         if (anchorNode) {
                             // Place note above or to the left of anchor node, depending on layout
                             // For horizontal spine, place above; for vertical, place left
-                            if (((_11 = flow.layout) === null || _11 === void 0 ? void 0 : _11.direction) === 'VERTICAL') {
-                                noteFrame.x = ((_12 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _12 !== void 0 ? _12 : 0) - noteFrame.width - 24;
-                                noteFrame.y = ((_13 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _13 !== void 0 ? _13 : 0) + ((_14 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.height) !== null && _14 !== void 0 ? _14 : 0) / 2 - noteFrame.height / 2;
+                            if (((_13 = flow.layout) === null || _13 === void 0 ? void 0 : _13.direction) === 'VERTICAL') {
+                                noteFrame.x = ((_14 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _14 !== void 0 ? _14 : 0) - noteFrame.width - 24;
+                                noteFrame.y = ((_15 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _15 !== void 0 ? _15 : 0) + ((_16 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.height) !== null && _16 !== void 0 ? _16 : 0) / 2 - noteFrame.height / 2;
                             }
                             else {
-                                noteFrame.x = ((_15 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _15 !== void 0 ? _15 : 0) + ((_16 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.width) !== null && _16 !== void 0 ? _16 : 0) / 2 - noteFrame.width / 2;
-                                noteFrame.y = ((_17 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _17 !== void 0 ? _17 : 0) - noteFrame.height - 24;
+                                noteFrame.x = ((_17 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.x) !== null && _17 !== void 0 ? _17 : 0) + ((_18 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.width) !== null && _18 !== void 0 ? _18 : 0) / 2 - noteFrame.width / 2;
+                                noteFrame.y = ((_19 = anchorNode === null || anchorNode === void 0 ? void 0 : anchorNode.y) !== null && _19 !== void 0 ? _19 : 0) - noteFrame.height - 24;
                             }
                         }
                         else {

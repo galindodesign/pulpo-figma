@@ -13,6 +13,8 @@ import {
   formatDateForDisplay,
   getExperimentTypeLabel,
   createRolledOutBadge,
+  resolveExperimentDisplayStatus,
+  type ExperimentStatus,
 } from "./experiment-card-shared";
 import type { MetricDefinition } from "./types";
 
@@ -32,6 +34,7 @@ export interface VariantOutcome {
   name: string;          // "Blue button", "Red button"
   color?: string;        // Variant dot color
   figmaLink?: string;    // Optional design link for this variant
+  parentEventName?: string; // Touchpoint where this variant lives
   isControl?: boolean;   // Optional explicit comparison anchor from older saved data
   traffic: number;       // Traffic allocation percentage
   sampleSize?: number;   // Number of users in this variant
@@ -53,10 +56,33 @@ export interface ExperimentOutcomeData {
   audience?: string;        // Target audience for the experiment
   totalSampleSize?: number;
   status: 'running' | 'completed' | 'paused' | 'draft' | 'rolled_out';
-  primaryMetric?: string;  // Key of the primary decision metric
+  primaryMetric?: string;  // Legacy key for older saved experiments
   metrics: MetricDefinition[];
   variants: VariantOutcome[];
   dateCreated?: string; // Date when experiment was created (ISO format, auto-populated if not provided)
+  outcomeNotes?: string;
+  /** Show touchpoint name under variant rows when variants span 2+ touchpoints. */
+  showVariantTouchpointName?: boolean;
+}
+
+function getOutcomeSummaryBadge(data: ExperimentOutcomeData): {
+  label: string;
+  bgColor: string;
+  borderColor: string;
+  textColor: string;
+} {
+  const hasRollout = data.variants.some(v => v.isRolledOut);
+  const displayStatus = resolveExperimentDisplayStatus(
+    data.status as ExperimentStatus,
+    hasRollout,
+  );
+  const config = EXPERIMENT_STATUS_STYLES[displayStatus] || EXPERIMENT_STATUS_STYLES.running;
+  return {
+    label: config.label,
+    bgColor: config.bgColor,
+    borderColor: config.borderColor,
+    textColor: config.textColor,
+  };
 }
 
 /**
@@ -126,76 +152,182 @@ interface OutcomeSummaryContent {
   nextStep: string;
 }
 
-function classifyOutcomeState(data: ExperimentOutcomeData): OutcomeSummaryContent {
-  const rolledOutVariant = data.variants.find(v => v.isRolledOut);
-  const primaryMetric = getPrimaryDecisionMetric(data);
-  const leadingVariant = primaryMetric ? getLeadingVariant(data, primaryMetric) : undefined;
-  const comparisonVariant = getComparisonVariant(data);
-  const primaryFact = primaryMetric && leadingVariant
-    ? formatPrimaryMetricFact(primaryMetric, leadingVariant, comparisonVariant)
-    : "Primary metric: not set";
-  const facts = [
-    primaryFact,
-    `${data.variants.length} variant${data.variants.length === 1 ? "" : "s"} evaluated`,
-  ];
+function variantDisplayName(variant: VariantOutcome): string {
+  return variant.name || `Variant ${variant.key}`;
+}
 
-  if (data.totalSampleSize) {
-    facts.push(`${data.totalSampleSize.toLocaleString()} users sampled`);
+function firstGoalLabel(goal?: MetricDefinition): string {
+  return goal ? getMetricDisplayName(goal) : "Goal 1";
+}
+
+function goalTargetSuffix(goalMet: boolean | undefined): string {
+  if (goalMet === true) return ", on target";
+  if (goalMet === false) return ", below target";
+  return "";
+}
+
+function supportingGoalsBelowTargetDetail(failed: number): string {
+  if (failed <= 0) return "";
+  return `${failed} other goal${failed === 1 ? "" : "s"} below target.`;
+}
+
+function sampleSizePhrase(totalSampleSize?: number): string {
+  return totalSampleSize
+    ? `${totalSampleSize.toLocaleString()} users`
+    : "your sample size goal";
+}
+
+function goalPerformancePhrase(goalMet: boolean | undefined): string {
+  if (goalMet === true) return "on target";
+  if (goalMet === false) return "below target";
+  return "no target set";
+}
+
+function shouldShowEmbeddedNextStep(data: ExperimentOutcomeData): boolean {
+  const hasRollout = data.variants.some(v => v.isRolledOut);
+  if (data.status === "rolled_out" || hasRollout) return false;
+  if (data.status === "running" || data.status === "paused") return false;
+  return true;
+}
+
+function classifyOutcomeState(
+  data: ExperimentOutcomeData,
+  options?: { compact?: boolean; embeddedInOverview?: boolean },
+): OutcomeSummaryContent {
+  const embeddedInOverview = options?.embeddedInOverview === true;
+  const showTargetInCopy = !embeddedInOverview;
+  const rolledOutVariant = data.variants.find(v => v.isRolledOut);
+  const leadingGoal = getLeadingGoal(data);
+  const leadingVariant = leadingGoal ? getLeadingVariant(data, leadingGoal) : undefined;
+  const goalMet = leadingGoal && leadingVariant
+    ? getGoalPerformance(leadingGoal, leadingVariant.metrics[getMetricKey(leadingGoal)]?.value)
+    : undefined;
+  const focusVariant = rolledOutVariant || leadingVariant;
+  const supportingIssues = focusVariant
+    ? countSupportingGoalRegressions(data, focusVariant)
+    : { failed: 0, total: 0 };
+  const goalLabel = firstGoalLabel(leadingGoal);
+  const leaderName = leadingVariant ? variantDisplayName(leadingVariant) : undefined;
+  const facts = buildOutcomeFacts(data, leadingGoal, leadingVariant, {
+    compact: options?.compact === true,
+    embeddedInOverview,
+    supportingIssuesFailed: supportingIssues.failed,
+    rolledOutVariant,
+  });
+
+  if (data.status === "draft") {
+    return {
+      state: "inconclusive",
+      headline: "Add goals and variant results to compare",
+      detail: "",
+      facts: [],
+      nextStep: "Set status to Running when the test is live.",
+    };
   }
 
   if (data.status === "running") {
     return {
       state: "running",
-      headline: "Keep collecting evidence",
-      detail: leadingVariant
-        ? `${leadingVariant.name} is currently strongest on the primary metric, but results are still in progress.`
-        : "Results are still developing. Use the goal table to watch the primary metric and guardrails before deciding.",
+      headline: leaderName
+        ? `${leaderName} leads on ${goalLabel}${showTargetInCopy ? goalTargetSuffix(goalMet) : ""}`
+        : "Add variant results to compare",
+      detail: "",
       facts,
-      nextStep: "Continue monitoring until the experiment reaches its planned sample size or decision threshold.",
+      nextStep: embeddedInOverview
+        ? ""
+        : `Keep running until you reach ${sampleSizePhrase(data.totalSampleSize)} or your ${goalLabel} target.`,
     };
   }
 
   if (data.status === "paused") {
     return {
       state: "paused",
-      headline: "Experiment paused",
-      detail: "The current data is preserved, but the experiment is not collecting new evidence.",
+      headline: leaderName
+        ? `Paused — ${leaderName} was leading on ${goalLabel}`
+        : "Test paused",
+      detail: "",
       facts,
-      nextStep: "Resume to gather more data, or close the experiment with the current learning and rationale.",
+      nextStep: embeddedInOverview ? "" : "Resume the test or mark it concluded.",
     };
   }
 
   if (data.status === "rolled_out" || rolledOutVariant) {
     const chosenVariant = rolledOutVariant || leadingVariant;
+    const chosenName = chosenVariant ? variantDisplayName(chosenVariant) : undefined;
+    const chosenGoalMet = leadingGoal && chosenVariant
+      ? getGoalPerformance(leadingGoal, chosenVariant.metrics[getMetricKey(leadingGoal)]?.value)
+      : undefined;
+    const rolloutDiffersFromLeader = !!(
+      rolledOutVariant &&
+      leadingVariant &&
+      rolledOutVariant.id !== leadingVariant.id
+    );
+
+    let headline = chosenName ? `${chosenName} rolled out` : "Rolled out";
+    if (chosenName && !rolloutDiffersFromLeader && showTargetInCopy && chosenGoalMet !== undefined) {
+      headline = `${chosenName} rolled out${goalTargetSuffix(chosenGoalMet)}`;
+    }
+
+    let detail = "";
+    if (rolloutDiffersFromLeader && leaderName && chosenName) {
+      detail = `${leaderName} led on ${goalLabel}, but the team rolled out ${chosenName}.`;
+    } else if (!embeddedInOverview) {
+      detail = supportingGoalsBelowTargetDetail(supportingIssues.failed);
+    }
+
     return {
       state: "rolled_out",
-      headline: chosenVariant ? `Decision: ${chosenVariant.name} is live` : "Decision: rollout complete",
-      detail: chosenVariant
-        ? `${chosenVariant.name} has been moved forward. Use the table above to confirm the primary metric and any guardrail trade-offs.`
-        : "A rollout decision has been recorded. Use the table above to confirm the primary metric and any guardrail trade-offs.",
+      headline,
+      detail,
       facts,
-      nextStep: "Monitor post-rollout performance and rollback if guardrails regress.",
+      nextStep: embeddedInOverview
+        ? ""
+        : supportingIssues.failed > 0
+          ? "Watch the other goals in production."
+          : "Confirm results hold in production.",
     };
   }
 
-  if (data.status === "completed" && primaryMetric && leadingVariant) {
+  if (data.status === "completed" && leadingGoal && leadingVariant) {
+    const leader = variantDisplayName(leadingVariant);
+    let nextStep = "Pick a rolled-out variant in Details when the team agrees.";
+    if (supportingIssues.failed > 0) {
+      nextStep = "Review trade-offs, then pick a rolled-out variant in Details.";
+    } else if (goalMet === false) {
+      nextStep = "Extend the test, or pick a rolled-out variant in Details if the team accepts it.";
+    }
     return {
       state: "recommendation",
-      headline: `Recommendation: review ${leadingVariant.name}`,
-      detail: `${leadingVariant.name} has the strongest observed ${getMetricDisplayName(primaryMetric)} result. Confirm guardrails and qualitative context before rollout.`,
+      headline: goalMet === false && showTargetInCopy
+        ? `${leader} leads on ${goalLabel}, but below target`
+        : `${leader} leads on ${goalLabel}`,
+      detail: !embeddedInOverview && supportingIssues.failed > 0
+        ? supportingGoalsBelowTargetDetail(supportingIssues.failed)
+        : "",
       facts,
-      nextStep: "Choose a rollout candidate only if the primary win is strong enough and no guardrails show meaningful regression.",
+      nextStep,
     };
+  }
+
+  let headline = "Not enough to compare yet";
+  if (!leadingGoal || data.metrics.length === 0) {
+    headline = "Add a goal to compare variants";
+  } else if (!leadingVariant) {
+    headline = data.status === "completed"
+      ? "Add variant results to compare"
+      : `${goalLabel}: no clear leader yet`;
+  } else {
+    headline = "Choose a rollout variant";
   }
 
   return {
     state: "inconclusive",
-    headline: "Decision needs more context",
-    detail: primaryMetric
-      ? "No clear rollout decision has been marked. Compare the primary metric against guardrails before choosing a variant."
-      : "Set a primary metric so the outcome card can explain which result should drive the decision.",
+    headline,
+    detail: "",
     facts,
-    nextStep: "Document the decision criteria, then mark the rollout variant when the team has aligned.",
+    nextStep: data.variants.length >= 2
+      ? "Use the results table, then pick a rolled-out variant in Details when the team aligns."
+      : "Add goals and variant results first.",
   };
 }
 
@@ -218,16 +350,20 @@ function getMetricDisplayName(metric: MetricDefinition): string {
   return `${name} (${abbreviation})`;
 }
 
-function getPrimaryDecisionMetric(data: ExperimentOutcomeData): MetricDefinition | undefined {
-  if (data.primaryMetric) {
-    const primaryMetricKey = data.primaryMetric.trim().toLowerCase();
-    const matchedMetric = data.metrics.find(metric => (
-      metric.id.toLowerCase() === primaryMetricKey ||
-      getMetricKey(metric) === primaryMetricKey ||
-      metric.name.toLowerCase() === primaryMetricKey ||
-      metric.abbreviation?.toLowerCase() === primaryMetricKey
-    ));
+/** Goal #1 — first goal in list order (drag priority). Legacy fallbacks for older saves. */
+function getLeadingGoal(data: ExperimentOutcomeData): MetricDefinition | undefined {
+  if (data.metrics.length > 0) {
+    return data.metrics[0];
+  }
 
+  if (data.primaryMetric) {
+    const legacyKey = data.primaryMetric.trim().toLowerCase();
+    const matchedMetric = data.metrics.find(metric => (
+      metric.id.toLowerCase() === legacyKey ||
+      getMetricKey(metric) === legacyKey ||
+      metric.name.toLowerCase() === legacyKey ||
+      metric.abbreviation?.toLowerCase() === legacyKey
+    ));
     if (matchedMetric) {
       return matchedMetric;
     }
@@ -267,20 +403,148 @@ function getLeadingVariant(data: ExperimentOutcomeData, metric: MetricDefinition
   });
 }
 
-function formatPrimaryMetricFact(
+function formatLeadingGoalFact(
+  goalIndex: number,
   metric: MetricDefinition,
   variant: VariantOutcome,
-  comparisonVariant: VariantOutcome | undefined
 ): string {
   const metricData = variant.metrics[getMetricKey(metric)];
   const metricValue = formatMetricValue(metricData?.value, metric);
-  const changeLabel = comparisonVariant && variant.id !== comparisonVariant.id && metricData?.uplift !== undefined
-    ? `, ${formatUplift(metricData.uplift)} change from ${comparisonVariant.name || `Variant ${comparisonVariant.key}`}`
-    : "";
   const goalPerformance = getGoalPerformance(metric, metricData?.value);
-  const goalLabel = goalPerformance === undefined ? "goal not set" : goalPerformance ? "goal met" : "goal not met";
+  const goalLabel = getMetricDisplayName(metric);
+  return `${variantDisplayName(variant)} leads Goal ${goalIndex} (${goalLabel}) at ${metricValue} — ${goalPerformancePhrase(goalPerformance)}`;
+}
 
-  return `Primary metric: ${variant.name} at ${metricValue}${changeLabel} (${goalLabel})`;
+function getCloseCallFact(
+  data: ExperimentOutcomeData,
+  metric: MetricDefinition,
+  leadingVariant: VariantOutcome,
+): string | undefined {
+  const metricKey = getMetricKey(metric);
+  const leadingValue = leadingVariant.metrics[metricKey]?.value;
+  if (leadingValue === undefined || leadingValue === null) {
+    return undefined;
+  }
+
+  let closest: { name: string; gapPp: number } | undefined;
+  for (const candidate of data.variants) {
+    if (candidate.id === leadingVariant.id) continue;
+    const candidateValue = candidate.metrics[metricKey]?.value;
+    if (candidateValue === undefined || candidateValue === null) continue;
+
+    const rawGap = Math.abs(leadingValue - candidateValue);
+    const gapPp = isPercentageMetric(metric)
+      ? (leadingValue >= 0 && leadingValue <= 1 && candidateValue >= 0 && candidateValue <= 1 ? rawGap * 100 : rawGap)
+      : rawGap;
+
+    if (gapPp <= 1 && (!closest || gapPp < closest.gapPp)) {
+      closest = {
+        name: candidate.name || `Variant ${candidate.key}`,
+        gapPp,
+      };
+    }
+  }
+
+  if (!closest) return undefined;
+  const metricLabel = metric.abbreviation || metric.name;
+  return `${closest.name} is within ${closest.gapPp.toFixed(1)}pp on ${metricLabel} — almost tied.`;
+}
+
+function summarizeSupportingGoals(
+  data: ExperimentOutcomeData,
+  variant: VariantOutcome,
+  maxGoals = 3,
+): string[] {
+  const supportingGoals = data.metrics.slice(1);
+  if (supportingGoals.length === 0) {
+    return [];
+  }
+
+  const facts: string[] = [];
+
+  for (let i = 0; i < supportingGoals.length && facts.length < maxGoals; i++) {
+    const metric = supportingGoals[i];
+    const goalNum = i + 2;
+    const metricData = variant.metrics[getMetricKey(metric)];
+    if (!metricData || metricData.value === undefined) {
+      continue;
+    }
+
+    const metricValue = formatMetricValue(metricData.value, metric);
+    const goalPerformance = getGoalPerformance(metric, metricData.value);
+    const goalLabel = goalPerformance === undefined ? "no target set" : goalPerformance ? "on target" : "below target";
+
+    facts.push(`Goal ${goalNum} (${metric.name}): ${metricValue} — ${goalLabel}`);
+  }
+
+  const remaining = supportingGoals.length - maxGoals;
+  if (remaining > 0) {
+    facts.push(`+ ${remaining} more goal${remaining === 1 ? "" : "s"} in table`);
+  }
+
+  return facts;
+}
+
+/** Supporting goals with thresholds only (no control/uplift). */
+function countSupportingGoalRegressions(
+  data: ExperimentOutcomeData,
+  variant: VariantOutcome,
+): { failed: number; total: number } {
+  let failed = 0;
+  let total = 0;
+
+  for (const metric of data.metrics.slice(1)) {
+    if (metric.direction === "neutral") continue;
+    const metricData = variant.metrics[getMetricKey(metric)];
+    if (!metricData || metricData.value === undefined) continue;
+    const goalPerformance = getGoalPerformance(metric, metricData.value);
+    if (goalPerformance === undefined) continue;
+    total += 1;
+    if (!goalPerformance) {
+      failed += 1;
+    }
+  }
+
+  return { failed, total };
+}
+
+function buildOutcomeFacts(
+  data: ExperimentOutcomeData,
+  leadingGoal: MetricDefinition | undefined,
+  leadingVariant: VariantOutcome | undefined,
+  options?: {
+    compact?: boolean;
+    embeddedInOverview?: boolean;
+    supportingIssuesFailed?: number;
+    rolledOutVariant?: VariantOutcome;
+  },
+): string[] {
+  const compact = options?.compact === true;
+  const embedded = options?.embeddedInOverview === true;
+  const supportingFailed = options?.supportingIssuesFailed ?? 0;
+
+  if (embedded) {
+    return [];
+  }
+
+  const facts: string[] = [];
+
+  if (leadingGoal && leadingVariant) {
+    facts.push(formatLeadingGoalFact(1, leadingGoal, leadingVariant));
+    const closeCall = getCloseCallFact(data, leadingGoal, leadingVariant);
+    if (closeCall) {
+      facts.push(closeCall);
+    }
+  }
+
+  const focusVariant = data.variants.find(v => v.isRolledOut) || leadingVariant;
+  if (focusVariant && supportingFailed > 0 && !compact) {
+    facts.push(supportingGoalsBelowTargetDetail(supportingFailed));
+  } else if (focusVariant && !compact) {
+    facts.push(...summarizeSupportingGoals(data, focusVariant));
+  }
+
+  return compact ? facts.slice(0, 1) : facts;
 }
 
 const OUTCOME_SUMMARY_MIN_WIDTH = 728;
@@ -468,14 +732,14 @@ async function createMetricsTablesSection(data: ExperimentOutcomeData): Promise<
   section.appendChild(flippedMetricsTable);
 
   const hasRolledOut = data.variants.some(v => v.isRolledOut);
-  if (hasRolledOut) {
-    const legend = figma.createText();
-    styleOverviewText(legend, "caption");
-    legend.textAutoResize = "WIDTH_AND_HEIGHT";
-    legend.characters = "Highlighted cells show decision metrics for the rolled-out variant.";
-    legend.name = "Table Legend";
-    section.appendChild(legend);
-  }
+  const legend = figma.createText();
+  styleOverviewText(legend, "caption");
+  legend.textAutoResize = "WIDTH_AND_HEIGHT";
+  legend.characters = hasRolledOut
+    ? "Highlighted cells show entered values for the rolled-out variant."
+    : "Green = at or above target · Red = below target · Values are as entered";
+  legend.name = "Table Legend";
+  section.appendChild(legend);
 
   return section;
 }
@@ -558,7 +822,7 @@ async function createTableHeaderRow(data: ExperimentOutcomeData, variantCount: n
   row.name = "Header Row";
 
   // First column: Metric label (fixed width)
-  const metricHeader = createTableCell('Key Metric', 140, true, false);
+  const metricHeader = createTableCell('Goal', 140, true, false);
   metricHeader.layoutGrow = 0; // Don't grow
   metricHeader.minWidth = 200;
   row.appendChild(metricHeader);
@@ -606,8 +870,8 @@ async function createFlippedTableHeaderRow(metrics: MetricDefinition[]): Promise
   row.appendChild(variantHeader);
 
   if (metrics.length > 0) {
-    for (const metric of metrics) {
-      const metricHeader = createFlippedMetricHeaderCell(metric);
+    for (let i = 0; i < metrics.length; i++) {
+      const metricHeader = createFlippedMetricHeaderCell(metrics[i]);
       metricHeader.layoutGrow = 1;
       metricHeader.layoutAlign = "STRETCH";
       row.appendChild(metricHeader);
@@ -866,7 +1130,7 @@ async function createVariantMetricRow(
 
   row.name = `Variant Row: ${variant.name || variant.key}`;
 
-  const variantCell = createVariantNameCell(variant);
+  const variantCell = createVariantNameCell(variant, data?.showVariantTouchpointName === true);
   variantCell.layoutGrow = 0;
   row.appendChild(variantCell);
 
@@ -915,7 +1179,7 @@ async function createEmptyVariantMetricRow(metrics: MetricDefinition[]): Promise
   return row;
 }
 
-function createVariantNameCell(variant: VariantOutcome): FrameNode {
+function createVariantNameCell(variant: VariantOutcome, showTouchpointName = false): FrameNode {
   const cell = figma.createFrame();
   cell.layoutMode = "VERTICAL";
   cell.counterAxisSizingMode = "FIXED";
@@ -958,6 +1222,14 @@ function createVariantNameCell(variant: VariantOutcome): FrameNode {
   }
 
   cell.appendChild(nameRow);
+
+  if (showTouchpointName && variant.parentEventName?.trim()) {
+    const touchpointText = figma.createText();
+    styleOverviewText(touchpointText, "caption");
+    touchpointText.textAutoResize = "WIDTH_AND_HEIGHT";
+    touchpointText.characters = variant.parentEventName.trim();
+    cell.appendChild(touchpointText);
+  }
 
   if (variant.figmaLink) {
     const linkText = figma.createText();
@@ -1035,18 +1307,18 @@ function getCellHighlight(
   comparisonVariant: VariantOutcome | undefined,
 ): 'positive' | 'negative' | 'none' {
   const rolledOutVariant = data.variants.find(v => v.isRolledOut);
-  const primaryMetric = getPrimaryDecisionMetric(data);
+  const leadingGoal = getLeadingGoal(data);
 
   const isRolledOutRow = !!rolledOutVariant && variant.id === rolledOutVariant.id;
   const isLeadingRow = !rolledOutVariant
     && (data.status === 'completed' || data.status === 'rolled_out')
-    && !!primaryMetric
-    && getLeadingVariant(data, primaryMetric)?.id === variant.id;
+    && !!leadingGoal
+    && getLeadingVariant(data, leadingGoal)?.id === variant.id;
 
   if (!isRolledOutRow && !isLeadingRow) return 'none';
 
-  // For the leading (pre-rollout) row, only highlight the primary metric column.
-  if (isLeadingRow && primaryMetric && getMetricKey(metric) !== getMetricKey(primaryMetric)) {
+  // For the leading (pre-rollout) row, only highlight the Goal #1 column.
+  if (isLeadingRow && leadingGoal && getMetricKey(metric) !== getMetricKey(leadingGoal)) {
     return 'none';
   }
 
@@ -1063,14 +1335,14 @@ function getCellHighlight(
     return changeIsGood ? 'positive' : 'negative';
   }
 
-  // Fallback: use goal threshold when no control uplift is available.
+  // Fallback: use goal threshold when no legacy control uplift is available.
   const goalPerformance = getGoalPerformance(metric, metricData.value);
   if (goalPerformance !== undefined) {
     return goalPerformance ? 'positive' : 'negative';
   }
 
-  // Primary metric on rolled-out row with no other signal: mild positive.
-  if (isRolledOutRow && primaryMetric && getMetricKey(metric) === getMetricKey(primaryMetric)) {
+  // Goal #1 on rolled-out row with no other signal: mild positive.
+  if (isRolledOutRow && leadingGoal && getMetricKey(metric) === getMetricKey(leadingGoal)) {
     return 'positive';
   }
 
@@ -1078,15 +1350,11 @@ function getCellHighlight(
 }
 
 /**
- * Cell highlight contract (rollout-only):
- * - Green fill: rolled-out variant on metrics where performance supports the
- *   rollout decision (primary metric, or guardrails beating control in the
- *   metric's intended direction). Also the leading variant's primary-metric
- *   cell for completed-but-not-yet-rolled-out experiments.
- * - Red fill: rolled-out variant on guardrail metrics that regressed vs
- *   control or missed a decrease goal — trade-off visibility.
- * - No fill: all other variants (including control), and any cell where data
- *   is missing or the metric direction is neutral.
+ * Cell highlight contract (rollout-only, table layer):
+ * - Green fill: rolled-out or leading variant on Goal #1 / supporting goals
+ *   that meet threshold or beat a legacy control uplift when present.
+ * - Red fill: missed goal threshold or unfavorable legacy control uplift.
+ * - No fill: other variants and cells without a signal.
  */
 function createMetricValueCell(
   metricData: VariantOutcome['metrics'][string] | undefined,
@@ -1194,9 +1462,50 @@ async function createSummarySection(
   options?: { embedded?: boolean },
 ): Promise<FrameNode> {
   const embedded = options?.embedded === true;
+  const outcome = classifyOutcomeState(data, { compact: embedded, embeddedInOverview: embedded });
+  const rationaleText = (data.outcomeNotes || "").trim();
+  const rolledOutVariant = data.variants.find(v => v.isRolledOut);
+
+  if (embedded) {
+    const section = figma.createFrame();
+    section.layoutMode = "VERTICAL";
+    section.counterAxisSizingMode = "AUTO";
+    section.primaryAxisSizingMode = "AUTO";
+    section.layoutAlign = "STRETCH";
+    section.itemSpacing = SECTION_PANEL_LAYOUT.sectionGap;
+    section.fills = [];
+    section.name = "Section: Outcome summary";
+
+    section.appendChild(createOverviewSectionTitle("Outcome summary"));
+
+    const panelWidth = OUTCOME_SUMMARY_MIN_WIDTH;
+    const contentWidth = panelWidth - (SECTION_PANEL_LAYOUT.panelPadding * 2);
+    const panel = figma.createFrame();
+    panel.layoutMode = "VERTICAL";
+    panel.counterAxisSizingMode = "AUTO";
+    panel.primaryAxisSizingMode = "AUTO";
+    panel.layoutAlign = "STRETCH";
+    panel.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+    panel.paddingTop = panel.paddingBottom = SECTION_PANEL_LAYOUT.panelPadding;
+    panel.paddingLeft = panel.paddingRight = SECTION_PANEL_LAYOUT.panelPadding;
+    panel.cornerRadius = SECTION_PANEL_LAYOUT.panelCornerRadius;
+    applySectionPanel(panel);
+    panel.name = "Outcome Summary Panel";
+
+    appendOutcomeSummaryBody(panel, outcome, data, contentWidth, {
+      embedded: true,
+      includeDecisionFields: true,
+      rolledOutVariant,
+      rationaleText,
+    });
+
+    section.appendChild(panel);
+    return section;
+  }
+
   const section = figma.createFrame();
   section.layoutMode = "VERTICAL";
-  section.counterAxisSizingMode = embedded ? "AUTO" : "FIXED";
+  section.counterAxisSizingMode = "FIXED";
   section.primaryAxisSizingMode = "AUTO";
   section.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
   section.paddingTop = section.paddingBottom = SECTION_PANEL_LAYOUT.panelPadding;
@@ -1205,17 +1514,11 @@ async function createSummarySection(
   applySectionPanel(section);
   section.name = "Outcome Summary Section";
   section.layoutAlign = "STRETCH";
-  if (!embedded) {
-    section.minWidth = OUTCOME_SUMMARY_MIN_WIDTH;
-  }
+  section.minWidth = OUTCOME_SUMMARY_MIN_WIDTH;
 
   const contentWidth = OUTCOME_SUMMARY_MIN_WIDTH - (SECTION_PANEL_LAYOUT.panelPadding * 2);
 
-  const outcome = classifyOutcomeState(data);
-
-  /** Badge label color: decision green, otherwise neutral primary text. */
-  const badgeTextColor =
-    outcome.state === "rolled_out" ? TOKENS.malachite700 : SUMMARY_TYPOGRAPHY.body;
+  const summaryBadge = getOutcomeSummaryBadge(data);
 
   const headerRow = figma.createFrame();
   headerRow.layoutMode = "HORIZONTAL";
@@ -1230,47 +1533,151 @@ async function createSummarySection(
   headerRow.appendChild(headerText);
 
   const stateBadge = createBadge(
-    outcome.state === "rolled_out" ? "Decision" : outcome.state === "running" ? "Live read" : "Guidance",
+    summaryBadge.label,
     "chip",
-    TOKENS.badgeNeutralBg,
-    badgeTextColor,
+    summaryBadge.bgColor,
+    summaryBadge.textColor,
     undefined,
-    TOKENS.badgeNeutralBorder
+    summaryBadge.borderColor,
   );
   headerRow.appendChild(stateBadge);
   section.appendChild(headerRow);
 
-  const headlineText = figma.createText();
-  styleOverviewText(headlineText, "fieldValue");
-  setWrappedText(headlineText, outcome.headline, contentWidth);
-  section.appendChild(headlineText);
-
-  const outcomeDetail = figma.createText();
-  styleOverviewText(outcomeDetail, "fieldValue");
-  setWrappedText(outcomeDetail, outcome.detail, contentWidth);
-  section.appendChild(outcomeDetail);
-
-  const factsFrame = figma.createFrame();
-  factsFrame.layoutMode = "VERTICAL";
-  factsFrame.counterAxisSizingMode = "FIXED";
-  factsFrame.primaryAxisSizingMode = "AUTO";
-  factsFrame.layoutAlign = "STRETCH";
-  factsFrame.minWidth = contentWidth;
-  factsFrame.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
-  factsFrame.fills = [];
-  factsFrame.name = "Outcome Evidence";
-
-  for (const fact of outcome.facts) {
-    factsFrame.appendChild(createSummaryFactRow(fact, contentWidth));
-  }
-  section.appendChild(factsFrame);
-
-  const nextStepText = figma.createText();
-  styleOverviewText(nextStepText, "fieldValue");
-  setWrappedText(nextStepText, `Next step: ${outcome.nextStep}`, contentWidth);
-  section.appendChild(nextStepText);
+  appendOutcomeSummaryBody(section, outcome, data, contentWidth, {
+    includeDecisionFields: false,
+    rolledOutVariant,
+    rationaleText,
+  });
 
   return section;
+}
+
+function appendEmbeddedDecisionField(
+  parent: FrameNode,
+  label: string,
+  value: string,
+  contentWidth: number,
+  valueDot?: string,
+): void {
+  const labelNode = figma.createText();
+  styleOverviewText(labelNode, "fieldLabel");
+  labelNode.textAutoResize = "WIDTH_AND_HEIGHT";
+  labelNode.characters = label;
+  parent.appendChild(labelNode);
+
+  const valueNode = figma.createText();
+  styleOverviewText(valueNode, "fieldValue");
+  if (valueDot) {
+    const valueRow = figma.createFrame();
+    valueRow.layoutMode = "HORIZONTAL";
+    valueRow.counterAxisSizingMode = "AUTO";
+    valueRow.primaryAxisSizingMode = "AUTO";
+    valueRow.counterAxisAlignItems = "CENTER";
+    valueRow.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
+    valueRow.fills = [];
+    valueRow.name = "Value Row";
+
+    const dot = figma.createEllipse();
+    dot.resize(8, 8);
+    dot.fills = [{ type: "SOLID", color: hexToRgb(valueDot) }];
+    valueRow.appendChild(dot);
+
+    setWrappedText(valueNode, value, contentWidth);
+    valueRow.appendChild(valueNode);
+    parent.appendChild(valueRow);
+  } else {
+    setWrappedText(valueNode, value, contentWidth);
+    parent.appendChild(valueNode);
+  }
+}
+
+function appendOutcomeSummaryBody(
+  parent: FrameNode,
+  outcome: OutcomeSummaryContent,
+  data: ExperimentOutcomeData,
+  contentWidth: number,
+  options: {
+    embedded?: boolean;
+    includeDecisionFields: boolean;
+    rolledOutVariant?: VariantOutcome;
+    rationaleText: string;
+  },
+): void {
+  const embedded = options.embedded === true;
+  const headline = outcome.headline.trim();
+  const detail = outcome.detail.trim();
+
+  if (headline) {
+    const headlineText = figma.createText();
+    styleOverviewText(headlineText, "headline");
+    setWrappedText(headlineText, headline, contentWidth);
+    headlineText.name = "Readout";
+    parent.appendChild(headlineText);
+  }
+
+  if (detail) {
+    const outcomeDetail = figma.createText();
+    styleOverviewText(outcomeDetail, "fieldValue");
+    setWrappedText(outcomeDetail, detail, contentWidth);
+    parent.appendChild(outcomeDetail);
+  }
+
+  if (options.includeDecisionFields) {
+    if (options.rationaleText) {
+      const rationaleFrame = figma.createFrame();
+      rationaleFrame.layoutMode = "VERTICAL";
+      rationaleFrame.counterAxisSizingMode = "AUTO";
+      rationaleFrame.primaryAxisSizingMode = "AUTO";
+      rationaleFrame.layoutAlign = "STRETCH";
+      rationaleFrame.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
+      rationaleFrame.fills = [];
+      rationaleFrame.name = "Row: Decision rationale";
+      appendEmbeddedDecisionField(
+        rationaleFrame,
+        "Decision rationale",
+        options.rationaleText,
+        contentWidth,
+      );
+      parent.appendChild(rationaleFrame);
+    }
+  } else if (options.rationaleText) {
+    const rationaleFrame = figma.createFrame();
+    rationaleFrame.layoutMode = "VERTICAL";
+    rationaleFrame.counterAxisSizingMode = "AUTO";
+    rationaleFrame.primaryAxisSizingMode = "AUTO";
+    rationaleFrame.layoutAlign = "STRETCH";
+    rationaleFrame.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
+    rationaleFrame.fills = [];
+    rationaleFrame.name = "Decision Rationale";
+
+    const rationaleLabel = figma.createText();
+    styleOverviewText(rationaleLabel, "fieldLabel");
+    rationaleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
+    rationaleLabel.characters = "Decision rationale";
+    rationaleFrame.appendChild(rationaleLabel);
+
+    const rationaleBody = figma.createText();
+    styleOverviewText(rationaleBody, "fieldValue");
+    setWrappedText(rationaleBody, options.rationaleText, contentWidth);
+    rationaleFrame.appendChild(rationaleBody);
+    parent.appendChild(rationaleFrame);
+  }
+
+  if (!embedded && outcome.facts.length > 0) {
+    for (const fact of outcome.facts) {
+      parent.appendChild(createSummaryFactRow(fact, contentWidth));
+    }
+  }
+
+  const nextStep = outcome.nextStep.trim();
+  const showNextStep = nextStep && (!embedded || shouldShowEmbeddedNextStep(data));
+  if (showNextStep) {
+    const nextStepText = figma.createText();
+    styleOverviewText(nextStepText, "bodyEmphasis");
+    setWrappedText(nextStepText, `Next step: ${nextStep}`, contentWidth);
+    nextStepText.name = "Next step";
+    parent.appendChild(nextStepText);
+  }
 }
 
 function createSummaryFactRow(fact: string, width: number): FrameNode {
@@ -1351,6 +1758,7 @@ export async function createOutcomeCardFromExperimentData(
     status?: 'running' | 'completed' | 'paused' | 'draft' | 'rolled_out';
     primaryMetric?: string;
     dateCreated?: string;
+    outcomeNotes?: string;
   }
 ): Promise<FrameNode> {
   const data = mapExperimentDataToOutcomeData(experimentName, metrics, variants, options);
@@ -1371,6 +1779,7 @@ export function mapExperimentDataToOutcomeData(
     status?: string;
     metrics?: { [key: string]: number };
     isRolledOut?: boolean;
+    parentEventName?: string;
   }>,
   options?: {
     hypothesis?: string;
@@ -1382,8 +1791,16 @@ export function mapExperimentDataToOutcomeData(
     status?: 'running' | 'completed' | 'paused' | 'draft' | 'rolled_out';
     primaryMetric?: string;
     dateCreated?: string;
+    outcomeNotes?: string;
   }
 ): ExperimentOutcomeData {
+  const touchpointNames = new Set(
+    variants
+      .map(v => v.parentEventName?.trim())
+      .filter((name): name is string => !!name),
+  );
+  const showVariantTouchpointName = touchpointNames.size > 1;
+
   // Use a comparison anchor only when older saved data explicitly marks one.
   const comparisonVariant = variants.find(v => v.isControl === true);
   
@@ -1418,6 +1835,7 @@ export function mapExperimentDataToOutcomeData(
       name: v.name || `Variant ${v.key}`,
       color: v.color,
       figmaLink: v.figmaLink,
+      parentEventName: v.parentEventName,
       isControl,
       traffic: v.traffic,
       metrics: outcomeMetrics,
@@ -1438,5 +1856,7 @@ export function mapExperimentDataToOutcomeData(
     metrics,
     variants: variantOutcomes,
     dateCreated: options?.dateCreated,
+    outcomeNotes: options?.outcomeNotes,
+    showVariantTouchpointName,
   };
 }

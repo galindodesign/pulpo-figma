@@ -9,26 +9,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 /// <reference types="@figma/plugin-typings" />
 import { TOKENS } from "./design-tokens";
-import { getCanvasTokens, createCardShadowEffect } from "./canvas-theme";
-import { hexToRgb, getFontStyle, createBadge } from "./layout-utils";
+import { applyCardShell, applySectionPanel, applyTableHeaderRow, applyTableRowDivider, applyTableShell } from "./canvas-theme";
+import { hexToRgb, createBadge } from "./layout-utils";
 import { loadFonts } from "./load-fonts";
-import { EXPERIMENT_STATUS_STYLES, formatDateForDisplay, getExperimentTypeLabel, } from "./experiment-card-shared";
-const ROLLED_OUT_BADGE_BG = "#fffbb5";
-const ROLLED_OUT_BADGE_TEXT = "#484122";
-const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4 22h16" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-function createRolledOutIcon() {
-    const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
-    icon.name = "Rolled Out Icon";
-    icon.resize(10, 10);
-    icon.fills = [];
-    return icon;
+import { EXPERIMENT_STATUS_STYLES, SUMMARY_TYPOGRAPHY, SUMMARY_BULLET_PX, SECTION_PANEL_LAYOUT, createOverviewSectionTitle, styleOverviewText, formatDateForDisplay, getExperimentTypeLabel, createRolledOutBadge, resolveExperimentDisplayStatus, } from "./experiment-card-shared";
+function getOutcomeSummaryBadge(data) {
+    const hasRollout = data.variants.some(v => v.isRolledOut);
+    const displayStatus = resolveExperimentDisplayStatus(data.status, hasRollout);
+    const config = EXPERIMENT_STATUS_STYLES[displayStatus] || EXPERIMENT_STATUS_STYLES.running;
+    return {
+        label: config.label,
+        bgColor: config.bgColor,
+        borderColor: config.borderColor,
+        textColor: config.textColor,
+    };
 }
 /**
  * Format metric value with appropriate precision (always decimal)
@@ -90,70 +84,163 @@ function getGoalPerformance(metric, value) {
         return value <= metric.thresholdPct;
     return value >= metric.thresholdPct;
 }
-function classifyOutcomeState(data) {
+function variantDisplayName(variant) {
+    return variant.name || `Variant ${variant.key}`;
+}
+function firstGoalLabel(goal) {
+    return goal ? getMetricDisplayName(goal) : "Goal 1";
+}
+function goalTargetSuffix(goalMet) {
+    if (goalMet === true)
+        return ", on target";
+    if (goalMet === false)
+        return ", below target";
+    return "";
+}
+function supportingGoalsBelowTargetDetail(failed) {
+    if (failed <= 0)
+        return "";
+    return `${failed} other goal${failed === 1 ? "" : "s"} below target.`;
+}
+function sampleSizePhrase(totalSampleSize) {
+    return totalSampleSize
+        ? `${totalSampleSize.toLocaleString()} users`
+        : "your sample size goal";
+}
+function goalPerformancePhrase(goalMet) {
+    if (goalMet === true)
+        return "on target";
+    if (goalMet === false)
+        return "below target";
+    return "no target set";
+}
+function classifyOutcomeState(data, options) {
+    var _a, _b;
+    const embeddedInOverview = (options === null || options === void 0 ? void 0 : options.embeddedInOverview) === true;
     const rolledOutVariant = data.variants.find(v => v.isRolledOut);
-    const primaryMetric = getPrimaryDecisionMetric(data);
-    const leadingVariant = primaryMetric ? getLeadingVariant(data, primaryMetric) : undefined;
-    const comparisonVariant = getComparisonVariant(data);
-    const primaryFact = primaryMetric && leadingVariant
-        ? formatPrimaryMetricFact(primaryMetric, leadingVariant, comparisonVariant)
-        : "Primary metric: not set";
-    const facts = [
-        primaryFact,
-        `${data.variants.length} variant${data.variants.length === 1 ? "" : "s"} evaluated`,
-    ];
-    if (data.totalSampleSize) {
-        facts.push(`${data.totalSampleSize.toLocaleString()} users sampled`);
+    const leadingGoal = getLeadingGoal(data);
+    const leadingVariant = leadingGoal ? getLeadingVariant(data, leadingGoal) : undefined;
+    const goalMet = leadingGoal && leadingVariant
+        ? getGoalPerformance(leadingGoal, (_a = leadingVariant.metrics[getMetricKey(leadingGoal)]) === null || _a === void 0 ? void 0 : _a.value)
+        : undefined;
+    const focusVariant = rolledOutVariant || leadingVariant;
+    const supportingIssues = focusVariant
+        ? countSupportingGoalRegressions(data, focusVariant)
+        : { failed: 0, total: 0 };
+    const goalLabel = firstGoalLabel(leadingGoal);
+    const leaderName = leadingVariant ? variantDisplayName(leadingVariant) : undefined;
+    const facts = buildOutcomeFacts(data, leadingGoal, leadingVariant, {
+        compact: (options === null || options === void 0 ? void 0 : options.compact) === true,
+        embeddedInOverview,
+        supportingIssuesFailed: supportingIssues.failed,
+        rolledOutVariant,
+    });
+    if (data.status === "draft") {
+        return {
+            state: "inconclusive",
+            headline: "Add goals and variant results to compare",
+            detail: "",
+            facts: [],
+            nextStep: "Set status to Running when the test is live.",
+        };
     }
     if (data.status === "running") {
         return {
             state: "running",
-            headline: "Keep collecting evidence",
-            detail: leadingVariant
-                ? `${leadingVariant.name} is currently strongest on the primary metric, but results are still in progress.`
-                : "Results are still developing. Use the goal table to watch the primary metric and guardrails before deciding.",
+            headline: leaderName
+                ? `${leaderName} leads on ${goalLabel}${goalTargetSuffix(goalMet)}`
+                : "Add variant results to compare",
+            detail: "",
             facts,
-            nextStep: "Continue monitoring until the experiment reaches its planned sample size or decision threshold.",
+            nextStep: `Keep running until you reach ${sampleSizePhrase(data.totalSampleSize)} or your ${goalLabel} target.`,
         };
     }
     if (data.status === "paused") {
         return {
             state: "paused",
-            headline: "Experiment paused",
-            detail: "The current data is preserved, but the experiment is not collecting new evidence.",
+            headline: leaderName
+                ? `Paused — ${leaderName} was leading on ${goalLabel}`
+                : "Test paused",
+            detail: "",
             facts,
-            nextStep: "Resume to gather more data, or close the experiment with the current learning and rationale.",
+            nextStep: "Resume the test or mark it concluded.",
         };
     }
     if (data.status === "rolled_out" || rolledOutVariant) {
         const chosenVariant = rolledOutVariant || leadingVariant;
+        const chosenName = chosenVariant ? variantDisplayName(chosenVariant) : undefined;
+        const chosenGoalMet = leadingGoal && chosenVariant
+            ? getGoalPerformance(leadingGoal, (_b = chosenVariant.metrics[getMetricKey(leadingGoal)]) === null || _b === void 0 ? void 0 : _b.value)
+            : undefined;
+        const rolloutDiffersFromLeader = !!(rolledOutVariant &&
+            leadingVariant &&
+            rolledOutVariant.id !== leadingVariant.id);
+        let headline = chosenName ? `${chosenName} rolled out` : "Rolled out";
+        if (chosenName && !rolloutDiffersFromLeader && chosenGoalMet !== undefined) {
+            headline = `${chosenName} rolled out${goalTargetSuffix(chosenGoalMet)}`;
+        }
+        let detail = "";
+        if (rolloutDiffersFromLeader && leaderName && chosenName) {
+            detail = `${leaderName} led on ${goalLabel}, but the team rolled out ${chosenName}.`;
+            const supportingDetail = supportingGoalsBelowTargetDetail(supportingIssues.failed);
+            if (supportingDetail) {
+                detail = `${detail} ${supportingDetail}`;
+            }
+        }
+        else {
+            detail = supportingGoalsBelowTargetDetail(supportingIssues.failed);
+        }
         return {
             state: "rolled_out",
-            headline: chosenVariant ? `Decision: ${chosenVariant.name} is live` : "Decision: rollout complete",
-            detail: chosenVariant
-                ? `${chosenVariant.name} has been moved forward. Use the table above to confirm the primary metric and any guardrail trade-offs.`
-                : "A rollout decision has been recorded. Use the table above to confirm the primary metric and any guardrail trade-offs.",
+            headline,
+            detail,
             facts,
-            nextStep: "Monitor post-rollout performance and rollback if guardrails regress.",
+            nextStep: supportingIssues.failed > 0
+                ? "Watch the other goals in production."
+                : "Confirm results hold in production.",
         };
     }
-    if (data.status === "completed" && primaryMetric && leadingVariant) {
+    if (data.status === "completed" && leadingGoal && leadingVariant) {
+        const leader = variantDisplayName(leadingVariant);
+        let nextStep = "Pick a rolled-out variant in Details when the team agrees.";
+        if (supportingIssues.failed > 0) {
+            nextStep = "Review trade-offs, then pick a rolled-out variant in Details.";
+        }
+        else if (goalMet === false) {
+            nextStep = "Extend the test, or pick a rolled-out variant in Details if the team accepts it.";
+        }
         return {
             state: "recommendation",
-            headline: `Recommendation: review ${leadingVariant.name}`,
-            detail: `${leadingVariant.name} has the strongest observed ${getMetricDisplayName(primaryMetric)} result. Confirm guardrails and qualitative context before rollout.`,
+            headline: goalMet === false
+                ? `${leader} leads on ${goalLabel}, but below target`
+                : `${leader} leads on ${goalLabel}`,
+            detail: supportingIssues.failed > 0
+                ? supportingGoalsBelowTargetDetail(supportingIssues.failed)
+                : "",
             facts,
-            nextStep: "Choose a rollout candidate only if the primary win is strong enough and no guardrails show meaningful regression.",
+            nextStep,
         };
+    }
+    let headline = "Not enough to compare yet";
+    if (!leadingGoal || data.metrics.length === 0) {
+        headline = "Add a goal to compare variants";
+    }
+    else if (!leadingVariant) {
+        headline = data.status === "completed"
+            ? "Add variant results to compare"
+            : `${goalLabel}: no clear leader yet`;
+    }
+    else {
+        headline = "Choose a rollout variant";
     }
     return {
         state: "inconclusive",
-        headline: "Decision needs more context",
-        detail: primaryMetric
-            ? "No clear rollout decision has been marked. Compare the primary metric against guardrails before choosing a variant."
-            : "Set a primary metric so the outcome card can explain which result should drive the decision.",
+        headline,
+        detail: "",
         facts,
-        nextStep: "Document the decision criteria, then mark the rollout variant when the team has aligned.",
+        nextStep: data.variants.length >= 2
+            ? "Use the results table, then pick a rolled-out variant in Details when the team aligns."
+            : "Add goals and variant results first.",
     };
 }
 /**
@@ -173,15 +260,19 @@ function getMetricDisplayName(metric) {
     }
     return `${name} (${abbreviation})`;
 }
-function getPrimaryDecisionMetric(data) {
+/** Goal #1 — first goal in list order (drag priority). Legacy fallbacks for older saves. */
+function getLeadingGoal(data) {
+    if (data.metrics.length > 0) {
+        return data.metrics[0];
+    }
     if (data.primaryMetric) {
-        const primaryMetricKey = data.primaryMetric.trim().toLowerCase();
+        const legacyKey = data.primaryMetric.trim().toLowerCase();
         const matchedMetric = data.metrics.find(metric => {
             var _a;
-            return (metric.id.toLowerCase() === primaryMetricKey ||
-                getMetricKey(metric) === primaryMetricKey ||
-                metric.name.toLowerCase() === primaryMetricKey ||
-                ((_a = metric.abbreviation) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === primaryMetricKey);
+            return (metric.id.toLowerCase() === legacyKey ||
+                getMetricKey(metric) === legacyKey ||
+                metric.name.toLowerCase() === legacyKey ||
+                ((_a = metric.abbreviation) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === legacyKey);
         });
         if (matchedMetric) {
             return matchedMetric;
@@ -215,18 +306,123 @@ function getLeadingVariant(data, metric) {
         return candidateValue > bestValue ? candidateVariant : bestVariant;
     });
 }
-function formatPrimaryMetricFact(metric, variant, comparisonVariant) {
+function formatLeadingGoalFact(goalIndex, metric, variant) {
     const metricData = variant.metrics[getMetricKey(metric)];
     const metricValue = formatMetricValue(metricData === null || metricData === void 0 ? void 0 : metricData.value, metric);
-    const changeLabel = comparisonVariant && variant.id !== comparisonVariant.id && (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined
-        ? `, ${formatUplift(metricData.uplift)} change from ${comparisonVariant.name || `Variant ${comparisonVariant.key}`}`
-        : "";
     const goalPerformance = getGoalPerformance(metric, metricData === null || metricData === void 0 ? void 0 : metricData.value);
-    const goalLabel = goalPerformance === undefined ? "goal not set" : goalPerformance ? "goal met" : "goal not met";
-    return `Primary metric: ${variant.name} at ${metricValue}${changeLabel} (${goalLabel})`;
+    const goalLabel = getMetricDisplayName(metric);
+    return `${variantDisplayName(variant)} leads Goal ${goalIndex} (${goalLabel}) at ${metricValue} — ${goalPerformancePhrase(goalPerformance)}`;
+}
+function getCloseCallFact(data, metric, leadingVariant) {
+    var _a, _b;
+    const metricKey = getMetricKey(metric);
+    const leadingValue = (_a = leadingVariant.metrics[metricKey]) === null || _a === void 0 ? void 0 : _a.value;
+    if (leadingValue === undefined || leadingValue === null) {
+        return undefined;
+    }
+    let closest;
+    for (const candidate of data.variants) {
+        if (candidate.id === leadingVariant.id)
+            continue;
+        const candidateValue = (_b = candidate.metrics[metricKey]) === null || _b === void 0 ? void 0 : _b.value;
+        if (candidateValue === undefined || candidateValue === null)
+            continue;
+        const rawGap = Math.abs(leadingValue - candidateValue);
+        const gapPp = isPercentageMetric(metric)
+            ? (leadingValue >= 0 && leadingValue <= 1 && candidateValue >= 0 && candidateValue <= 1 ? rawGap * 100 : rawGap)
+            : rawGap;
+        if (gapPp <= 1 && (!closest || gapPp < closest.gapPp)) {
+            closest = {
+                name: candidate.name || `Variant ${candidate.key}`,
+                gapPp,
+            };
+        }
+    }
+    if (!closest)
+        return undefined;
+    const metricLabel = metric.abbreviation || metric.name;
+    return `${closest.name} is within ${closest.gapPp.toFixed(1)}pp on ${metricLabel} — almost tied.`;
+}
+function summarizeSupportingGoals(data, variant, maxGoals = 3) {
+    const supportingGoals = data.metrics.slice(1);
+    if (supportingGoals.length === 0) {
+        return [];
+    }
+    const facts = [];
+    for (let i = 0; i < supportingGoals.length && facts.length < maxGoals; i++) {
+        const metric = supportingGoals[i];
+        const goalNum = i + 2;
+        const metricData = variant.metrics[getMetricKey(metric)];
+        if (!metricData || metricData.value === undefined) {
+            continue;
+        }
+        const metricValue = formatMetricValue(metricData.value, metric);
+        const goalPerformance = getGoalPerformance(metric, metricData.value);
+        const goalLabel = goalPerformance === undefined ? "no target set" : goalPerformance ? "on target" : "below target";
+        facts.push(`Goal ${goalNum} (${metric.name}): ${metricValue} — ${goalLabel}`);
+    }
+    const remaining = supportingGoals.length - maxGoals;
+    if (remaining > 0) {
+        facts.push(`+ ${remaining} more goal${remaining === 1 ? "" : "s"} in table`);
+    }
+    return facts;
+}
+/** Supporting goals with thresholds only (no control/uplift). */
+function countSupportingGoalRegressions(data, variant) {
+    let failed = 0;
+    let total = 0;
+    for (const metric of data.metrics.slice(1)) {
+        if (metric.direction === "neutral")
+            continue;
+        const metricData = variant.metrics[getMetricKey(metric)];
+        if (!metricData || metricData.value === undefined)
+            continue;
+        const goalPerformance = getGoalPerformance(metric, metricData.value);
+        if (goalPerformance === undefined)
+            continue;
+        total += 1;
+        if (!goalPerformance) {
+            failed += 1;
+        }
+    }
+    return { failed, total };
+}
+function buildOutcomeFacts(data, leadingGoal, leadingVariant, options) {
+    var _a;
+    const compact = (options === null || options === void 0 ? void 0 : options.compact) === true;
+    const embedded = (options === null || options === void 0 ? void 0 : options.embeddedInOverview) === true;
+    const supportingFailed = (_a = options === null || options === void 0 ? void 0 : options.supportingIssuesFailed) !== null && _a !== void 0 ? _a : 0;
+    if (embedded) {
+        const focusVariant = (options === null || options === void 0 ? void 0 : options.rolledOutVariant) || leadingVariant;
+        if (!leadingGoal || !focusVariant) {
+            return [];
+        }
+        const facts = [formatLeadingGoalFact(1, leadingGoal, focusVariant)];
+        const closeCallSource = leadingVariant || focusVariant;
+        const closeCall = getCloseCallFact(data, leadingGoal, closeCallSource);
+        if (closeCall) {
+            facts.push(closeCall);
+        }
+        return facts;
+    }
+    const facts = [];
+    if (leadingGoal && leadingVariant) {
+        facts.push(formatLeadingGoalFact(1, leadingGoal, leadingVariant));
+        const closeCall = getCloseCallFact(data, leadingGoal, leadingVariant);
+        if (closeCall) {
+            facts.push(closeCall);
+        }
+    }
+    const focusVariant = data.variants.find(v => v.isRolledOut) || leadingVariant;
+    if (focusVariant && supportingFailed > 0 && !compact) {
+        facts.push(supportingGoalsBelowTargetDetail(supportingFailed));
+    }
+    else if (focusVariant && !compact) {
+        facts.push(...summarizeSupportingGoals(data, focusVariant));
+    }
+    return compact ? facts.slice(0, 1) : facts;
 }
 const OUTCOME_SUMMARY_MIN_WIDTH = 728;
-const OUTCOME_SUMMARY_HORIZONTAL_PADDING = 16;
 function setWrappedText(text, characters, width) {
     text.textAutoResize = "HEIGHT";
     text.layoutAlign = "STRETCH";
@@ -275,15 +471,11 @@ export function createExperimentOutcomeCard(data) {
         card.layoutMode = "VERTICAL";
         card.counterAxisSizingMode = "AUTO";
         card.primaryAxisSizingMode = "AUTO";
-        card.itemSpacing = 24;
-        card.paddingLeft = card.paddingRight = 32;
-        card.paddingTop = card.paddingBottom = 32;
-        card.cornerRadius = 24;
-        const canvas = getCanvasTokens();
-        card.fills = [{ type: "SOLID", color: canvas.fillsSurface }];
-        card.strokes = [{ type: "SOLID", color: canvas.border }];
-        card.strokeWeight = 1;
-        card.effects = [createCardShadowEffect()];
+        card.itemSpacing = TOKENS.space24;
+        card.paddingLeft = card.paddingRight = TOKENS.space32;
+        card.paddingTop = card.paddingBottom = TOKENS.space32;
+        card.cornerRadius = TOKENS.radiusLG;
+        applyCardShell(card);
         card.minWidth = 792;
         card.minHeight = 612;
         const sections = yield createOutcomeCardSections(data);
@@ -301,7 +493,7 @@ export function createOutcomeCardSections(data, options) {
         const includeHeader = (options === null || options === void 0 ? void 0 : options.includeHeader) !== false;
         const headerSection = includeHeader ? yield createHeaderSection(data) : undefined;
         const metricsTable = yield createMetricsTablesSection(data);
-        const summarySection = yield createSummarySection(data);
+        const summarySection = yield createSummarySection(data, { embedded: (options === null || options === void 0 ? void 0 : options.embeddedSummary) === true });
         return { headerSection, metricsTable, summarySection };
     });
 }
@@ -322,25 +514,20 @@ function createHeaderSection(data) {
         const dateCreated = data.dateCreated || new Date().toISOString().split('T')[0];
         const dateFormatted = formatDateForDisplay(dateCreated);
         const dateLabel = figma.createText();
-        dateLabel.fontName = { family: "Figtree", style: "Regular" };
-        dateLabel.fontSize = TOKENS.fontSizeLabel;
-        dateLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary), opacity: 0.5 }];
+        styleOverviewText(dateLabel, "caption");
         dateLabel.textAutoResize = "WIDTH_AND_HEIGHT";
         dateLabel.characters = dateFormatted;
         dateLabel.name = "Date Created Label";
         section.appendChild(dateLabel);
-        // Status badge - filled for rolled_out (yellow), outlined for others
+        // Status badge — chip style matching ui.html `.variant-passive-chip`
         const statusConfig = EXPERIMENT_STATUS_STYLES[data.status] || EXPERIMENT_STATUS_STYLES.running;
-        const statusStyle = data.status === 'rolled_out' ? 'filled' : 'outlined';
-        // For outlined badges, use textColor for stroke to match info-card; for filled, use bgColor
-        const strokeOrFillColor = statusStyle === 'outlined' ? statusConfig.textColor : statusConfig.bgColor;
-        const statusBadge = createBadge(statusConfig.label, statusStyle, strokeOrFillColor, statusConfig.textColor);
+        const statusBadge = data.status === 'rolled_out'
+            ? createRolledOutBadge()
+            : createBadge(statusConfig.label, 'chip', statusConfig.bgColor, statusConfig.textColor, undefined, statusConfig.borderColor);
         section.appendChild(statusBadge);
         // Experiment name (Bold, 24px)
         const titleText = figma.createText();
-        titleText.fontName = getFontStyle("Bold");
-        titleText.fontSize = 24;
-        titleText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+        styleOverviewText(titleText, "cardTitle");
         titleText.textAutoResize = "WIDTH_AND_HEIGHT";
         titleText.characters = data.experimentName || 'Untitled Experiment';
         section.appendChild(titleText);
@@ -366,9 +553,7 @@ function createHeaderSection(data) {
         // Render context line if we have any parts
         if (contextParts.length > 0) {
             const contextText = figma.createText();
-            contextText.fontName = getFontStyle("Regular");
-            contextText.fontSize = TOKENS.fontSizeBodySm;
-            contextText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+            styleOverviewText(contextText, "caption");
             contextText.textAutoResize = "WIDTH_AND_HEIGHT";
             contextText.characters = contextParts.join('  •  ');
             section.appendChild(contextText);
@@ -386,22 +571,21 @@ function createMetricsTablesSection(data) {
         section.counterAxisSizingMode = "FIXED";
         section.primaryAxisSizingMode = "AUTO";
         section.layoutAlign = "STRETCH";
-        section.itemSpacing = 16;
+        section.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+        section.layoutAlign = "STRETCH";
         section.fills = [];
         section.name = "Metrics Tables";
         const flippedMetricsTable = yield createFlippedMetricsTable(data);
         section.appendChild(flippedMetricsTable);
         const hasRolledOut = data.variants.some(v => v.isRolledOut);
-        if (hasRolledOut) {
-            const legend = figma.createText();
-            legend.fontName = getFontStyle("Regular");
-            legend.fontSize = TOKENS.fontSizeLabel;
-            legend.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
-            legend.textAutoResize = "WIDTH_AND_HEIGHT";
-            legend.characters = "Highlighted cells show decision metrics for the rolled-out variant.";
-            legend.name = "Table Legend";
-            section.appendChild(legend);
-        }
+        const legend = figma.createText();
+        styleOverviewText(legend, "caption");
+        legend.textAutoResize = "WIDTH_AND_HEIGHT";
+        legend.characters = hasRolledOut
+            ? "Highlighted cells show entered values for the rolled-out variant."
+            : "Green = at or above target · Red = below target · Values are as entered";
+        legend.name = "Table Legend";
+        section.appendChild(legend);
         return section;
     });
 }
@@ -413,10 +597,8 @@ function createMetricsTable(data) {
         table.primaryAxisSizingMode = "AUTO"; // Hug height
         table.layoutAlign = "STRETCH"; // Stretch to parent width
         table.itemSpacing = 0;
-        table.fills = [];
-        table.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-        table.strokeWeight = 1;
-        table.cornerRadius = 8;
+        applyTableShell(table);
+        table.cornerRadius = TOKENS.radiusSM;
         table.name = "Metrics Table";
         // Table header row
         const headerRow = yield createTableHeaderRow(data, data.variants.length);
@@ -439,10 +621,8 @@ function createFlippedMetricsTable(data) {
         table.primaryAxisSizingMode = "AUTO";
         table.layoutAlign = "STRETCH";
         table.itemSpacing = 0;
-        table.fills = [];
-        table.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-        table.strokeWeight = 1;
-        table.cornerRadius = 8;
+        applyTableShell(table);
+        table.cornerRadius = TOKENS.radiusSM;
         table.name = "Metrics Table — Variants as Rows";
         const headerRow = yield createFlippedTableHeaderRow(data.metrics);
         table.appendChild(headerRow);
@@ -475,15 +655,10 @@ function createTableHeaderRow(data, variantCount) {
         row.counterAxisAlignItems = "CENTER";
         row.minHeight = 40;
         row.resize(row.width, 40);
-        row.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
-        row.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-        row.strokeWeight = 1;
-        row.strokeTopWeight = 0;
-        row.strokeLeftWeight = 0;
-        row.strokeRightWeight = 0;
+        applyTableHeaderRow(row);
         row.name = "Header Row";
         // First column: Metric label (fixed width)
-        const metricHeader = createTableCell('Key Metric', 140, true, false);
+        const metricHeader = createTableCell('Goal', 140, true, false);
         metricHeader.layoutGrow = 0; // Don't grow
         metricHeader.minWidth = 200;
         row.appendChild(metricHeader);
@@ -521,20 +696,15 @@ function createFlippedTableHeaderRow(metrics) {
         row.layoutAlign = "STRETCH";
         row.counterAxisAlignItems = "MIN";
         row.minHeight = 48;
-        row.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
-        row.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-        row.strokeWeight = 1;
-        row.strokeTopWeight = 0;
-        row.strokeLeftWeight = 0;
-        row.strokeRightWeight = 0;
+        applyTableHeaderRow(row);
         row.name = "Flipped Header Row";
         const variantHeader = createTableCell('Variant', 200, true, false);
         variantHeader.layoutGrow = 0;
         variantHeader.layoutAlign = "STRETCH";
         row.appendChild(variantHeader);
         if (metrics.length > 0) {
-            for (const metric of metrics) {
-                const metricHeader = createFlippedMetricHeaderCell(metric);
+            for (let i = 0; i < metrics.length; i++) {
+                const metricHeader = createFlippedMetricHeaderCell(metrics[i]);
                 metricHeader.layoutGrow = 1;
                 metricHeader.layoutAlign = "STRETCH";
                 row.appendChild(metricHeader);
@@ -570,9 +740,7 @@ function createVariantHeaderCell(variant) {
     cell.name = `Variant Header: ${variantName}`;
     // Variant name
     const nameText = figma.createText();
-    nameText.fontName = getFontStyle("Medium");
-    nameText.fontSize = TOKENS.fontSizeBodySm;
-    nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+    styleOverviewText(nameText, "tableHeader");
     nameText.textAutoResize = "WIDTH_AND_HEIGHT";
     nameText.characters = variantName;
     cell.appendChild(nameText);
@@ -595,9 +763,7 @@ function createFlippedMetricHeaderCell(metric) {
     cell.fills = [];
     cell.name = `Metric Header: ${metric.name}`;
     const metricText = figma.createText();
-    metricText.fontName = getFontStyle("Medium");
-    metricText.fontSize = TOKENS.fontSizeBodySm;
-    metricText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
+    styleOverviewText(metricText, "tableHeader");
     metricText.textAlignHorizontal = "CENTER";
     metricText.characters = getMetricDisplayName(metric);
     metricText.textAutoResize = "HEIGHT";
@@ -606,9 +772,7 @@ function createFlippedMetricHeaderCell(metric) {
     const goalLabel = getGoalLabel(metric);
     if (goalLabel !== '--') {
         const goalText = figma.createText();
-        goalText.fontName = getFontStyle("Regular");
-        goalText.fontSize = TOKENS.fontSizeLabel;
-        goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+        styleOverviewText(goalText, "caption");
         goalText.textAlignHorizontal = "CENTER";
         goalText.characters = goalLabel;
         goalText.textAutoResize = "HEIGHT";
@@ -652,9 +816,7 @@ function createGoalCell(metric) {
     cell.name = "Goal Cell";
     if (typeof metric.thresholdPct === 'number' && Number.isFinite(metric.thresholdPct)) {
         const goalText = figma.createText();
-        goalText.fontName = getFontStyle("Medium");
-        goalText.fontSize = TOKENS.fontSizeBodyMd;
-        goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+        styleOverviewText(goalText, "fieldValue");
         goalText.textAutoResize = "WIDTH_AND_HEIGHT";
         goalText.textAlignHorizontal = "CENTER";
         goalText.characters = `${getGoalDirectionArrow(metric)} ${metric.thresholdPct}%`;
@@ -662,9 +824,7 @@ function createGoalCell(metric) {
     }
     else if (metric.min !== undefined && metric.max !== undefined) {
         const goalText = figma.createText();
-        goalText.fontName = getFontStyle("Medium");
-        goalText.fontSize = TOKENS.fontSizeBodyMd;
-        goalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+        styleOverviewText(goalText, "fieldValue");
         goalText.textAutoResize = "WIDTH_AND_HEIGHT";
         goalText.textAlignHorizontal = "CENTER";
         goalText.characters = `${metric.min} - ${metric.max}`;
@@ -672,9 +832,7 @@ function createGoalCell(metric) {
     }
     else {
         const noGoalText = figma.createText();
-        noGoalText.fontName = getFontStyle("Regular");
-        noGoalText.fontSize = TOKENS.fontSizeLabel;
-        noGoalText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+        styleOverviewText(noGoalText, "caption");
         noGoalText.textAutoResize = "WIDTH_AND_HEIGHT";
         noGoalText.textAlignHorizontal = "CENTER";
         noGoalText.characters = '--';
@@ -702,13 +860,11 @@ function createComparisonCell(metricData, variant) {
     cell.name = "Comparison Cell";
     // Main value only (name and badge are in header)
     const valueText = figma.createText();
-    valueText.fontName = getFontStyle("Medium");
-    valueText.fontSize = TOKENS.fontSizeBodyMd;
+    styleOverviewText(valueText, "fieldValue");
     valueText.textAutoResize = "WIDTH_AND_HEIGHT";
     valueText.textAlignHorizontal = "CENTER";
     const value = metricData === null || metricData === void 0 ? void 0 : metricData.value;
     valueText.characters = formatMetricValue(value);
-    valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
     cell.appendChild(valueText);
     return cell;
 }
@@ -727,11 +883,7 @@ function createMetricRow(metric_1, variants_1) {
         row.resize(row.width, 48);
         row.fills = [];
         if (!isLast) {
-            row.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-            row.strokeWeight = 1;
-            row.strokeTopWeight = 0;
-            row.strokeLeftWeight = 0;
-            row.strokeRightWeight = 0;
+            applyTableRowDivider(row);
         }
         row.name = `Row: ${metric.name}`;
         const metricKey = getMetricKey(metric);
@@ -774,14 +926,10 @@ function createVariantMetricRow(variant_1, metrics_1, comparisonVariant_1) {
         row.resize(row.width, 48);
         row.fills = [];
         if (!isLast) {
-            row.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-            row.strokeWeight = 1;
-            row.strokeTopWeight = 0;
-            row.strokeLeftWeight = 0;
-            row.strokeRightWeight = 0;
+            applyTableRowDivider(row);
         }
         row.name = `Variant Row: ${variant.name || variant.key}`;
-        const variantCell = createVariantNameCell(variant);
+        const variantCell = createVariantNameCell(variant, (data === null || data === void 0 ? void 0 : data.showVariantTouchpointName) === true);
         variantCell.layoutGrow = 0;
         row.appendChild(variantCell);
         if (metrics.length > 0) {
@@ -827,7 +975,8 @@ function createEmptyVariantMetricRow(metrics) {
         return row;
     });
 }
-function createVariantNameCell(variant) {
+function createVariantNameCell(variant, showTouchpointName = false) {
+    var _a;
     const cell = figma.createFrame();
     cell.layoutMode = "VERTICAL";
     cell.counterAxisSizingMode = "FIXED";
@@ -857,22 +1006,24 @@ function createVariantNameCell(variant) {
     nameRow.appendChild(colorDot);
     const variantName = variant.name || `Variant ${variant.key}`;
     const nameText = figma.createText();
-    nameText.fontName = { family: "Figtree", style: "Regular" };
-    nameText.fontSize = TOKENS.fontSizeBodySm;
-    nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+    styleOverviewText(nameText, "fieldValue");
     nameText.textAutoResize = "WIDTH_AND_HEIGHT";
     nameText.characters = variantName;
     nameRow.appendChild(nameText);
     if (variant.isRolledOut) {
-        const rolledOutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
-        nameRow.appendChild(rolledOutBadge);
+        nameRow.appendChild(createRolledOutBadge());
     }
     cell.appendChild(nameRow);
+    if (showTouchpointName && ((_a = variant.parentEventName) === null || _a === void 0 ? void 0 : _a.trim())) {
+        const touchpointText = figma.createText();
+        styleOverviewText(touchpointText, "caption");
+        touchpointText.textAutoResize = "WIDTH_AND_HEIGHT";
+        touchpointText.characters = variant.parentEventName.trim();
+        cell.appendChild(touchpointText);
+    }
     if (variant.figmaLink) {
         const linkText = figma.createText();
-        linkText.fontName = getFontStyle("Medium");
-        linkText.fontSize = TOKENS.fontSizeLabel;
-        linkText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.royalBlue600) }];
+        styleOverviewText(linkText, "link");
         linkText.textAutoResize = "WIDTH_AND_HEIGHT";
         linkText.characters = "Open in Figma";
         linkText.hyperlink = { type: "URL", value: variant.figmaLink.trim() };
@@ -908,9 +1059,7 @@ function createMetricNameCell(metric) {
     nameRow.fills = [];
     nameRow.name = "Name Row";
     const nameText = figma.createText();
-    nameText.fontName = getFontStyle("Regular");
-    nameText.fontSize = TOKENS.fontSizeBodySm;
-    nameText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+    styleOverviewText(nameText, "fieldValue");
     nameText.textAutoResize = "WIDTH_AND_HEIGHT";
     nameText.characters = metric.name;
     nameRow.appendChild(nameText);
@@ -919,9 +1068,7 @@ function createMetricNameCell(metric) {
     const hasAbbrev = metric.abbreviation && metric.abbreviation !== metric.name;
     if (hasAbbrev) {
         const subText = figma.createText();
-        subText.fontName = getFontStyle("Regular");
-        subText.fontSize = TOKENS.fontSizeLabel;
-        subText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+        styleOverviewText(subText, "caption");
         subText.textAutoResize = "WIDTH_AND_HEIGHT";
         subText.characters = metric.abbreviation;
         cell.appendChild(subText);
@@ -937,16 +1084,16 @@ function createMetricNameCell(metric) {
 function getCellHighlight(variant, metric, data, comparisonVariant) {
     var _a;
     const rolledOutVariant = data.variants.find(v => v.isRolledOut);
-    const primaryMetric = getPrimaryDecisionMetric(data);
+    const leadingGoal = getLeadingGoal(data);
     const isRolledOutRow = !!rolledOutVariant && variant.id === rolledOutVariant.id;
     const isLeadingRow = !rolledOutVariant
         && (data.status === 'completed' || data.status === 'rolled_out')
-        && !!primaryMetric
-        && ((_a = getLeadingVariant(data, primaryMetric)) === null || _a === void 0 ? void 0 : _a.id) === variant.id;
+        && !!leadingGoal
+        && ((_a = getLeadingVariant(data, leadingGoal)) === null || _a === void 0 ? void 0 : _a.id) === variant.id;
     if (!isRolledOutRow && !isLeadingRow)
         return 'none';
-    // For the leading (pre-rollout) row, only highlight the primary metric column.
-    if (isLeadingRow && primaryMetric && getMetricKey(metric) !== getMetricKey(primaryMetric)) {
+    // For the leading (pre-rollout) row, only highlight the Goal #1 column.
+    if (isLeadingRow && leadingGoal && getMetricKey(metric) !== getMetricKey(leadingGoal)) {
         return 'none';
     }
     const metricKey = getMetricKey(metric);
@@ -961,27 +1108,23 @@ function getCellHighlight(variant, metric, data, comparisonVariant) {
             : metricData.uplift >= 0;
         return changeIsGood ? 'positive' : 'negative';
     }
-    // Fallback: use goal threshold when no control uplift is available.
+    // Fallback: use goal threshold when no legacy control uplift is available.
     const goalPerformance = getGoalPerformance(metric, metricData.value);
     if (goalPerformance !== undefined) {
         return goalPerformance ? 'positive' : 'negative';
     }
-    // Primary metric on rolled-out row with no other signal: mild positive.
-    if (isRolledOutRow && primaryMetric && getMetricKey(metric) === getMetricKey(primaryMetric)) {
+    // Goal #1 on rolled-out row with no other signal: mild positive.
+    if (isRolledOutRow && leadingGoal && getMetricKey(metric) === getMetricKey(leadingGoal)) {
         return 'positive';
     }
     return 'none';
 }
 /**
- * Cell highlight contract (rollout-only):
- * - Green fill: rolled-out variant on metrics where performance supports the
- *   rollout decision (primary metric, or guardrails beating control in the
- *   metric's intended direction). Also the leading variant's primary-metric
- *   cell for completed-but-not-yet-rolled-out experiments.
- * - Red fill: rolled-out variant on guardrail metrics that regressed vs
- *   control or missed a decrease goal — trade-off visibility.
- * - No fill: all other variants (including control), and any cell where data
- *   is missing or the metric direction is neutral.
+ * Cell highlight contract (rollout-only, table layer):
+ * - Green fill: rolled-out or leading variant on Goal #1 / supporting goals
+ *   that meet threshold or beat a legacy control uplift when present.
+ * - Red fill: missed goal threshold or unfavorable legacy control uplift.
+ * - No fill: other variants and cells without a signal.
  */
 function createMetricValueCell(metricData, isComparisonVariant = false, metric, highlight = 'none') {
     const cell = figma.createFrame();
@@ -1008,12 +1151,10 @@ function createMetricValueCell(metricData, isComparisonVariant = false, metric, 
     // Main value
     const value = metricData === null || metricData === void 0 ? void 0 : metricData.value;
     const valueText = figma.createText();
-    valueText.fontName = getFontStyle("Medium");
-    valueText.fontSize = TOKENS.fontSizeBodyMd;
+    styleOverviewText(valueText, "fieldValue");
     valueText.textAutoResize = "WIDTH_AND_HEIGHT";
     valueText.textAlignHorizontal = "CENTER";
     valueText.characters = formatMetricValue(value, metric);
-    valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
     cell.appendChild(valueText);
     // Delta row (only shown when change is available from an explicit comparison variant)
     const showVariantDelta = !isComparisonVariant && (metricData === null || metricData === void 0 ? void 0 : metricData.uplift) !== undefined;
@@ -1031,8 +1172,7 @@ function createMetricValueCell(metricData, isComparisonVariant = false, metric, 
         const changeIsGood = directionIsDecrease ? uplift <= 0 : uplift >= 0;
         const upliftColor = changeIsGood ? TOKENS.malachite600 : TOKENS.coralRed500;
         const upliftText = figma.createText();
-        upliftText.fontName = getFontStyle("Medium");
-        upliftText.fontSize = TOKENS.fontSizeLabel;
+        styleOverviewText(upliftText, "caption");
         upliftText.fills = [{ type: "SOLID", color: hexToRgb(upliftColor) }];
         upliftText.textAutoResize = "WIDTH_AND_HEIGHT";
         upliftText.characters = formatDelta(uplift);
@@ -1058,9 +1198,7 @@ function createTableCell(content, width, isHeader = false, alignCenter = true) {
     cell.fills = [];
     cell.name = `Cell: ${content}`;
     const text = figma.createText();
-    text.fontName = getFontStyle(isHeader ? "Medium" : "Regular");
-    text.fontSize = TOKENS.fontSizeBodySm;
-    text.fills = [{ type: "SOLID", color: hexToRgb(isHeader ? TOKENS.textSecondary : TOKENS.textPrimary) }];
+    styleOverviewText(text, isHeader ? "tableHeader" : "fieldValue");
     text.textAutoResize = "WIDTH_AND_HEIGHT";
     text.characters = content;
     cell.appendChild(text);
@@ -1069,31 +1207,68 @@ function createTableCell(content, width, isHeader = false, alignCenter = true) {
 /**
  * Create summary/recommendation section
  */
-function createSummarySection(data) {
+function createSummarySection(data, options) {
     return __awaiter(this, void 0, void 0, function* () {
+        const embedded = (options === null || options === void 0 ? void 0 : options.embedded) === true;
+        const outcome = classifyOutcomeState(data, { compact: embedded, embeddedInOverview: embedded });
+        const rationaleText = (data.outcomeNotes || "").trim();
+        const rolledOutVariant = data.variants.find(v => v.isRolledOut);
+        if (embedded) {
+            const section = figma.createFrame();
+            section.layoutMode = "VERTICAL";
+            section.counterAxisSizingMode = "AUTO";
+            section.primaryAxisSizingMode = "AUTO";
+            section.layoutAlign = "STRETCH";
+            section.itemSpacing = SECTION_PANEL_LAYOUT.sectionGap;
+            section.fills = [];
+            section.name = "Section: Outcome summary";
+            const summaryBadge = getOutcomeSummaryBadge(data);
+            const headerRow = figma.createFrame();
+            headerRow.layoutMode = "HORIZONTAL";
+            headerRow.counterAxisSizingMode = "AUTO";
+            headerRow.primaryAxisSizingMode = "AUTO";
+            headerRow.counterAxisAlignItems = "CENTER";
+            headerRow.itemSpacing = 8;
+            headerRow.fills = [];
+            headerRow.name = "Outcome Summary Header";
+            headerRow.appendChild(createOverviewSectionTitle("Outcome summary"));
+            headerRow.appendChild(createBadge(summaryBadge.label, "chip", summaryBadge.bgColor, summaryBadge.textColor, undefined, summaryBadge.borderColor));
+            section.appendChild(headerRow);
+            const panelWidth = OUTCOME_SUMMARY_MIN_WIDTH;
+            const contentWidth = panelWidth - (SECTION_PANEL_LAYOUT.panelPadding * 2);
+            const panel = figma.createFrame();
+            panel.layoutMode = "VERTICAL";
+            panel.counterAxisSizingMode = "AUTO";
+            panel.primaryAxisSizingMode = "AUTO";
+            panel.layoutAlign = "STRETCH";
+            panel.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+            panel.paddingTop = panel.paddingBottom = SECTION_PANEL_LAYOUT.panelPadding;
+            panel.paddingLeft = panel.paddingRight = SECTION_PANEL_LAYOUT.panelPadding;
+            panel.cornerRadius = SECTION_PANEL_LAYOUT.panelCornerRadius;
+            applySectionPanel(panel);
+            panel.name = "Outcome Summary Panel";
+            appendOutcomeSummaryBody(panel, outcome, data, contentWidth, {
+                includeDecisionFields: true,
+                rolledOutVariant,
+                rationaleText,
+            });
+            section.appendChild(panel);
+            return section;
+        }
         const section = figma.createFrame();
         section.layoutMode = "VERTICAL";
         section.counterAxisSizingMode = "FIXED";
         section.primaryAxisSizingMode = "AUTO";
-        section.itemSpacing = 10;
-        section.paddingTop = section.paddingBottom = 16;
-        section.paddingLeft = section.paddingRight = OUTCOME_SUMMARY_HORIZONTAL_PADDING;
-        section.cornerRadius = 12;
-        section.fills = [{ type: "SOLID", color: getCanvasTokens().sectionTint }];
-        section.strokes = [{ type: "SOLID", color: getCanvasTokens().sectionTintBorder }];
-        section.strokeWeight = 1;
+        section.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+        section.paddingTop = section.paddingBottom = SECTION_PANEL_LAYOUT.panelPadding;
+        section.paddingLeft = section.paddingRight = SECTION_PANEL_LAYOUT.panelPadding;
+        section.cornerRadius = SECTION_PANEL_LAYOUT.panelCornerRadius;
+        applySectionPanel(section);
         section.name = "Outcome Summary Section";
         section.layoutAlign = "STRETCH";
         section.minWidth = OUTCOME_SUMMARY_MIN_WIDTH;
-        const contentWidth = OUTCOME_SUMMARY_MIN_WIDTH - (OUTCOME_SUMMARY_HORIZONTAL_PADDING * 2);
-        const outcome = classifyOutcomeState(data);
-        const stateColors = {
-            recommendation: TOKENS.royalBlue700,
-            inconclusive: TOKENS.azure600,
-            running: TOKENS.royalBlue700,
-            paused: TOKENS.yellow700,
-            rolled_out: TOKENS.malachite700,
-        };
+        const contentWidth = OUTCOME_SUMMARY_MIN_WIDTH - (SECTION_PANEL_LAYOUT.panelPadding * 2);
+        const summaryBadge = getOutcomeSummaryBadge(data);
         const headerRow = figma.createFrame();
         headerRow.layoutMode = "HORIZONTAL";
         headerRow.counterAxisSizingMode = "AUTO";
@@ -1102,51 +1277,123 @@ function createSummarySection(data) {
         headerRow.itemSpacing = 8;
         headerRow.fills = [];
         headerRow.name = "Outcome Summary Header";
-        const headerText = figma.createText();
-        headerText.fontName = getFontStyle("Medium");
-        headerText.fontSize = TOKENS.fontSizeLabel;
-        headerText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
-        headerText.textAutoResize = "WIDTH_AND_HEIGHT";
-        headerText.characters = "Outcome summary";
+        const headerText = createOverviewSectionTitle("Outcome summary");
         headerRow.appendChild(headerText);
-        const stateBadge = createBadge(outcome.state === "rolled_out" ? "Decision" : outcome.state === "running" ? "Live read" : "Guidance", "micro", TOKENS.fillsSurface, stateColors[outcome.state]);
+        const stateBadge = createBadge(summaryBadge.label, "chip", summaryBadge.bgColor, summaryBadge.textColor, undefined, summaryBadge.borderColor);
         headerRow.appendChild(stateBadge);
         section.appendChild(headerRow);
-        const headlineText = figma.createText();
-        headlineText.fontName = getFontStyle("Bold");
-        headlineText.fontSize = TOKENS.fontSizeBodyLg;
-        headlineText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        setWrappedText(headlineText, outcome.headline, contentWidth);
-        section.appendChild(headlineText);
-        const outcomeDetail = figma.createText();
-        outcomeDetail.fontName = getFontStyle("Regular");
-        outcomeDetail.fontSize = TOKENS.fontSizeBodyMd;
-        outcomeDetail.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        setWrappedText(outcomeDetail, outcome.detail, contentWidth);
-        section.appendChild(outcomeDetail);
-        const factsFrame = figma.createFrame();
-        factsFrame.layoutMode = "VERTICAL";
-        factsFrame.counterAxisSizingMode = "FIXED";
-        factsFrame.primaryAxisSizingMode = "AUTO";
-        factsFrame.layoutAlign = "STRETCH";
-        factsFrame.minWidth = contentWidth;
-        factsFrame.itemSpacing = 4;
-        factsFrame.fills = [];
-        factsFrame.name = "Outcome Evidence";
-        for (const fact of outcome.facts) {
-            factsFrame.appendChild(createSummaryFactRow(fact, stateColors[outcome.state], contentWidth));
-        }
-        section.appendChild(factsFrame);
-        const nextStepText = figma.createText();
-        nextStepText.fontName = getFontStyle("Medium");
-        nextStepText.fontSize = TOKENS.fontSizeBodySm;
-        nextStepText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        setWrappedText(nextStepText, `Next step: ${outcome.nextStep}`, contentWidth);
-        section.appendChild(nextStepText);
+        appendOutcomeSummaryBody(section, outcome, data, contentWidth, {
+            includeDecisionFields: false,
+            rolledOutVariant,
+            rationaleText,
+        });
         return section;
     });
 }
-function createSummaryFactRow(fact, accentColor, width) {
+function appendEmbeddedDecisionField(parent, label, value, contentWidth, valueDot) {
+    const labelNode = figma.createText();
+    styleOverviewText(labelNode, "fieldLabel");
+    labelNode.textAutoResize = "WIDTH_AND_HEIGHT";
+    labelNode.characters = label;
+    parent.appendChild(labelNode);
+    const valueNode = figma.createText();
+    styleOverviewText(valueNode, "fieldValue");
+    if (valueDot) {
+        const valueRow = figma.createFrame();
+        valueRow.layoutMode = "HORIZONTAL";
+        valueRow.counterAxisSizingMode = "AUTO";
+        valueRow.primaryAxisSizingMode = "AUTO";
+        valueRow.counterAxisAlignItems = "CENTER";
+        valueRow.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
+        valueRow.fills = [];
+        valueRow.name = "Value Row";
+        const dot = figma.createEllipse();
+        dot.resize(8, 8);
+        dot.fills = [{ type: "SOLID", color: hexToRgb(valueDot) }];
+        valueRow.appendChild(dot);
+        setWrappedText(valueNode, value, contentWidth);
+        valueRow.appendChild(valueNode);
+        parent.appendChild(valueRow);
+    }
+    else {
+        setWrappedText(valueNode, value, contentWidth);
+        parent.appendChild(valueNode);
+    }
+}
+function appendOutcomeSummaryBody(parent, outcome, data, contentWidth, options) {
+    const decisionBlock = figma.createFrame();
+    decisionBlock.layoutMode = "VERTICAL";
+    decisionBlock.counterAxisSizingMode = "AUTO";
+    decisionBlock.primaryAxisSizingMode = "AUTO";
+    decisionBlock.layoutAlign = "STRETCH";
+    decisionBlock.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
+    decisionBlock.fills = [];
+    decisionBlock.name = "Readout";
+    const headlineText = figma.createText();
+    styleOverviewText(headlineText, "headline");
+    setWrappedText(headlineText, outcome.headline, contentWidth);
+    decisionBlock.appendChild(headlineText);
+    const detailText = outcome.detail.trim();
+    if (detailText) {
+        const outcomeDetail = figma.createText();
+        styleOverviewText(outcomeDetail, "fieldValue");
+        setWrappedText(outcomeDetail, detailText, contentWidth);
+        decisionBlock.appendChild(outcomeDetail);
+    }
+    parent.appendChild(decisionBlock);
+    if (options.includeDecisionFields) {
+        const hasRolledOut = !!options.rolledOutVariant;
+        const hasRationale = !!options.rationaleText;
+        if (hasRolledOut || hasRationale) {
+            const decisionFrame = figma.createFrame();
+            decisionFrame.layoutMode = "VERTICAL";
+            decisionFrame.counterAxisSizingMode = "AUTO";
+            decisionFrame.primaryAxisSizingMode = "AUTO";
+            decisionFrame.layoutAlign = "STRETCH";
+            decisionFrame.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+            decisionFrame.fills = [];
+            decisionFrame.name = "Decision";
+            if (options.rolledOutVariant) {
+                appendEmbeddedDecisionField(decisionFrame, "Rolled out", variantDisplayName(options.rolledOutVariant), contentWidth, options.rolledOutVariant.color || TOKENS.royalBlue600);
+            }
+            if (options.rationaleText) {
+                appendEmbeddedDecisionField(decisionFrame, "Decision rationale", options.rationaleText, contentWidth);
+            }
+            parent.appendChild(decisionFrame);
+        }
+    }
+    else if (options.rationaleText) {
+        const rationaleFrame = figma.createFrame();
+        rationaleFrame.layoutMode = "VERTICAL";
+        rationaleFrame.counterAxisSizingMode = "AUTO";
+        rationaleFrame.primaryAxisSizingMode = "AUTO";
+        rationaleFrame.layoutAlign = "STRETCH";
+        rationaleFrame.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
+        rationaleFrame.fills = [];
+        rationaleFrame.name = "Decision Rationale";
+        const rationaleLabel = figma.createText();
+        styleOverviewText(rationaleLabel, "fieldLabel");
+        rationaleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
+        rationaleLabel.characters = "Decision rationale";
+        rationaleFrame.appendChild(rationaleLabel);
+        const rationaleBody = figma.createText();
+        styleOverviewText(rationaleBody, "fieldValue");
+        setWrappedText(rationaleBody, options.rationaleText, contentWidth);
+        rationaleFrame.appendChild(rationaleBody);
+        parent.appendChild(rationaleFrame);
+    }
+    if (outcome.facts.length > 0) {
+        for (const fact of outcome.facts) {
+            parent.appendChild(createSummaryFactRow(fact, contentWidth));
+        }
+    }
+    const nextStepText = figma.createText();
+    styleOverviewText(nextStepText, "bodyEmphasis");
+    setWrappedText(nextStepText, `Next step: ${outcome.nextStep}`, contentWidth);
+    nextStepText.name = "Next step";
+    parent.appendChild(nextStepText);
+}
+function createSummaryFactRow(fact, width) {
     const row = figma.createFrame();
     row.layoutMode = "HORIZONTAL";
     row.counterAxisSizingMode = "AUTO";
@@ -1158,14 +1405,12 @@ function createSummaryFactRow(fact, accentColor, width) {
     row.name = "Outcome Evidence Row";
     row.minWidth = width;
     const dot = figma.createEllipse();
-    dot.resize(5, 5);
-    dot.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
+    dot.resize(SUMMARY_BULLET_PX, SUMMARY_BULLET_PX);
+    dot.fills = [{ type: "SOLID", color: hexToRgb(SUMMARY_TYPOGRAPHY.body) }];
     row.appendChild(dot);
     const factText = figma.createText();
-    factText.fontName = getFontStyle("Regular");
-    factText.fontSize = TOKENS.fontSizeBodySm;
-    factText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-    setWrappedText(factText, fact, width - 11);
+    styleOverviewText(factText, "fieldValue");
+    setWrappedText(factText, fact, width - (SUMMARY_BULLET_PX + 6));
     row.appendChild(factText);
     return row;
 }
@@ -1203,6 +1448,10 @@ export function createOutcomeCardFromExperimentData(experimentName, metrics, var
     });
 }
 export function mapExperimentDataToOutcomeData(experimentName, metrics, variants, options) {
+    const touchpointNames = new Set(variants
+        .map(v => { var _a; return (_a = v.parentEventName) === null || _a === void 0 ? void 0 : _a.trim(); })
+        .filter((name) => !!name));
+    const showVariantTouchpointName = touchpointNames.size > 1;
     // Use a comparison anchor only when older saved data explicitly marks one.
     const comparisonVariant = variants.find(v => v.isControl === true);
     // Convert variants to outcome format with uplift calculations
@@ -1233,6 +1482,7 @@ export function mapExperimentDataToOutcomeData(experimentName, metrics, variants
             name: v.name || `Variant ${v.key}`,
             color: v.color,
             figmaLink: v.figmaLink,
+            parentEventName: v.parentEventName,
             isControl,
             traffic: v.traffic,
             metrics: outcomeMetrics,
@@ -1252,5 +1502,7 @@ export function mapExperimentDataToOutcomeData(experimentName, metrics, variants
         metrics,
         variants: variantOutcomes,
         dateCreated: options === null || options === void 0 ? void 0 : options.dateCreated,
+        outcomeNotes: options === null || options === void 0 ? void 0 : options.outcomeNotes,
+        showVariantTouchpointName,
     };
 }

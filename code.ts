@@ -2142,6 +2142,26 @@ function deleteExperimentCanvasArtifacts(experimentId: string, experimentName: s
       // Node may already be removed with a parent
     }
   }
+
+  // Remove orphaned resource/link frames leaked by older builds (created before parenting).
+  for (const node of figma.currentPage.children) {
+    if (
+      node.name === "Links Section" ||
+      node.name === "Links" ||
+      node.name === "Link Chip" ||
+      node.name === "Link Text" ||
+      node.name === "Metrics Tables" ||
+      node.name === "Section: Outcome summary" ||
+      node.name === "Section: Results" ||
+      (node.type === "TEXT" && node.name === "Link Title")
+    ) {
+      try {
+        node.remove();
+      } catch {
+        // Node may already be removed
+      }
+    }
+  }
 }
 
 // --- V2 Experiment Flow Helpers ---
@@ -2957,6 +2977,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
       isRolledOut?: boolean;
       isStatSig?: boolean;
       color?: string;
+      parentEventName?: string;
     }> = [];
     
     // Iterate through all events and extract variants, applying normalizations
@@ -2981,6 +3002,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
             isStatSig: safeGetBoolean(variant, 'isStatSig'),
             // Variant color used for visual identification in cards
             color: safeGetString(variant, 'color') || variant.style?.variantColor,
+            parentEventName: event.name?.trim() || undefined,
           });
         });
       }
@@ -3001,7 +3023,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     // Positioned to the left of main flow to provide context
     infoCard = await createExperimentInfoCard(
       experiment.name,
-      experiment.description || 'e.g., Testing if new CTA increases conversions.',
+      experiment.description || '',
       experiment.links?.figma || '',
       experiment.links?.jira || '',
       experiment.links?.miro || '',
@@ -3045,12 +3067,13 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
             rolledOutVariantColor: rolledOutVariant?.color
           };
         })(),
+        outcomeNotes: experiment.outcomes?.notes?.trim() || undefined,
       }
     );
     attachNodeMeta(infoCard, {
       name: infoCardName,
       type: 'frame' as CanvasNodeType,
-      description: experiment.description || 'e.g., Testing if new CTA increases conversions.',
+      description: experiment.description || '',
       extra: { experimentId: experiment.id, role: 'experiment-info' },
     });
 

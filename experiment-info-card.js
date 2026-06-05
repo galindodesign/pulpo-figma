@@ -9,28 +9,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 /// <reference types="@figma/plugin-typings" />
 import { TOKENS } from "./design-tokens";
-import { getCanvasTokens, createCardShadowEffect } from "./canvas-theme";
-import { hexToRgb } from "./layout-utils";
-import { loadFonts, getLoadedFigtreeSemibold } from "./load-fonts";
+import { applyCardShell, applySectionPanel, applyPluginChip } from "./canvas-theme";
+import { hexToRgb, createBadge } from "./layout-utils";
+import { loadFonts } from "./load-fonts";
 import { createOutcomeCardSections, mapExperimentDataToOutcomeData, } from "./experiment-outcome-card";
-import { EXPERIMENT_STATUS_STYLES, formatDateForDisplay, getExperimentTypeLabel, } from "./experiment-card-shared";
-const ROLLED_OUT_BADGE_BG = "#fffbb5";
-const ROLLED_OUT_BADGE_TEXT = "#484122";
-const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4 22h16" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-function createRolledOutIcon() {
-    const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
-    icon.name = "Rolled Out Icon";
-    icon.resize(10, 10);
-    icon.fills = [];
-    return icon;
-}
+import { EXPERIMENT_STATUS_STYLES, createOverviewSectionTitle, styleOverviewText, SECTION_PANEL_LAYOUT, resolveExperimentDisplayStatus, getExperimentTypeLabel, } from "./experiment-card-shared";
+const SUMMARY_CONTENT_MIN_WIDTH = 728;
 // Brand icon SVG markup (complete SVGs for figma.createNodeFromSvg)
 const BRAND_SVGS = {
     // Official Figma multi-color logo (same paths as plugin UI `brandIcons.figma`)
@@ -280,6 +264,7 @@ function createBrandIconVector(brand, size = 14) {
  */
 export function createExperimentInfoCard(experimentName_1) {
     return __awaiter(this, arguments, void 0, function* (experimentName, description = "", figmaLink = "", jiraLink = "", miroLink = "", notionLink = "", amplitudeLink = "", asanaLink = "", LinearLink = "", SlackLink = "", GithubLink = "", ConfluenceLink = "", TrelloLink = "", MondayLink = "", ClickupLink = "", genericLinks = [], metrics, status = 'running', options) {
+        var _a, _b, _c, _d;
         // Ensure all fonts are loaded before creating any text nodes
         yield loadFonts();
         // Container
@@ -288,81 +273,19 @@ export function createExperimentInfoCard(experimentName_1) {
         card.layoutMode = "VERTICAL";
         card.counterAxisSizingMode = "AUTO";
         card.primaryAxisSizingMode = "AUTO";
-        card.itemSpacing = 24;
-        card.paddingLeft = card.paddingRight = 32;
-        card.paddingTop = card.paddingBottom = 32;
-        card.cornerRadius = 24;
-        const canvas = getCanvasTokens();
-        card.fills = [{ type: "SOLID", color: canvas.fillsSurface }];
-        card.strokes = [{ type: "SOLID", color: canvas.border }];
-        card.strokeWeight = 1;
-        card.effects = [createCardShadowEffect()];
+        card.itemSpacing = TOKENS.space24;
+        card.paddingLeft = card.paddingRight = TOKENS.space32;
+        card.paddingTop = card.paddingBottom = TOKENS.space32;
+        card.cornerRadius = TOKENS.radiusLG;
+        applyCardShell(card);
         card.minWidth = 792;
         card.minHeight = 612;
         const CONTENT_MIN_WIDTH = 728;
         const CONTENT_MAX_WIDTH = 1400;
         const CARD_MAX_WIDTH = 1800;
         const statusConfig = EXPERIMENT_STATUS_STYLES[status] || EXPERIMENT_STATUS_STYLES.running;
-        // === SECTION 1: HEADER (Badge row + Name + Description) ===
-        const headerSection = yield createStoryHeaderWithBadges(experimentName, description || "", statusConfig, options);
-        card.appendChild(headerSection);
-        // === SINGLE-COLUMN CONTENT FLOW ===
-        const contentStack = figma.createFrame();
-        contentStack.name = "Content Flow";
-        contentStack.layoutMode = "VERTICAL";
-        contentStack.counterAxisSizingMode = "FIXED";
-        contentStack.primaryAxisSizingMode = "AUTO";
-        contentStack.layoutAlign = "STRETCH";
-        contentStack.itemSpacing = 24;
-        contentStack.fills = [];
-        contentStack.strokes = [];
-        contentStack.minWidth = CONTENT_MIN_WIDTH;
-        const summaryHost = figma.createFrame();
-        summaryHost.name = "Summary Host";
-        summaryHost.layoutMode = "VERTICAL";
-        summaryHost.counterAxisSizingMode = "FIXED";
-        summaryHost.primaryAxisSizingMode = "AUTO";
-        summaryHost.layoutAlign = "STRETCH";
-        summaryHost.fills = [];
-        summaryHost.strokes = [];
-        summaryHost.minWidth = CONTENT_MIN_WIDTH;
-        // === OVERVIEW SECTION ===
-        const overviewData = [];
-        // Name - always show (hidden)
-        // overviewData.push({ 
-        //   label: 'Name', 
-        //   value: experimentName || 'Untitled Experiment'
-        // });
-        // Description - always show
-        overviewData.push({
-            label: 'Description',
-            value: description || '—'
-        });
-        // Audience - show if present, and not already in overviewData
-        if ((options === null || options === void 0 ? void 0 : options.audience) && !overviewData.some(row => row.label === 'Audience')) {
-            overviewData.push({
-                label: 'Audience',
-                value: options.audience
-            });
-        }
-        // Sample Size - show if present, and not already in overviewData
-        if ((options === null || options === void 0 ? void 0 : options.totalSampleSize) !== undefined && options.totalSampleSize !== null && !overviewData.some(row => row.label === 'Sample Size')) {
-            overviewData.push({
-                label: 'Sample Size',
-                value: options.totalSampleSize.toLocaleString()
-            });
-        }
-        // Hypothesis - hidden
-        // overviewData.push({ 
-        //   label: 'Hypothesis', 
-        //   value: options?.hypothesis || '—' 
-        // });
-        // Type - hidden
-        // overviewData.push({ 
-        //   label: 'Type', 
-        //   value: options?.experimentType ? getExperimentTypeLabel(options.experimentType) : '—' 
-        // });
-        // Dates - always show
+        const hasRollout = !!((_a = options === null || options === void 0 ? void 0 : options.rolledOutVariantName) === null || _a === void 0 ? void 0 : _a.trim());
+        const displayStatus = resolveExperimentDisplayStatus(status, hasRollout);
         // Parse YYYY-MM-DD as local date to avoid timezone day shifts.
         function parseDateLocal(dateString) {
             if (!dateString)
@@ -384,49 +307,53 @@ export function createExperimentInfoCard(experimentName_1) {
                 return '';
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         }
-        let dateValue = '—';
+        let runDatesValue = '';
         if ((options === null || options === void 0 ? void 0 : options.startDate) && (options === null || options === void 0 ? void 0 : options.endDate)) {
             const start = parseDateLocal(options.startDate);
             const end = parseDateLocal(options.endDate);
             if (start && end) {
-                dateValue = `${formatUIDate(options.startDate)} → ${formatUIDate(options.endDate)}`;
+                runDatesValue = `${formatUIDate(options.startDate)} → ${formatUIDate(options.endDate)}`;
             }
             else {
-                dateValue = `${options.startDate} – ${options.endDate}`;
+                runDatesValue = `${options.startDate} – ${options.endDate}`;
             }
         }
         else if (options === null || options === void 0 ? void 0 : options.startDate) {
             const start = parseDateLocal(options.startDate);
-            dateValue = start ? formatUIDate(options.startDate) : options.startDate;
+            runDatesValue = start ? formatUIDate(options.startDate) : options.startDate;
         }
         else if (options === null || options === void 0 ? void 0 : options.endDate) {
             const end = parseDateLocal(options.endDate);
-            dateValue = end ? formatUIDate(options.endDate) : options.endDate;
+            runDatesValue = end ? formatUIDate(options.endDate) : options.endDate;
         }
-        overviewData.push({
-            label: 'Dates',
-            value: dateValue
-        });
-        // Owner - always show
-        overviewData.push({
-            label: 'Owner',
-            value: (options === null || options === void 0 ? void 0 : options.owner) || '—'
-        });
-        // (Audience and Sample Size are now only added above Dates)
-        // Create Overview section
-        try {
-            yield appendDetailsSection(summaryHost, 'Summary', overviewData);
-        }
-        catch (e) {
-            console.error('Error creating overview section:', e);
-        }
-        // === RESOURCES SECTION ===
-        // Always show Resources section, even if no links (show placeholder)
-        const linksSection = createResourcesSection(figmaLink, jiraLink, miroLink, notionLink, amplitudeLink, asanaLink, LinearLink, SlackLink, GithubLink, ConfluenceLink, TrelloLink, MondayLink, ClickupLink, genericLinks);
+        const runSampleSizeValue = (options === null || options === void 0 ? void 0 : options.totalSampleSize) !== undefined &&
+            options.totalSampleSize !== null &&
+            options.totalSampleSize > 0
+            ? options.totalSampleSize.toLocaleString()
+            : "";
+        // === SECTION 1: HEADER (status, title, context, purpose) ===
+        const headerSection = yield createStoryHeaderWithBadges(experimentName, description.trim(), statusConfig, CONTENT_MIN_WIDTH, options, runDatesValue, runSampleSizeValue, ((_b = options === null || options === void 0 ? void 0 : options.hypothesis) === null || _b === void 0 ? void 0 : _b.trim()) || "");
+        card.appendChild(headerSection);
+        // === SINGLE-COLUMN CONTENT FLOW ===
+        const contentStack = figma.createFrame();
+        contentStack.name = "Content Flow";
+        contentStack.layoutMode = "VERTICAL";
+        contentStack.counterAxisSizingMode = "FIXED";
+        contentStack.primaryAxisSizingMode = "AUTO";
+        contentStack.layoutAlign = "STRETCH";
+        contentStack.itemSpacing = TOKENS.space24;
+        contentStack.fills = [];
+        contentStack.strokes = [];
+        contentStack.minWidth = CONTENT_MIN_WIDTH;
         card.appendChild(contentStack);
-        summaryHost.layoutAlign = "STRETCH";
-        contentStack.appendChild(summaryHost);
-        // (Targeting section removed)
+        const audienceValue = ((_c = options === null || options === void 0 ? void 0 : options.audience) === null || _c === void 0 ? void 0 : _c.trim()) || "";
+        const ownerValue = ((_d = options === null || options === void 0 ? void 0 : options.owner) === null || _d === void 0 ? void 0 : _d.trim()) || "";
+        const contextGroups = buildContextDetailsGroups({
+            audience: audienceValue,
+            owner: ownerValue,
+            experimentType: options === null || options === void 0 ? void 0 : options.experimentType,
+            confidenceLevel: options === null || options === void 0 ? void 0 : options.confidenceLevel,
+        });
         const shouldShowInlineOutcome = (options === null || options === void 0 ? void 0 : options.showOutcomeCard) === true &&
             !!(options === null || options === void 0 ? void 0 : options.variants) &&
             options.variants.length > 0 &&
@@ -442,41 +369,49 @@ export function createExperimentInfoCard(experimentName_1) {
                     audience: options === null || options === void 0 ? void 0 : options.audience,
                     totalSampleSize: options === null || options === void 0 ? void 0 : options.totalSampleSize,
                     dateCreated: options === null || options === void 0 ? void 0 : options.dateCreated,
-                    status,
+                    status: displayStatus,
                     primaryMetric: options === null || options === void 0 ? void 0 : options.primaryMetric,
+                    outcomeNotes: options === null || options === void 0 ? void 0 : options.outcomeNotes,
                 });
-                const outcomeSections = yield createOutcomeCardSections(outcomeData, { includeHeader: false });
+                const outcomeSections = yield createOutcomeCardSections(outcomeData, {
+                    includeHeader: false,
+                    embeddedSummary: true,
+                });
                 outcomeSections.summarySection.layoutAlign = "STRETCH";
                 outcomeSections.metricsTable.layoutAlign = "STRETCH";
-                const summarySection = summaryHost.children[0];
-                if (summarySection) {
-                    summarySection.appendChild(outcomeSections.summarySection);
-                }
                 const metricsSection = figma.createFrame();
-                metricsSection.name = "Section: Goals and Variants";
+                metricsSection.name = "Section: Results";
                 metricsSection.layoutMode = "VERTICAL";
                 metricsSection.counterAxisSizingMode = "AUTO";
                 metricsSection.primaryAxisSizingMode = "AUTO";
                 metricsSection.layoutAlign = "STRETCH";
-                metricsSection.itemSpacing = 8;
+                metricsSection.itemSpacing = SECTION_PANEL_LAYOUT.sectionGap;
                 metricsSection.fills = [];
-                const metricsLabel = figma.createText();
-                metricsLabel.fontName = { family: "Figtree", style: "Bold" };
-                metricsLabel.fontSize = TOKENS.fontSizeLabel;
-                metricsLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-                metricsLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-                metricsLabel.characters = "Goals and Variants";
-                metricsSection.appendChild(metricsLabel);
+                metricsSection.appendChild(createOverviewSectionTitle("Results"));
                 metricsSection.appendChild(outcomeSections.metricsTable);
                 contentStack.appendChild(metricsSection);
+                contentStack.appendChild(outcomeSections.summarySection);
             }
             catch (e) {
                 console.error('Error creating inline outcome sections:', e);
             }
         }
-        // Move links section from metadata context to final supporting context.
-        linksSection.layoutAlign = "STRETCH";
-        contentStack.appendChild(linksSection);
+        try {
+            yield appendDetailsSection(contentStack, "Context", contextGroups, CONTENT_MIN_WIDTH);
+        }
+        catch (e) {
+            console.error('Error creating overview details sections:', e);
+        }
+        if (!(options === null || options === void 0 ? void 0 : options.excludeResources)) {
+            try {
+                const linksSection = createResourcesSection(figmaLink, jiraLink, miroLink, notionLink, amplitudeLink, asanaLink, LinearLink, SlackLink, GithubLink, ConfluenceLink, TrelloLink, MondayLink, ClickupLink, genericLinks, CONTENT_MIN_WIDTH);
+                linksSection.layoutAlign = "STRETCH";
+                contentStack.appendChild(linksSection);
+            }
+            catch (e) {
+                console.error("Error creating resources section:", e);
+            }
+        }
         const measuredContentWidth = contentStack.width > 0 ? contentStack.width : CONTENT_MIN_WIDTH;
         const contentTargetWidth = Math.min(CONTENT_MAX_WIDTH, Math.max(CONTENT_MIN_WIDTH, measuredContentWidth));
         contentStack.minWidth = contentTargetWidth;
@@ -547,10 +482,13 @@ export function createExperimentCanvasLayout(experimentName_1) {
         rightPanel.strokes = [];
         // Create resources section
         const resourcesSection = createResourcesSection(figmaLink, jiraLink, miroLink, notionLink, amplitudeLink, asanaLink, LinearLink, SlackLink, GithubLink, ConfluenceLink, TrelloLink, MondayLink, ClickupLink, genericLinks);
-        rightPanel.appendChild(resourcesSection);
-        // Add panels to canvas
+        if (resourcesSection) {
+            rightPanel.appendChild(resourcesSection);
+        }
         canvas.appendChild(leftPanel);
-        canvas.appendChild(rightPanel);
+        if (resourcesSection) {
+            canvas.appendChild(rightPanel);
+        }
         return canvas;
     });
 }
@@ -561,28 +499,19 @@ export function createExperimentCanvasLayout(experimentName_1) {
  * Create resources section with all links
  * Extracted from createExperimentInfoCard for reuse in canvas layout
  */
-function createResourcesSection(figmaLink = "", jiraLink = "", miroLink = "", notionLink = "", amplitudeLink = "", asanaLink = "", LinearLink = "", SlackLink = "", GithubLink = "", ConfluenceLink = "", TrelloLink = "", MondayLink = "", ClickupLink = "", genericLinks = []) {
-    // Always show Resources section, even if no links (show placeholder)
+function createResourcesSection(figmaLink = "", jiraLink = "", miroLink = "", notionLink = "", amplitudeLink = "", asanaLink = "", LinearLink = "", SlackLink = "", GithubLink = "", ConfluenceLink = "", TrelloLink = "", MondayLink = "", ClickupLink = "", genericLinks = [], contentWidth = SUMMARY_CONTENT_MIN_WIDTH) {
     const linksSection = figma.createFrame();
     linksSection.layoutMode = "VERTICAL";
     linksSection.counterAxisSizingMode = "AUTO";
     linksSection.primaryAxisSizingMode = "AUTO";
     linksSection.primaryAxisAlignItems = "MIN";
     linksSection.counterAxisAlignItems = "MIN";
-    linksSection.layoutAlign = 'STRETCH';
-    linksSection.itemSpacing = 8;
+    linksSection.layoutAlign = "STRETCH";
+    linksSection.itemSpacing = SECTION_PANEL_LAYOUT.sectionGap;
     linksSection.fills = [];
     linksSection.strokes = [];
     linksSection.name = "Links Section";
-    const linksLabel = figma.createText();
-    linksLabel.fontName = { family: "Figtree", style: "Bold" };
-    linksLabel.fontSize = TOKENS.fontSizeLabel;
-    linksLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-    linksLabel.opacity = 1;
-    linksLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-    linksLabel.characters = "Resources";
-    linksSection.appendChild(linksLabel);
-    // Links container - horizontal wrap for link chips
+    linksSection.appendChild(createOverviewSectionTitle("Resources"));
     const linksContainer = figma.createFrame();
     linksContainer.layoutMode = "HORIZONTAL";
     linksContainer.layoutWrap = "WRAP";
@@ -590,795 +519,384 @@ function createResourcesSection(figmaLink = "", jiraLink = "", miroLink = "", no
     linksContainer.primaryAxisSizingMode = "AUTO";
     linksContainer.primaryAxisAlignItems = "MIN";
     linksContainer.counterAxisAlignItems = "MIN";
-    linksContainer.layoutAlign = 'STRETCH';
-    linksContainer.maxWidth = 282;
-    linksContainer.itemSpacing = 8;
-    linksContainer.counterAxisSpacing = 8;
+    linksContainer.layoutAlign = "STRETCH";
+    linksContainer.maxWidth = contentWidth;
+    linksContainer.itemSpacing = TOKENS.space8;
+    linksContainer.counterAxisSpacing = TOKENS.space8;
     linksContainer.fills = [];
     linksContainer.strokes = [];
     linksContainer.name = "Links";
-    // Add all links
-    if (figmaLink)
-        linksContainer.appendChild(createLinkChip("Figma", figmaLink));
-    if (jiraLink)
-        linksContainer.appendChild(createLinkChip("Jira", jiraLink));
-    if (miroLink)
-        linksContainer.appendChild(createLinkChip("Miro", miroLink));
-    if (notionLink)
-        linksContainer.appendChild(createLinkChip("Notion", notionLink));
-    if (amplitudeLink)
-        linksContainer.appendChild(createLinkChip("Amplitude", amplitudeLink));
-    if (asanaLink)
-        linksContainer.appendChild(createLinkChip("Asana", asanaLink));
-    if (LinearLink)
-        linksContainer.appendChild(createLinkChip("Linear", LinearLink));
-    if (SlackLink)
-        linksContainer.appendChild(createLinkChip("Slack", SlackLink));
-    if (GithubLink)
-        linksContainer.appendChild(createLinkChip("GitHub", GithubLink));
-    if (ConfluenceLink)
-        linksContainer.appendChild(createLinkChip("Confluence", ConfluenceLink));
-    if (TrelloLink)
-        linksContainer.appendChild(createLinkChip("Trello", TrelloLink));
-    if (MondayLink)
-        linksContainer.appendChild(createLinkChip("Monday", MondayLink));
-    if (ClickupLink)
-        linksContainer.appendChild(createLinkChip("Clickup", ClickupLink));
-    if (genericLinks && genericLinks.length > 0) {
-        genericLinks.forEach(url => {
-            if (url)
-                linksContainer.appendChild(createLinkChip("Link", url));
-        });
+    const appendChip = (label, url) => {
+        const chip = tryCreateLinkChip(label, url);
+        if (chip)
+            linksContainer.appendChild(chip);
+    };
+    appendChip("Figma", figmaLink);
+    appendChip("Jira", jiraLink);
+    appendChip("Miro", miroLink);
+    appendChip("Notion", notionLink);
+    appendChip("Amplitude", amplitudeLink);
+    appendChip("Asana", asanaLink);
+    appendChip("Linear", LinearLink);
+    appendChip("Slack", SlackLink);
+    appendChip("GitHub", GithubLink);
+    appendChip("Confluence", ConfluenceLink);
+    appendChip("Trello", TrelloLink);
+    appendChip("Monday", MondayLink);
+    appendChip("Clickup", ClickupLink);
+    if (genericLinks === null || genericLinks === void 0 ? void 0 : genericLinks.length) {
+        for (const url of genericLinks) {
+            appendChip("Link", url);
+        }
     }
-    // If no links, show placeholder text
     if (linksContainer.children.length === 0) {
         const placeholderText = figma.createText();
-        placeholderText.fontName = { family: "Figtree", style: "Regular" };
-        placeholderText.fontSize = TOKENS.fontSizeBodySm;
-        placeholderText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textTertiary) }];
+        styleOverviewText(placeholderText, "caption");
         placeholderText.textAutoResize = "WIDTH_AND_HEIGHT";
         placeholderText.characters = "—";
+        placeholderText.name = "Resources Placeholder";
         linksContainer.appendChild(placeholderText);
     }
     linksSection.appendChild(linksContainer);
     return linksSection;
 }
-// ============================================
-// STORY-DRIVEN LAYOUT HELPER FUNCTIONS
-// ============================================
-// Creates a subtle divider line between sections
-function createDivider() {
-    const divider = figma.createFrame();
-    divider.layoutMode = "HORIZONTAL";
-    divider.counterAxisSizingMode = "FIXED";
-    divider.primaryAxisSizingMode = "AUTO";
-    divider.layoutAlign = 'STRETCH';
-    divider.resize(100, 1);
-    divider.fills = [{ type: "SOLID", color: getCanvasTokens().border }];
-    divider.opacity = 0.5;
-    divider.name = "Divider";
-    return divider;
+function buildDecisionDetailsGroups(input) {
+    const groups = [];
+    const isConcluded = input.status === "completed" || input.status === "rolled_out";
+    if (!isConcluded && !input.rolledOutVariantName) {
+        return groups;
+    }
+    const decisionFields = [];
+    if (input.rolledOutVariantName) {
+        decisionFields.push({
+            label: "Rolled-out variant",
+            value: input.rolledOutVariantName,
+            valueDot: input.rolledOutVariantColor,
+        });
+    }
+    if (input.decisionRationale) {
+        decisionFields.push({
+            label: "Decision rationale",
+            value: input.decisionRationale,
+            wrap: true,
+        });
+    }
+    if (decisionFields.length > 0) {
+        groups.push({
+            name: "Decision",
+            fields: decisionFields,
+        });
+    }
+    return groups;
 }
-// ============================================
-// TABLE-STYLE LAYOUT HELPERS (Eppo-inspired)
-// ============================================
-/**
- * Create Targeting section with two-column layout (Audience | Sample size)
- */
-function appendTargetingSection(parent, audience, sampleSize, layout) {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a;
-        yield loadFonts();
-        const section = figma.createFrame();
-        section.layoutMode = "VERTICAL";
-        // In a VERTICAL auto-layout, width is the counter-axis.
-        // Set to FIXED so this section can STRETCH to the parent width.
-        section.counterAxisSizingMode = "FIXED";
-        section.primaryAxisSizingMode = "AUTO"; // Height hugs content
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 8;
-        section.fills = [];
-        section.name = "Section: Targeting";
-        // Section title
-        const titleLabel = figma.createText();
-        titleLabel.fontName = { family: "Figtree", style: "Bold" };
-        titleLabel.fontSize = TOKENS.fontSizeLabel;
-        titleLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        titleLabel.opacity = 1;
-        titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-        titleLabel.characters = "Targeting";
-        section.appendChild(titleLabel);
-        // Details container with background
-        const detailsContainer = figma.createFrame();
-        detailsContainer.layoutMode = "VERTICAL";
-        // In a VERTICAL auto-layout, width is the counter-axis.
-        // Set counter-axis to FIXED so it can stretch to the parent width.
-        detailsContainer.counterAxisSizingMode = "FIXED"; // Width can stretch to parent
-        detailsContainer.primaryAxisSizingMode = "AUTO"; // Height hugs content
-        detailsContainer.layoutAlign = 'STRETCH';
-        detailsContainer.itemSpacing = 16;
-        detailsContainer.paddingLeft = detailsContainer.paddingRight = 16;
-        detailsContainer.paddingTop = detailsContainer.paddingBottom = 16;
-        detailsContainer.cornerRadius = 8;
-        detailsContainer.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
-        detailsContainer.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-        detailsContainer.name = "Targeting Container";
-        section.appendChild(detailsContainer);
-        // Force a deterministic width so children (and text wrapping) don't collapse to ~100px.
-        const containerWidth = (_a = layout === null || layout === void 0 ? void 0 : layout.containerWidth) !== null && _a !== void 0 ? _a : parent.width;
-        if (containerWidth && containerWidth > 0) {
-            detailsContainer.minWidth = containerWidth;
-            detailsContainer.maxWidth = containerWidth;
-        }
-        // Two-column row
-        const twoColumnRow = figma.createFrame();
-        twoColumnRow.layoutMode = "HORIZONTAL";
-        twoColumnRow.counterAxisSizingMode = "AUTO"; // Height hugs content
-        // In a HORIZONTAL auto-layout, width is the primary axis.
-        // Set to FIXED so it can actually fill the available width (instead of hugging its children).
-        twoColumnRow.primaryAxisSizingMode = "FIXED";
-        twoColumnRow.layoutAlign = 'STRETCH'; // Stretch to fill container width
-        // IMPORTANT: don't set layoutGrow on a row inside a VERTICAL container,
-        // or it will "Fill" height and add extra space.
-        twoColumnRow.itemSpacing = 24;
-        twoColumnRow.fills = [];
-        twoColumnRow.name = "Two Column Row";
-        detailsContainer.appendChild(twoColumnRow);
-        // Compute deterministic row/column widths
-        const padL = detailsContainer.paddingLeft || 0;
-        const padR = detailsContainer.paddingRight || 0;
-        const rowWidth = containerWidth && containerWidth > 0 ? Math.max(0, containerWidth - padL - padR) : 0;
-        if (rowWidth > 0) {
-            twoColumnRow.minWidth = rowWidth;
-            twoColumnRow.maxWidth = rowWidth;
-        }
-        const gap = twoColumnRow.itemSpacing || 0;
-        const colWidth = rowWidth > 0 ? Math.max(0, Math.floor((rowWidth - gap) / 2)) : 0;
-        // ...other targeting fields can be added here
-        parent.appendChild(section);
-    });
+function buildContextDetailsGroups(input) {
+    var _a;
+    const typeLabel = ((_a = input.experimentType) === null || _a === void 0 ? void 0 : _a.trim())
+        ? getExperimentTypeLabel(input.experimentType.trim())
+        : "";
+    const confidenceLabel = typeof input.confidenceLevel === "number" &&
+        Number.isFinite(input.confidenceLevel) &&
+        input.confidenceLevel > 0
+        ? `${input.confidenceLevel}% planned confidence`
+        : "";
+    return [{
+            name: "Context",
+            pairFields: true,
+            fields: [
+                { label: "Audience", value: input.audience.trim() || "—", wrap: true },
+                { label: "Owner", value: input.owner.trim() || "—", wrap: true },
+                { label: "Experiment type", value: typeLabel || "—" },
+                { label: "Confidence", value: confidenceLabel || "—" },
+            ],
+        }];
 }
-/**
- * Create experiment details as simple label:value pairs directly in the card
- * Uses the same styling pattern as existing working sections
- */
-function appendDetailsSection(parent, title, rowsData) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        // Create a simple vertical section similar to existing working sections
-        const section = figma.createFrame();
-        section.layoutMode = "VERTICAL";
-        section.counterAxisSizingMode = "FIXED";
-        section.primaryAxisSizingMode = "AUTO";
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 8;
-        section.fills = [];
-        section.name = `Section: ${title}`;
-        // Use a deterministic width so wrapped text doesn't collapse before the frame is attached.
-        const sectionWidth = parent.maxWidth || parent.minWidth || parent.width;
-        if (sectionWidth && sectionWidth > 0) {
-            section.minWidth = sectionWidth;
-            section.maxWidth = sectionWidth;
-        }
-        // Section title label
-        const titleLabel = figma.createText();
-        titleLabel.fontName = { family: "Figtree", style: "Bold" };
-        titleLabel.fontSize = TOKENS.fontSizeLabel;
-        titleLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        titleLabel.opacity = 1;
-        titleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-        titleLabel.characters = title;
-        section.appendChild(titleLabel);
-        // Details container with background
-        const detailsContainer = figma.createFrame();
-        detailsContainer.layoutMode = "VERTICAL";
-        detailsContainer.counterAxisSizingMode = "FIXED";
-        detailsContainer.primaryAxisSizingMode = "AUTO";
-        detailsContainer.layoutAlign = 'STRETCH';
-        detailsContainer.itemSpacing = 16;
-        detailsContainer.paddingLeft = detailsContainer.paddingRight = 16;
-        detailsContainer.paddingTop = detailsContainer.paddingBottom = 16;
-        detailsContainer.cornerRadius = 8;
-        detailsContainer.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
-        detailsContainer.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-        detailsContainer.opacity = 0.85;
-        detailsContainer.name = "Details Container";
-        section.appendChild(detailsContainer);
-        if (sectionWidth && sectionWidth > 0) {
-            detailsContainer.minWidth = sectionWidth;
-            detailsContainer.maxWidth = sectionWidth;
-        }
-        const contentWidth = sectionWidth && sectionWidth > 0
-            ? Math.max(0, sectionWidth - (detailsContainer.paddingLeft || 0) - (detailsContainer.paddingRight || 0))
-            : 0;
-        // Create each row
-        for (const { label, value, valueColor, valueDot } of rowsData) {
-            const row = figma.createFrame();
-            row.layoutMode = "VERTICAL";
-            row.counterAxisSizingMode = "FIXED";
-            row.primaryAxisSizingMode = "AUTO";
-            row.layoutAlign = 'STRETCH';
-            row.counterAxisAlignItems = "MIN";
-            row.itemSpacing = 4;
-            row.fills = [];
-            row.name = `Row: ${label}`;
-            if (contentWidth > 0) {
-                row.minWidth = contentWidth;
-                row.maxWidth = contentWidth;
-            }
-            detailsContainer.appendChild(row);
-            // Label
-            const labelNode = figma.createText();
-            labelNode.fontName = { family: "Figtree", style: "Regular" };
-            labelNode.fontSize = TOKENS.fontSizeLabel;
-            labelNode.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-            labelNode.opacity = 0.5;
-            labelNode.textAutoResize = "WIDTH_AND_HEIGHT";
-            labelNode.characters = label;
-            row.appendChild(labelNode);
-            // Value with optional dot
-            if (valueDot) {
-                const dot = figma.createEllipse();
-                dot.resize(8, 8);
-                dot.fills = [{ type: "SOLID", color: hexToRgb(valueDot) }];
-                row.appendChild(dot);
-            }
-            const valueNode = figma.createText();
-            valueNode.fontName = { family: "Figtree", style: "Medium" };
-            valueNode.fontSize = TOKENS.fontSizeBodySm;
-            valueNode.fills = [{ type: "SOLID", color: hexToRgb(valueColor || TOKENS.textPrimary) }];
-            // Ensure long content wraps and grows in height for key detail fields
-            const shouldWrapValue = label === 'Description' ||
-                label === 'Hypothesis' ||
-                label === 'Name' ||
-                label === 'Type' ||
-                label === 'Owner' ||
-                label === 'Dates';
-            if (shouldWrapValue) {
-                valueNode.textAutoResize = "HEIGHT";
-                valueNode.layoutAlign = "STRETCH";
-            }
-            else {
-                valueNode.textAutoResize = "WIDTH_AND_HEIGHT";
-            }
-            valueNode.characters = value || "—";
-            if (shouldWrapValue && contentWidth > 0) {
-                valueNode.resize(contentWidth, valueNode.height);
-            }
-            row.appendChild(valueNode);
-        }
-        parent.appendChild(section);
-    });
+function buildSummaryDetailsGroups(input) {
+    return [
+        ...buildDecisionDetailsGroups(input),
+        ...buildContextDetailsGroups({
+            audience: input.audience,
+            owner: input.owner,
+            experimentType: input.experimentType,
+            confidenceLevel: input.confidenceLevel,
+        }),
+    ];
 }
-// SECTION 1: Header with date + title + description
-function createStoryHeaderWithBadges(experimentName, description, _statusConfig, options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const section = figma.createFrame();
-        section.layoutMode = "VERTICAL";
-        section.counterAxisSizingMode = "AUTO";
-        section.primaryAxisSizingMode = "AUTO";
-        section.primaryAxisAlignItems = "MIN";
-        section.counterAxisAlignItems = "MIN";
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 10;
-        section.fills = [];
-        section.strokes = [];
-        section.name = "Header Section";
-        // Date row
-        const dateCreated = (options === null || options === void 0 ? void 0 : options.dateCreated) || new Date().toISOString().split('T')[0];
-        const dateFormatted = formatDateForDisplay(dateCreated);
-        const statusRow = figma.createFrame();
-        statusRow.layoutMode = "HORIZONTAL";
-        statusRow.counterAxisSizingMode = "AUTO";
-        statusRow.primaryAxisSizingMode = "AUTO";
-        statusRow.counterAxisAlignItems = "CENTER";
-        statusRow.itemSpacing = 8;
-        statusRow.fills = [];
-        statusRow.name = "Status Row";
-        const dateLabel = figma.createText();
-        dateLabel.fontName = { family: "Figtree", style: "Regular" };
-        dateLabel.fontSize = TOKENS.fontSizeLabel;
-        dateLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary), opacity: 0.5 }];
-        dateLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-        dateLabel.characters = dateFormatted;
-        dateLabel.name = "Date Created Label";
-        statusRow.appendChild(dateLabel);
-        section.appendChild(statusRow);
-        // Title (Bold, 24px)
-        const titleText = figma.createText();
-        titleText.fontName = { family: "Figtree", style: "Bold" };
-        titleText.fontSize = 24;
-        titleText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        titleText.textAutoResize = "WIDTH_AND_HEIGHT";
-        titleText.characters = experimentName && experimentName.length > 0 ? experimentName : 'Untitled Experiment';
-        section.appendChild(titleText);
-        // Description (muted)
-        // if (description) {
-        //   const descText = figma.createText();
-        //   descText.fontName = { family: "Figtree", style: "Regular" };
-        //   descText.fontSize = TOKENS.fontSizeBodyMd;
-        //   descText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-        //   descText.textAutoResize = "WIDTH_AND_HEIGHT";
-        //   descText.characters = description;
-        //   section.appendChild(descText);
-        // }
-        return section;
-    });
+function setWrappedOverviewText(text, characters, width) {
+    text.textAutoResize = "HEIGHT";
+    if (width > 0) {
+        text.resize(width, Math.max(text.height, 1));
+    }
+    text.characters = characters;
+    if (width > 0) {
+        text.resize(width, text.height);
+    }
 }
-// CHAPTER 2: Hypothesis - the key question being tested (quoted style)
-function createStoryHypothesis(hypothesis) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const section = figma.createFrame();
-        section.layoutMode = "VERTICAL";
-        section.counterAxisSizingMode = "AUTO";
-        section.primaryAxisSizingMode = "AUTO";
-        section.primaryAxisAlignItems = "MIN";
-        section.counterAxisAlignItems = "MIN";
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 8;
-        section.paddingTop = section.paddingBottom = 16;
-        section.paddingLeft = section.paddingRight = 16;
-        section.cornerRadius = 8;
-        section.fills = [{ type: "SOLID", color: getCanvasTokens().sectionTint }];
-        section.strokes = [];
-        section.name = "Hypothesis Section";
-        // Label with question framing
-        const labelText = figma.createText();
-        labelText.fontName = { family: "Figtree", style: "Medium" };
-        labelText.fontSize = TOKENS.fontSizeLabel;
-        labelText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        labelText.opacity = 0.5;
-        labelText.textAutoResize = "WIDTH_AND_HEIGHT";
-        labelText.characters = "Hypothesis";
-        section.appendChild(labelText);
-        // Hypothesis text with quote styling
-        const hypothesisText = figma.createText();
-        hypothesisText.fontName = { family: "Figtree", style: "Regular" };
-        hypothesisText.fontSize = TOKENS.fontSizeBodyMd;
-        hypothesisText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        hypothesisText.textAutoResize = "WIDTH_AND_HEIGHT";
-        hypothesisText.characters = `"${hypothesis}"`;
-        section.appendChild(hypothesisText);
-        return section;
-    });
+function shouldWrapDetailValue(label, wrap) {
+    if (wrap === true)
+        return true;
+    return (label === "Description" ||
+        label === "Hypothesis" ||
+        label === "What we're testing" ||
+        label === "Decision rationale" ||
+        label === "Audience" ||
+        label === "Owner");
 }
-// ============================================
-// LEGACY FUNCTIONS (keeping for compatibility)
-// ============================================
-// Card header with date, title, and description
-function createCardHeader(experimentName, description, _statusConfig, options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const section = figma.createFrame();
-        section.layoutMode = "VERTICAL";
-        section.counterAxisSizingMode = "AUTO";
-        section.primaryAxisSizingMode = "AUTO";
-        section.primaryAxisAlignItems = "MIN";
-        section.counterAxisAlignItems = "MIN";
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 12;
-        section.fills = [];
-        section.strokes = [];
-        section.name = "Header Section";
-        // Date created label - auto-populated (above badge row)
-        const dateCreatedCompact = (options === null || options === void 0 ? void 0 : options.dateCreated) || new Date().toISOString().split('T')[0];
-        const dateFormattedCompact = formatDateForDisplay(dateCreatedCompact);
-        const dateLabelCompact = figma.createText();
-        dateLabelCompact.fontName = { family: "Figtree", style: "Regular" };
-        dateLabelCompact.fontSize = TOKENS.fontSizeLabel;
-        dateLabelCompact.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary), opacity: 0.5 }];
-        dateLabelCompact.textAutoResize = "WIDTH_AND_HEIGHT";
-        dateLabelCompact.characters = dateFormattedCompact;
-        dateLabelCompact.name = "Date Created Label";
-        section.appendChild(dateLabelCompact);
-        // Title (Bold, 24px)
-        const titleText = figma.createText();
-        titleText.fontName = { family: "Figtree", style: "Bold" };
-        titleText.fontSize = 24;
-        titleText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        titleText.textAutoResize = "WIDTH_AND_HEIGHT";
-        titleText.characters = experimentName && experimentName.length > 0 ? experimentName : 'Untitled Experiment';
-        section.appendChild(titleText);
-        // Description (muted)
-        if (description) {
-            const descText = figma.createText();
-            descText.fontName = { family: "Figtree", style: "Regular" };
-            descText.fontSize = TOKENS.fontSizeBodyMd;
-            descText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-            descText.textAutoResize = "WIDTH_AND_HEIGHT";
-            descText.characters = description;
-            section.appendChild(descText);
-        }
-        return section;
-    });
+function createSummaryDetailValueNode(field, contentWidth) {
+    const valueNode = figma.createText();
+    styleOverviewText(valueNode, "fieldValue");
+    if (field.valueColor) {
+        valueNode.fills = [{ type: "SOLID", color: hexToRgb(field.valueColor) }];
+    }
+    const wrapValue = shouldWrapDetailValue(field.label, field.wrap);
+    if (wrapValue && contentWidth > 0) {
+        setWrappedOverviewText(valueNode, field.value || "—", contentWidth);
+    }
+    else {
+        valueNode.textAutoResize = "WIDTH_AND_HEIGHT";
+        valueNode.characters = field.value || "—";
+    }
+    return valueNode;
 }
-// Details row: Type + Owner + Dates
-function createDetailsRow(experimentType, owner, startDate, endDate) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const row = figma.createFrame();
-        row.layoutMode = "HORIZONTAL";
-        row.counterAxisSizingMode = "AUTO";
-        row.primaryAxisSizingMode = "AUTO";
-        row.primaryAxisAlignItems = "MIN";
-        row.counterAxisAlignItems = "MIN";
-        row.layoutAlign = 'STRETCH';
-        row.itemSpacing = 32;
-        row.fills = [];
-        row.strokes = [];
-        row.name = "Details Row";
-        // Helper to create a column
-        const createColumn = (label, value) => {
-            const col = figma.createFrame();
-            col.layoutMode = "VERTICAL";
-            col.counterAxisSizingMode = "AUTO";
-            col.primaryAxisSizingMode = "AUTO";
-            col.itemSpacing = 4;
-            col.fills = [];
-            col.strokes = [];
-            col.name = `${label} Column`;
-            const labelText = figma.createText();
-            labelText.fontName = { family: "Figtree", style: "Medium" };
-            labelText.fontSize = TOKENS.fontSizeLabel;
-            labelText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-            labelText.opacity = 0.5;
-            labelText.textAutoResize = "WIDTH_AND_HEIGHT";
-            labelText.characters = label;
-            col.appendChild(labelText);
-            const valueText = figma.createText();
-            valueText.fontName = { family: "Figtree", style: "Regular" };
-            valueText.fontSize = TOKENS.fontSizeBodyMd;
-            valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-            valueText.textAutoResize = "WIDTH_AND_HEIGHT";
-            valueText.characters = value;
-            col.appendChild(valueText);
-            return col;
-        };
-        // Type column
-        if (experimentType) {
-            row.appendChild(createColumn("Type", getExperimentTypeLabel(experimentType)));
-        }
-        // Owner column
-        if (owner) {
-            row.appendChild(createColumn("Owner", owner));
-        }
-        // Dates column
-        if (startDate || endDate) {
-            const formatDate = (dateStr) => {
-                const date = new Date(dateStr);
-                if (isNaN(date.getTime()))
-                    return dateStr;
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            };
-            let timelineStr = '';
-            if (startDate && endDate) {
-                const start = new Date(startDate);
-                const end = new Date(endDate);
-                const diffMs = end.getTime() - start.getTime();
-                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                const weeks = Math.floor(diffDays / 7);
-                const days = diffDays % 7;
-                const durationStr = weeks > 0 ? (days > 0 ? `${weeks}w ${days}d` : `${weeks}w`) : `${days}d`;
-                timelineStr = `${formatDate(startDate)} → ${formatDate(endDate)} (${durationStr})`;
-            }
-            else if (startDate) {
-                timelineStr = `Started ${formatDate(startDate)}`;
-            }
-            else if (endDate) {
-                timelineStr = `Ends ${formatDate(endDate)}`;
-            }
-            row.appendChild(createColumn("Dates", timelineStr));
-        }
-        return row;
-    });
-}
-// Target row: Audience + Sample Size
-function createTargetRow(audience, sampleSize) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const row = figma.createFrame();
-        row.layoutMode = "HORIZONTAL";
-        row.counterAxisSizingMode = "AUTO";
-        row.primaryAxisSizingMode = "AUTO";
-        row.primaryAxisAlignItems = "MIN";
-        row.counterAxisAlignItems = "MIN";
-        row.layoutAlign = 'STRETCH';
-        row.itemSpacing = 32;
-        row.fills = [];
-        row.strokes = [];
-        row.name = "Target Row";
-        // Helper to create a column
-        const createColumn = (label, value) => {
-            const col = figma.createFrame();
-            col.layoutMode = "VERTICAL";
-            col.counterAxisSizingMode = "AUTO";
-            col.primaryAxisSizingMode = "AUTO";
-            col.itemSpacing = 4;
-            col.fills = [];
-            col.strokes = [];
-            col.name = `${label} Column`;
-            const labelText = figma.createText();
-            labelText.fontName = { family: "Figtree", style: "Medium" };
-            labelText.fontSize = TOKENS.fontSizeLabel;
-            labelText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-            labelText.opacity = 0.5;
-            labelText.textAutoResize = "WIDTH_AND_HEIGHT";
-            labelText.characters = label;
-            col.appendChild(labelText);
-            const valueText = figma.createText();
-            valueText.fontName = { family: "Figtree", style: "Regular" };
-            valueText.fontSize = TOKENS.fontSizeBodyMd;
-            valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-            valueText.textAutoResize = "WIDTH_AND_HEIGHT";
-            valueText.characters = value;
-            col.appendChild(valueText);
-            return col;
-        };
-        // Audience column
-        if (audience) {
-            row.appendChild(createColumn("Audience", audience));
-        }
-        // Sample Size column
-        if (sampleSize !== undefined && sampleSize > 0) {
-            row.appendChild(createColumn("Sample size", sampleSize.toLocaleString()));
-        }
-        return row;
-    });
-}
-// Outcome row: Status + Rolled out variant (only shown when rolled out)
-function createOutcomeRow(statusConfig, variantName, variantColor) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const row = figma.createFrame();
-        row.layoutMode = "HORIZONTAL";
-        row.counterAxisSizingMode = "AUTO";
-        row.primaryAxisSizingMode = "AUTO";
-        row.primaryAxisAlignItems = "MIN";
-        row.counterAxisAlignItems = "MIN";
-        row.layoutAlign = 'STRETCH';
-        row.itemSpacing = 32;
-        row.fills = [];
-        row.strokes = [];
-        row.name = "Outcome Row";
-        // Status column (left)
-        const statusCol = figma.createFrame();
-        statusCol.layoutMode = "VERTICAL";
-        statusCol.counterAxisSizingMode = "AUTO";
-        statusCol.primaryAxisSizingMode = "AUTO";
-        statusCol.itemSpacing = 4;
-        statusCol.fills = [];
-        statusCol.strokes = [];
-        statusCol.name = "Status Column";
-        const statusLabel = figma.createText();
-        statusLabel.fontName = { family: "Figtree", style: "Medium" };
-        statusLabel.fontSize = TOKENS.fontSizeLabel;
-        statusLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        statusLabel.opacity = 0.5;
-        statusLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-        statusLabel.characters = "Status";
-        statusCol.appendChild(statusLabel);
-        const statusValue = figma.createText();
-        statusValue.fontName = { family: "Figtree", style: "Regular" };
-        statusValue.fontSize = TOKENS.fontSizeBodyMd;
-        statusValue.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        statusValue.textAutoResize = "WIDTH_AND_HEIGHT";
-        statusValue.characters = statusConfig.label;
-        statusCol.appendChild(statusValue);
-        row.appendChild(statusCol);
-        // Rolled out column (right)
-        const rolledOutCol = figma.createFrame();
-        rolledOutCol.layoutMode = "VERTICAL";
-        rolledOutCol.counterAxisSizingMode = "AUTO";
-        rolledOutCol.primaryAxisSizingMode = "AUTO";
-        rolledOutCol.itemSpacing = 4;
-        rolledOutCol.fills = [];
-        rolledOutCol.strokes = [];
-        rolledOutCol.name = "Rolled Out Column";
-        const rolledOutLabel = figma.createText();
-        rolledOutLabel.fontName = { family: "Figtree", style: "Medium" };
-        rolledOutLabel.fontSize = TOKENS.fontSizeLabel;
-        rolledOutLabel.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        rolledOutLabel.opacity = 0.5;
-        rolledOutLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-        rolledOutLabel.characters = "Variant rolled out";
-        rolledOutCol.appendChild(rolledOutLabel);
-        // Value row with radio button and variant name
+function createSummaryDetailFieldRow(field, contentWidth) {
+    const row = figma.createFrame();
+    row.layoutMode = "VERTICAL";
+    row.counterAxisSizingMode = "FIXED";
+    row.primaryAxisSizingMode = "AUTO";
+    row.layoutAlign = "STRETCH";
+    row.counterAxisAlignItems = "MIN";
+    row.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
+    row.fills = [];
+    row.strokes = [];
+    row.name = `Row: ${field.label}`;
+    if (contentWidth > 0) {
+        row.minWidth = contentWidth;
+    }
+    const labelNode = figma.createText();
+    styleOverviewText(labelNode, "fieldLabel");
+    labelNode.textAutoResize = "WIDTH_AND_HEIGHT";
+    labelNode.characters = field.label;
+    row.appendChild(labelNode);
+    const valueNode = createSummaryDetailValueNode(field, contentWidth);
+    if (field.valueDot) {
         const valueRow = figma.createFrame();
         valueRow.layoutMode = "HORIZONTAL";
         valueRow.counterAxisSizingMode = "AUTO";
         valueRow.primaryAxisSizingMode = "AUTO";
-        valueRow.itemSpacing = 6;
-        valueRow.primaryAxisAlignItems = "MIN";
         valueRow.counterAxisAlignItems = "CENTER";
+        valueRow.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
         valueRow.fills = [];
-        valueRow.strokes = [];
         valueRow.name = "Value Row";
-        // Radio button indicator (uses variant color or default purple)
-        const radioButton = figma.createEllipse();
-        radioButton.resize(10, 10);
-        const color = variantColor || TOKENS.electricViolet600;
-        radioButton.fills = [{ type: "SOLID", color: hexToRgb(color) }];
-        radioButton.strokes = [];
-        radioButton.name = "Radio Button";
-        valueRow.appendChild(radioButton);
-        // Variant name
-        const valueText = figma.createText();
-        valueText.fontName = { family: "Figtree", style: "Medium" };
-        valueText.fontSize = TOKENS.fontSizeBodyMd;
-        valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        valueText.textAutoResize = "WIDTH_AND_HEIGHT";
-        valueText.characters = variantName;
-        valueRow.appendChild(valueText);
-        rolledOutCol.appendChild(valueRow);
-        row.appendChild(rolledOutCol);
-        return row;
-    });
+        const dot = figma.createEllipse();
+        dot.resize(8, 8);
+        dot.fills = [{ type: "SOLID", color: hexToRgb(field.valueDot) }];
+        valueRow.appendChild(dot);
+        valueRow.appendChild(valueNode);
+        row.appendChild(valueRow);
+    }
+    else {
+        row.appendChild(valueNode);
+    }
+    return row;
 }
-function createHypothesisSection(hypothesis) {
-    return __awaiter(this, void 0, void 0, function* () {
+function createSummaryDetailPairRow(fields, contentWidth) {
+    const pairRow = figma.createFrame();
+    pairRow.layoutMode = "HORIZONTAL";
+    pairRow.counterAxisSizingMode = "AUTO";
+    pairRow.primaryAxisSizingMode = "FIXED";
+    pairRow.layoutAlign = "STRETCH";
+    pairRow.counterAxisAlignItems = "MIN";
+    pairRow.itemSpacing = TOKENS.space16;
+    pairRow.fills = [];
+    pairRow.name = `Row: ${fields.map(field => field.label).join(" + ")}`;
+    const columnWidth = contentWidth > 0
+        ? Math.max(0, (contentWidth - TOKENS.space16) / 2)
+        : 0;
+    for (const field of fields) {
+        const cell = createSummaryDetailFieldRow(field, columnWidth);
+        cell.layoutGrow = 1;
+        pairRow.appendChild(cell);
+    }
+    return pairRow;
+}
+/**
+ * Create experiment details in grouped, hierarchy-driven rows inside the card panel.
+ */
+function appendDetailsSection(parent_1, title_1, groups_1) {
+    return __awaiter(this, arguments, void 0, function* (parent, title, groups, fallbackWidth = SUMMARY_CONTENT_MIN_WIDTH) {
         yield loadFonts();
         const section = figma.createFrame();
         section.layoutMode = "VERTICAL";
-        section.counterAxisSizingMode = "AUTO";
+        section.counterAxisSizingMode = "FIXED";
         section.primaryAxisSizingMode = "AUTO";
-        section.primaryAxisAlignItems = "MIN";
-        section.counterAxisAlignItems = "MIN";
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 8;
-        section.paddingTop = section.paddingBottom = 12;
-        section.paddingLeft = section.paddingRight = 12;
-        section.cornerRadius = 8;
-        section.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.fillsBackground) }];
-        section.strokes = [];
-        section.name = "Hypothesis Section";
-        // Label (styled same as Resources)
-        const labelText = figma.createText();
-        labelText.fontName = { family: "Figtree", style: "Medium" };
-        labelText.fontSize = TOKENS.fontSizeLabel;
-        labelText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        labelText.opacity = 0.5;
-        labelText.textAutoResize = "WIDTH_AND_HEIGHT";
-        labelText.characters = "Hypothesis";
-        section.appendChild(labelText);
-        // Hypothesis text
-        const hypothesisText = figma.createText();
-        hypothesisText.fontName = { family: "Figtree", style: "Regular" };
-        hypothesisText.fontSize = TOKENS.fontSizeBodyMd;
-        hypothesisText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        hypothesisText.textAutoResize = "WIDTH_AND_HEIGHT";
-        hypothesisText.characters = hypothesis;
-        section.appendChild(hypothesisText);
-        return section;
-    });
-}
-function createTimelineSection(startDateStr, endDateStr) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield loadFonts();
-        const section = figma.createFrame();
-        section.layoutMode = "VERTICAL";
-        section.counterAxisSizingMode = "AUTO";
-        section.primaryAxisSizingMode = "AUTO";
-        section.primaryAxisAlignItems = "MIN";
-        section.counterAxisAlignItems = "MIN";
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 4;
+        section.layoutAlign = "STRETCH";
+        section.itemSpacing = SECTION_PANEL_LAYOUT.sectionGap;
         section.fills = [];
-        section.strokes = [];
-        section.name = "Dates Section";
-        // Helper to format date - handles YYYY-MM-DD format from date picker
-        const formatDate = (dateStr) => {
-            if (!dateStr)
-                return "";
-            const parts = dateStr.split('-');
-            if (parts.length !== 3)
-                return dateStr;
-            const year = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1;
-            const day = parseInt(parts[2], 10);
-            const date = new Date(year, month, day);
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-        };
-        // Calculate duration in days
-        const calculateDuration = (start, end) => {
-            if (!start || !end)
-                return "";
-            const startParts = start.split('-');
-            const endParts = end.split('-');
-            const startDate = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2]));
-            const endDate = new Date(parseInt(endParts[0]), parseInt(endParts[1]) - 1, parseInt(endParts[2]));
-            const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            if (diffDays === 0)
-                return "Same day";
-            if (diffDays === 1)
-                return "1 day";
-            if (diffDays < 7)
-                return `${diffDays} days`;
-            const weeks = Math.floor(diffDays / 7);
-            const remainingDays = diffDays % 7;
-            if (remainingDays === 0)
-                return weeks === 1 ? "1 week" : `${weeks} weeks`;
-            return `${weeks}w ${remainingDays}d`;
-        };
-        // Label (styled same as Resources)
-        const labelText = figma.createText();
-        labelText.fontName = { family: "Figtree", style: "Medium" };
-        labelText.fontSize = TOKENS.fontSizeLabel;
-        labelText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        labelText.opacity = 0.5;
-        labelText.textAutoResize = "WIDTH_AND_HEIGHT";
-        labelText.characters = "Dates";
-        section.appendChild(labelText);
-        // Build dates text: "Jan 23, 2026 → Jan 31, 2026 (8 days)"
-        let timelineStr = "";
-        if (startDateStr) {
-            timelineStr += formatDate(startDateStr);
-        }
-        if (startDateStr && endDateStr) {
-            timelineStr += " → ";
-        }
-        if (endDateStr) {
-            timelineStr += formatDate(endDateStr);
-        }
-        if (startDateStr && endDateStr) {
-            const duration = calculateDuration(startDateStr, endDateStr);
-            if (duration) {
-                timelineStr += ` (${duration})`;
+        section.name = `Section: ${title}`;
+        const sectionWidth = parent.maxWidth || parent.minWidth || parent.width || fallbackWidth;
+        section.minWidth = sectionWidth;
+        section.counterAxisSizingMode = "FIXED";
+        section.appendChild(createOverviewSectionTitle(title));
+        const detailsContainer = figma.createFrame();
+        detailsContainer.layoutMode = "VERTICAL";
+        detailsContainer.counterAxisSizingMode = "AUTO";
+        detailsContainer.primaryAxisSizingMode = "AUTO";
+        detailsContainer.layoutAlign = "STRETCH";
+        detailsContainer.itemSpacing = SECTION_PANEL_LAYOUT.sectionGap;
+        detailsContainer.paddingLeft = detailsContainer.paddingRight = SECTION_PANEL_LAYOUT.panelPadding;
+        detailsContainer.paddingTop = detailsContainer.paddingBottom = SECTION_PANEL_LAYOUT.panelPadding;
+        detailsContainer.cornerRadius = SECTION_PANEL_LAYOUT.panelCornerRadius;
+        applySectionPanel(detailsContainer);
+        detailsContainer.name = "Details Container";
+        section.appendChild(detailsContainer);
+        const contentWidth = Math.max(0, sectionWidth - (detailsContainer.paddingLeft || 0) - (detailsContainer.paddingRight || 0));
+        for (const group of groups) {
+            const groupFrame = figma.createFrame();
+            groupFrame.layoutMode = "VERTICAL";
+            groupFrame.counterAxisSizingMode = "AUTO";
+            groupFrame.primaryAxisSizingMode = "AUTO";
+            groupFrame.layoutAlign = "STRETCH";
+            groupFrame.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+            groupFrame.fills = [];
+            groupFrame.name = `Details Group: ${group.name}`;
+            const fields = group.fields;
+            if (group.layout === "setup") {
+                const datesField = fields.find(field => field.label === "Dates");
+                const sampleField = fields.find(field => field.label === "Sample size");
+                const scalarFields = [datesField, sampleField].filter((field) => !!field);
+                if (scalarFields.length === 2) {
+                    groupFrame.appendChild(createSummaryDetailPairRow(scalarFields, contentWidth));
+                }
+                else if (scalarFields.length === 1) {
+                    groupFrame.appendChild(createSummaryDetailFieldRow(scalarFields[0], contentWidth));
+                }
+                for (const field of fields) {
+                    if (field.label === "Audience" || field.label === "Owner") {
+                        groupFrame.appendChild(createSummaryDetailFieldRow(field, contentWidth));
+                    }
+                }
             }
+            else if (group.pairFields) {
+                for (let index = 0; index < fields.length; index += 2) {
+                    const pair = fields.slice(index, index + 2);
+                    if (pair.length === 2) {
+                        groupFrame.appendChild(createSummaryDetailPairRow(pair, contentWidth));
+                    }
+                    else {
+                        groupFrame.appendChild(createSummaryDetailFieldRow(pair[0], contentWidth));
+                    }
+                }
+            }
+            else {
+                for (const field of fields) {
+                    groupFrame.appendChild(createSummaryDetailFieldRow(field, contentWidth));
+                }
+            }
+            detailsContainer.appendChild(groupFrame);
         }
-        const valueText = figma.createText();
-        valueText.fontName = { family: "Figtree", style: "Regular" };
-        valueText.fontSize = TOKENS.fontSizeBodyMd;
-        valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        valueText.textAutoResize = "WIDTH_AND_HEIGHT";
-        valueText.characters = timelineStr;
-        section.appendChild(valueText);
-        return section;
+        parent.appendChild(section);
     });
 }
-// Sample Size section removed - now shown in Outcome Card header
-function createSection(label_1, value_1) {
-    return __awaiter(this, arguments, void 0, function* (label, value, _muted = false) {
+// SECTION 1: Header with date, status badge, title, and description
+function createStoryHeaderWithBadges(experimentName_1, description_1, statusConfig_1) {
+    return __awaiter(this, arguments, void 0, function* (experimentName, description, statusConfig, contentWidth = 0, options, runDates = "", runSampleSize = "", hypothesis = "") {
+        var _a;
         yield loadFonts();
         const section = figma.createFrame();
         section.layoutMode = "VERTICAL";
-        section.counterAxisSizingMode = "AUTO";
+        section.counterAxisSizingMode = contentWidth > 0 ? "FIXED" : "AUTO";
         section.primaryAxisSizingMode = "AUTO";
         section.primaryAxisAlignItems = "MIN";
         section.counterAxisAlignItems = "MIN";
-        section.layoutAlign = 'STRETCH';
-        section.itemSpacing = 8;
+        section.layoutAlign = "STRETCH";
+        section.itemSpacing = SECTION_PANEL_LAYOUT.sectionGap;
         section.fills = [];
         section.strokes = [];
-        section.name = `${label} Section`;
-        // Skip label text for Description section
-        if (label !== "Description") {
-            const labelText = figma.createText();
-            labelText.fontName = { family: "Figtree", style: getLoadedFigtreeSemibold() };
-            labelText.fontSize = 14;
-            labelText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textSecondary) }];
-            labelText.textAutoResize = "WIDTH_AND_HEIGHT";
-            labelText.characters = label;
-            section.appendChild(labelText);
+        section.name = "Header Section";
+        if (contentWidth > 0) {
+            section.minWidth = contentWidth;
         }
-        const valueText = figma.createText();
-        valueText.fontName = { family: "Figtree", style: "Regular" };
-        valueText.fontSize = 14;
-        valueText.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
-        valueText.textAutoResize = label === "Description" ? "HEIGHT" : "WIDTH_AND_HEIGHT";
-        valueText.characters = value;
-        section.appendChild(valueText);
-        // If Description, make valueText fill section width
-        if (label === "Description") {
-            valueText.layoutAlign = "STRETCH";
-            // Optionally, still ensure width matches section
-            valueText.resizeWithoutConstraints(section.width, valueText.height);
+        const metaRow = figma.createFrame();
+        metaRow.layoutMode = "HORIZONTAL";
+        metaRow.counterAxisSizingMode = "AUTO";
+        metaRow.primaryAxisSizingMode = "AUTO";
+        metaRow.counterAxisAlignItems = "CENTER";
+        metaRow.itemSpacing = TOKENS.space8;
+        metaRow.fills = [];
+        metaRow.name = "Header Meta Row";
+        const statusBadge = createBadge(statusConfig.label, "chip", statusConfig.bgColor, statusConfig.textColor, undefined, statusConfig.borderColor);
+        metaRow.appendChild(statusBadge);
+        section.appendChild(metaRow);
+        const titleText = figma.createText();
+        styleOverviewText(titleText, "cardTitle");
+        titleText.textAutoResize = "WIDTH_AND_HEIGHT";
+        titleText.characters = experimentName && experimentName.length > 0 ? experimentName : "Untitled Experiment";
+        section.appendChild(titleText);
+        const contextParts = [];
+        contextParts.push(runDates.trim() || "No run dates set");
+        if ((_a = options === null || options === void 0 ? void 0 : options.experimentType) === null || _a === void 0 ? void 0 : _a.trim()) {
+            contextParts.push(getExperimentTypeLabel(options.experimentType.trim()));
+        }
+        if (runSampleSize.trim()) {
+            contextParts.push(`${runSampleSize} users`);
+        }
+        const contextText = figma.createText();
+        styleOverviewText(contextText, "caption");
+        contextText.textAutoResize = "WIDTH_AND_HEIGHT";
+        contextText.characters = contextParts.join(" · ");
+        contextText.name = "Header Context";
+        section.appendChild(contextText);
+        const descriptionText = description.trim();
+        const hypothesisText = hypothesis.trim();
+        const purposeWidth = contentWidth > 0 ? contentWidth : SUMMARY_CONTENT_MIN_WIDTH;
+        if (descriptionText || hypothesisText) {
+            const purposeBlock = figma.createFrame();
+            purposeBlock.layoutMode = "VERTICAL";
+            purposeBlock.counterAxisSizingMode = "FIXED";
+            purposeBlock.primaryAxisSizingMode = "AUTO";
+            purposeBlock.layoutAlign = "STRETCH";
+            purposeBlock.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+            purposeBlock.fills = [];
+            purposeBlock.name = "Header Purpose";
+            if (descriptionText) {
+                purposeBlock.appendChild(createSummaryDetailFieldRow({ label: "What we're testing", value: descriptionText, wrap: true }, purposeWidth));
+            }
+            if (hypothesisText) {
+                purposeBlock.appendChild(createSummaryDetailFieldRow({ label: "Hypothesis", value: hypothesisText, wrap: true }, purposeWidth));
+            }
+            section.appendChild(purposeBlock);
         }
         return section;
     });
+}
+function normalizeCanvasLinkUrl(url) {
+    const trimmed = url.trim();
+    if (!trimmed)
+        return "";
+    if (/^https?:\/\//i.test(trimmed))
+        return trimmed;
+    return `https://${trimmed}`;
+}
+function applyLinkHyperlink(text, start, end, url) {
+    const normalized = normalizeCanvasLinkUrl(url);
+    if (!normalized || end <= start)
+        return;
+    try {
+        text.setRangeHyperlink(start, end, { type: "URL", value: normalized });
+    }
+    catch (e) {
+        console.warn("Could not set hyperlink on link chip:", e);
+    }
+}
+function tryCreateLinkChip(label, url) {
+    if (!(url === null || url === void 0 ? void 0 : url.trim()))
+        return null;
+    try {
+        return createLinkChip(label, url);
+    }
+    catch (e) {
+        console.warn(`Failed to create link chip for ${label}:`, e);
+        return null;
+    }
 }
 function createLinkChip(label, url) {
     const chip = figma.createFrame();
@@ -1390,13 +908,10 @@ function createLinkChip(label, url) {
     chip.layoutAlign = 'STRETCH';
     chip.minWidth = 137; // 21rem
     chip.maxWidth = 137; // 21rem
-    chip.itemSpacing = 8;
-    chip.paddingLeft = chip.paddingRight = 8;
-    chip.paddingTop = chip.paddingBottom = 8;
-    chip.cornerRadius = 4;
-    chip.fills = [{ type: "SOLID", color: getCanvasTokens().fillsSurface }];
-    chip.strokes = [{ type: "SOLID", color: getCanvasTokens().border }];
-    chip.strokeWeight = 1;
+    chip.itemSpacing = TOKENS.space8;
+    chip.paddingLeft = chip.paddingRight = TOKENS.space8;
+    chip.paddingTop = chip.paddingBottom = TOKENS.space8;
+    applyPluginChip(chip);
     chip.name = "Link Chip";
     // Brand icon (vector) - larger size for this layout
     const icon = createBrandIconVector(label, 16);
@@ -1428,19 +943,16 @@ function createLinkChip(label, url) {
         'ClickUp': 'ClickUp task',
     };
     const title = figma.createText();
-    title.fontName = { family: "Figtree", style: "Regular" };
-    title.fontSize = TOKENS.fontSizeBodySm;
+    styleOverviewText(title, "fieldValue");
     title.lineHeight = { unit: "PIXELS", value: 12 };
-    title.fills = [{ type: "SOLID", color: hexToRgb(TOKENS.textPrimary) }];
     title.textAutoResize = "WIDTH_AND_HEIGHT";
     title.name = "Link Title";
     const titleText = linkLabels[label] || `${label} link`;
     title.characters = titleText;
-    // Add hyperlink to the title text
-    if (url) {
-        title.setRangeHyperlink(0, titleText.length, { type: 'URL', value: url });
-    }
     textContainer.appendChild(title);
     chip.appendChild(textContainer);
+    if (url === null || url === void 0 ? void 0 : url.trim()) {
+        applyLinkHyperlink(title, 0, titleText.length, url);
+    }
     return chip;
 }
