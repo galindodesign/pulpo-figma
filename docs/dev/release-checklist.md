@@ -5,6 +5,7 @@
 
 ## Checklist
 - Update version (package.json and UI footer)
+- Run `npm run lint`
 - Run build
 - Smoke test in Figma
 - Verify manifest settings

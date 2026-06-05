@@ -3,7 +3,7 @@
 // ===== Imports =====
 import { createExperimentInfoCard } from './experiment-info-card';
 import { TOKENS } from './design-tokens';
-import { initCanvasTheme, getCanvasTokens, createCardShadowEffect } from './canvas-theme';
+import { initCanvasTheme, getCanvasTokens, applyPluginCard, applyPluginMetaPanel } from './canvas-theme';
 import { hexToRgb } from './layout-utils';
 import { styleOverviewText } from './experiment-card-shared';
 import {
@@ -2618,12 +2618,7 @@ if (figma.editorType === 'figma') {
     card.primaryAxisSizingMode = 'AUTO';
     card.paddingLeft = card.paddingRight = TOKENS.space16;
     card.paddingTop = card.paddingBottom = TOKENS.space16;
-    card.cornerRadius = TOKENS.radiusLG;
-    const canvas = getCanvasTokens();
-    card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
-    card.strokes = [{ type: 'SOLID', color: canvas.border }];
-    card.strokeWeight = 1;
-    card.effects = [createCardShadowEffect()];
+    applyPluginCard(card);
     card.name = title ? `Node: ${title}` : 'Node';
     card.itemSpacing = TOKENS.space8;
 
@@ -2650,7 +2645,7 @@ if (figma.editorType === 'figma') {
     // Subtitle (if provided)
     if (subtitle && subtitle.length > 0) {
       const subtitleText = figma.createText();
-      styleOverviewText(subtitleText, 'bodyMuted');
+      styleOverviewText(subtitleText, 'caption');
       subtitleText.textAutoResize = 'WIDTH_AND_HEIGHT';
       subtitleText.characters = subtitle;
       subtitleText.name = 'Subtitle';
@@ -2665,10 +2660,7 @@ if (figma.editorType === 'figma') {
       noteContainer.primaryAxisSizingMode = 'AUTO';
       noteContainer.paddingLeft = noteContainer.paddingRight = TOKENS.space12;
       noteContainer.paddingTop = noteContainer.paddingBottom = TOKENS.space8;
-      noteContainer.cornerRadius = TOKENS.radiusSM;
-      noteContainer.fills = [{ type: 'SOLID', color: canvas.sectionTint }];
-      noteContainer.strokes = [{ type: 'SOLID', color: canvas.border }];
-      noteContainer.strokeWeight = 1;
+      applyPluginMetaPanel(noteContainer);
       noteContainer.name = 'Note Container';
       // Set a reasonable fixed width for note container (will be constrained by card)
       noteContainer.resize(200, noteContainer.height);
@@ -3314,9 +3306,6 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
         for (const [vIdx, variantCard] of variantCards.entries()) {
           const variant = event.variants?.[vIdx];
           if (!variant) continue;
-          const safeVariantName = typeof variant.name === 'string' && variant.name.trim().length > 0
-            ? variant.name
-            : `Variant ${vIdx + 1}`;
           
           // Position variant in horizontal row below event, then mount on canvas
           variantCard.x = variantX;

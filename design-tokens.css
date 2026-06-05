@@ -468,6 +468,46 @@
   --variant-traffic-border: var(--color-malachite-200);
   --variant-traffic-radius: var(--radius-sm);
   --variant-traffic-color: var(--text-states-success);
+
+  /* === Canvas output (plugin-generated Figma cards; ui.html unaffected) === */
+  --canvas-border-default: var(--border-border);
+  --canvas-border-emphasis: var(--border-strong);
+  --canvas-border-on-dark: var(--border-dark);
+  --canvas-surface: var(--fills-surface);
+  --canvas-section-tint: var(--background-subtle);
+
+  /* Typography colors shared by plugin UI and canvas output */
+  --typography-body-color: var(--text-primary-default);
+  --typography-muted-color: var(--text-secondary-default);
+  --typography-link-color: var(--text-link-default);
+
+  /* Plugin chrome parity (canvas applyPlugin* helpers mirror ui.html surfaces) */
+  --plugin-card-surface: var(--canvas-surface);
+  --plugin-card-border: var(--canvas-border-default);
+  --plugin-card-radius: var(--variant-card-radius);
+  --plugin-section-border: var(--section-border);
+  --plugin-section-radius: var(--radius-sm);
+  --plugin-section-padding: var(--section-padding);
+  --plugin-input-bg: var(--input-bg);
+  --plugin-input-border-color: var(--border-input-border);
+  --plugin-input-radius: var(--input-radius);
+  --plugin-chip-bg: var(--canvas-section-tint);
+  --plugin-chip-border: var(--canvas-border-default);
+  --plugin-subtle-fill: var(--fills-background);
+
+  /* Plugin badges — shared by ui.html .variant-passive-chip and canvas createBadge */
+  --badge-height: 20px;
+  --badge-padding-x: 6px;
+  --badge-icon-size: 12px;
+  --badge-rolled-out-icon-size: 10px;
+  --badge-rolled-out-bg: #fffcc1;
+  --badge-rolled-out-border: #e8db9a;
+  --badge-rolled-out-text: #484122;
+  --badge-variants-bg: #eeeaff;
+  --badge-variants-border: #ddd6f5;
+  --badge-variants-text: #5e44d1;
+  --badge-neutral-bg: var(--color-azure-50);
+  --badge-neutral-border: var(--color-azure-100);
 }
 
 /* Utility classes (import in your main CSS) */

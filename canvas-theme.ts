@@ -1,5 +1,5 @@
 // canvas-theme.ts
-// Resolves canvas-adaptive colors from the current Figma page background.
+// Canvas-adaptive tokens + shared chrome API (mirrors design-tokens.css plugin surfaces).
 
 import { TOKENS } from './design-tokens';
 import { hexToRgb } from './layout-utils';
@@ -25,6 +25,17 @@ export interface CanvasTokenSet {
   cardShadow: CardShadowConfig;
 }
 
+export interface PluginCardOptions {
+  /** 2px brand border for rolled-out variants. */
+  emphasis?: 'brand';
+  borderWeight?: number;
+  borderColor?: RGB;
+  /** Default true — matches --variant-card-shadow on canvas cards. */
+  shadow?: boolean;
+  /** Default true — sets --plugin-card-radius when frame has no radius yet. */
+  radius?: boolean;
+}
+
 /** Pages darker than this use on-dark connector/border tokens (~#444444 and below). */
 const LUMINANCE_THRESHOLD = 0.15;
 
@@ -46,9 +57,9 @@ function buildTokenSet(theme: CanvasTheme): CanvasTokenSet {
   if (theme === 'on-dark') {
     return {
       theme,
-      fillsSurface: hexToRgb(TOKENS.fillsSurface),
-      border: hexToRgb(TOKENS.paleSky400),
-      sectionTint: hexToRgb(TOKENS.azure50),
+      fillsSurface: hexToRgb(TOKENS.canvasSurface),
+      border: hexToRgb(TOKENS.canvasBorderOnDark),
+      sectionTint: hexToRgb(TOKENS.canvasSectionTint),
       connectorPrimary: hexToRgb(TOKENS.paleSky300),
       connectorBrand: hexToRgb(TOKENS.electricViolet400),
       connectorWinner: hexToRgb(TOKENS.malachite400),
@@ -59,9 +70,9 @@ function buildTokenSet(theme: CanvasTheme): CanvasTokenSet {
 
   return {
     theme,
-    fillsSurface: hexToRgb(TOKENS.fillsSurface),
-    border: hexToRgb(TOKENS.borderStrong),
-    sectionTint: hexToRgb(TOKENS.azure50),
+    fillsSurface: hexToRgb(TOKENS.canvasSurface),
+    border: hexToRgb(TOKENS.canvasBorderDefault),
+    sectionTint: hexToRgb(TOKENS.canvasSectionTint),
     connectorPrimary: hexToRgb(TOKENS.azure600),
     connectorBrand: hexToRgb(TOKENS.electricViolet600),
     connectorWinner: hexToRgb(TOKENS.malachite600),
@@ -136,29 +147,112 @@ export function createCardShadowEffect(): DropShadowEffect {
   };
 }
 
-/** Outer experiment card shell: white surface, border, shadow. */
-export function applyCardShell(frame: FrameNode): void {
+// ---------------------------------------------------------------------------
+// Shared chrome API — mirrors ui.html / design-tokens.css plugin surfaces
+// ---------------------------------------------------------------------------
+
+/**
+ * Outer card shell — mirrors .Card / --variant-card-* / --plugin-card-*.
+ * Sets surface, border, optional shadow, and default card radius.
+ */
+export function applyPluginCard(frame: FrameNode, options: PluginCardOptions = {}): void {
   const canvas = activeCanvasTokens;
-  frame.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
-  frame.strokes = [{ type: 'SOLID', color: canvas.border }];
-  frame.strokeWeight = 1;
-  frame.effects = [createCardShadowEffect()];
+  const { emphasis, borderWeight, borderColor, shadow = true, radius = true } = options;
+
+  frame.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.pluginCardSurface) }];
+
+  if (emphasis === 'brand') {
+    frame.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.electricViolet500) }];
+    frame.strokeWeight = borderWeight ?? 2;
+  } else {
+    frame.strokes = [{ type: 'SOLID', color: borderColor ?? canvas.border }];
+    frame.strokeWeight = borderWeight ?? 1;
+  }
+
+  if (radius) {
+    frame.cornerRadius = TOKENS.pluginCardRadius;
+  }
+
+  frame.effects = shadow ? [createCardShadowEffect()] : [];
 }
 
-/** Inset panel (summary, hypothesis, details): tinted fill + shared border. */
-export function applySectionPanel(frame: FrameNode): void {
+/**
+ * Inset section panel — mirrors --section-border / --plugin-section-*.
+ * Border-only interior; call applyPluginSectionLayout for padding.
+ */
+export function applyPluginSection(frame: FrameNode): void {
+  frame.fills = [];
+  frame.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.pluginSectionBorder) }];
+  frame.strokeWeight = 1;
+  frame.cornerRadius = TOKENS.pluginSectionRadius;
+}
+
+/** Section panel padding from --plugin-section-padding. */
+export function applyPluginSectionLayout(frame: FrameNode): void {
+  const pad = TOKENS.pluginSectionPadding;
+  frame.paddingLeft = frame.paddingRight = pad;
+  frame.paddingTop = frame.paddingBottom = pad;
+}
+
+/**
+ * Form input surface — mirrors --input-bg / --input-border / --input-radius.
+ */
+export function applyPluginInput(frame: FrameNode): void {
+  frame.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.pluginInputBg) }];
+  frame.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.pluginInputBorderColor) }];
+  frame.strokeWeight = 1;
+  frame.cornerRadius = TOKENS.pluginInputRadius;
+}
+
+/**
+ * Tinted chip (link rows, tags) — mirrors --plugin-chip-*.
+ */
+export function applyPluginChip(frame: FrameNode): void {
+  frame.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.pluginChipBg) }];
+  frame.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.pluginChipBorder) }];
+  frame.strokeWeight = 1;
+  frame.cornerRadius = TOKENS.radiusXS;
+}
+
+/**
+ * Subtle filled chip (metric badges) — mirrors --plugin-subtle-fill + section border.
+ */
+export function applyPluginSubtleChip(frame: FrameNode): void {
+  const canvas = activeCanvasTokens;
+  frame.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.pluginSubtleFill) }];
+  frame.strokes = [{ type: 'SOLID', color: canvas.border }];
+  frame.strokeWeight = 1;
+  frame.cornerRadius = TOKENS.radiusSM;
+}
+
+/**
+ * Note / meta callout block — tinted fill + border (--meta-bg equivalent).
+ */
+export function applyPluginMetaPanel(frame: FrameNode): void {
   const canvas = activeCanvasTokens;
   frame.fills = [{ type: 'SOLID', color: canvas.sectionTint }];
   frame.strokes = [{ type: 'SOLID', color: canvas.border }];
   frame.strokeWeight = 1;
+  frame.cornerRadius = TOKENS.radiusSM;
+}
+
+// ---------------------------------------------------------------------------
+// Legacy aliases (card builders — prefer applyPlugin* for new code)
+// ---------------------------------------------------------------------------
+
+/** @deprecated Use applyPluginCard */
+export function applyCardShell(frame: FrameNode): void {
+  applyPluginCard(frame, { radius: false, shadow: true });
+}
+
+/** @deprecated Use applyPluginSection */
+export function applySectionPanel(frame: FrameNode): void {
+  applyPluginSection(frame);
 }
 
 /** Metrics table outer frame: border only, transparent interior. */
 export function applyTableShell(frame: FrameNode): void {
-  const canvas = activeCanvasTokens;
-  frame.fills = [];
-  frame.strokes = [{ type: 'SOLID', color: canvas.border }];
-  frame.strokeWeight = 1;
+  applyPluginSection(frame);
 }
 
 /** Table header row: subtle tint, bottom divider. */

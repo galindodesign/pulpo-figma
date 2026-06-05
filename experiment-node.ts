@@ -2,9 +2,9 @@
 // Modularized node creation functions for Figma plugin
 
 import { TOKENS } from './design-tokens';
-import { getCanvasTokens, createCardShadowEffect } from './canvas-theme';
-import { styleOverviewText, SUMMARY_TYPOGRAPHY } from './experiment-card-shared';
-import { hexToRgb, createBadge } from './layout-utils';
+import { applyPluginCard, applyPluginSubtleChip, getCanvasTokens } from './canvas-theme';
+import { styleOverviewText, SUMMARY_TYPOGRAPHY, createRolledOutBadge } from './experiment-card-shared';
+import { hexToRgb } from './layout-utils';
 import type { MetricDefinition, Variant } from './types';
 
 const THUMBNAIL_WIDTH = 368;
@@ -96,17 +96,6 @@ export function isExperimentFlowCardNode(node: BaseNode): boolean {
   return false;
 }
 
-const ROLLED_OUT_BADGE_BG = '#fffbb5';
-const ROLLED_OUT_BADGE_TEXT = '#484122';
-const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4 22h16" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-
 /** Official Figma multi-color mark (paths align with plugin UI `brandIcons.figma`) */
 const FIGMA_BRAND_LOGO_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4z" fill="#0ACF83"/>
@@ -154,14 +143,6 @@ function createOpenInFigmaLinkRow(figmaLink: string): FrameNode {
   linkRow.appendChild(linkText);
 
   return linkRow;
-}
-
-function createRolledOutIcon(): FrameNode {
-  const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
-  icon.name = 'Rolled Out Icon';
-  icon.resize(10, 10);
-  icon.fills = [];
-  return icon;
 }
 
 /** True when the layer can be exported as a touchpoint / variant preview. */
@@ -446,17 +427,12 @@ export async function createEventCard(
   card.minWidth = 300; // 18.75rem
   card.maxWidth = 400; // 25rem
   // No fixed height: primaryAxisSizingMode AUTO hugs thumbnail + header + optional Figma row (like variant cards)
-  card.paddingLeft = 16;
-  card.paddingRight = 16;
-  card.paddingTop = 16; // 1rem
-  card.paddingBottom = 16; // 0.75rem
-  card.cornerRadius = 16; // 1rem
-  const canvas = getCanvasTokens();
-  card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
-  card.strokes = [{ type: 'SOLID', color: canvas.border }];
-  card.strokeWeight = 1;
-  card.effects = [createCardShadowEffect()];
-  card.itemSpacing = 8; // 1rem gap
+  card.paddingLeft = TOKENS.space16;
+  card.paddingRight = TOKENS.space16;
+  card.paddingTop = TOKENS.space16;
+  card.paddingBottom = TOKENS.space16;
+  applyPluginCard(card);
+  card.itemSpacing = TOKENS.space8;
   card.primaryAxisAlignItems = 'MIN';
   card.counterAxisAlignItems = 'MIN';
   card.name = 'Touchpoint';
@@ -500,7 +476,7 @@ export async function createEventCard(
   eventDetailsContainer.primaryAxisSizingMode = 'FIXED';
   eventDetailsContainer.primaryAxisAlignItems = 'MIN';
   eventDetailsContainer.counterAxisAlignItems = 'CENTER';
-  eventDetailsContainer.itemSpacing = 8;
+  eventDetailsContainer.itemSpacing = TOKENS.space8;
   eventDetailsContainer.fills = [];
   eventDetailsContainer.strokes = [];
   eventDetailsContainer.name = 'Touchpoint Details Container';
@@ -592,23 +568,12 @@ export async function createVariantCard(
   card.minWidth = 400; // 25rem
   card.maxWidth = 640; // 40rem
   // Height will hug content automatically with primaryAxisSizingMode = 'AUTO'
-  card.paddingLeft = 16;
-  card.paddingRight = 16;
-  card.paddingTop = 16; // 1rem
-  card.paddingBottom = 16; // 0.75rem
-  card.cornerRadius = 16; // 1rem
-  const canvas = getCanvasTokens();
-  card.fills = [{ type: 'SOLID', color: canvas.fillsSurface }];
-  // Use green border (2px) if this variant was rolled out - indicates success/shipped
-  if (options?.rolledout) {
-    card.strokes = [{ type: 'SOLID', color: hexToRgb(TOKENS.electricViolet500) }];
-    card.strokeWeight = 2;
-  } else {
-    card.strokes = [{ type: 'SOLID', color: canvas.border }];
-    card.strokeWeight = 1;
-  }
-  card.effects = [createCardShadowEffect()];
-  card.itemSpacing = 8; // 1rem gap
+  card.paddingLeft = TOKENS.space16;
+  card.paddingRight = TOKENS.space16;
+  card.paddingTop = TOKENS.space16;
+  card.paddingBottom = TOKENS.space16;
+  applyPluginCard(card, options?.rolledout ? { emphasis: 'brand' } : {});
+  card.itemSpacing = TOKENS.space8;
   card.primaryAxisAlignItems = 'MIN';
   card.counterAxisAlignItems = 'MIN';
 
@@ -635,7 +600,7 @@ export async function createVariantCard(
   variantDetailsContainer.layoutMode = 'VERTICAL';
   variantDetailsContainer.counterAxisSizingMode = 'AUTO';
   variantDetailsContainer.primaryAxisSizingMode = 'AUTO';
-  variantDetailsContainer.itemSpacing = 8;
+  variantDetailsContainer.itemSpacing = TOKENS.space8;
   variantDetailsContainer.fills = [];
   variantDetailsContainer.strokes = [];
   variantDetailsContainer.name = 'Variant Details';
@@ -656,7 +621,7 @@ export async function createVariantCard(
   nameRow.strokes = [];
   nameRow.name = 'Name Row';
   nameRow.layoutAlign = 'STRETCH';
-  nameRow.resize(300 - 32, 16); // Match card width minus padding
+  // Width from parent STRETCH; height hugs badge (20px) and headline text — do not fix at 16px.
 
   // Left: radio button + variant name
   const nameLeft = figma.createFrame();
@@ -694,8 +659,7 @@ export async function createVariantCard(
   nameRow.appendChild(nameLeft);
 
   if (options?.rolledout) {
-    const rolledoutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
-    nameRow.appendChild(rolledoutBadge);
+    nameRow.appendChild(createRolledOutBadge());
   }
 
   variantDetailsContainer.appendChild(nameRow);
@@ -704,7 +668,7 @@ export async function createVariantCard(
   // (We keep description in the data model / metadata; just don't render it.)
   if (options?.showDescription) {
     const variantLabel = figma.createText();
-    styleOverviewText(variantLabel, 'body');
+    styleOverviewText(variantLabel, 'fieldValue');
     variantLabel.textAutoResize = 'WIDTH_AND_HEIGHT';
     const description = (variant as Record<string, unknown>).description as string | undefined;
     variantLabel.characters = description || '';
@@ -768,7 +732,7 @@ export async function createVariantCard(
     metricItem.primaryAxisSizingMode = 'AUTO';
     metricItem.layoutAlign = 'STRETCH'; // Stretch to parent width
     metricItem.primaryAxisAlignItems = 'SPACE_BETWEEN'; // Space between label (left) and value badge (right)
-    metricItem.itemSpacing = 8;
+    metricItem.itemSpacing = TOKENS.space8;
     metricItem.fills = [];
     metricItem.strokes = [];
     metricItem.name = `${metricName} Metric Item`;
@@ -879,10 +843,7 @@ export function createMetricChip(label: string, value: number): FrameNode {
   chip.primaryAxisSizingMode = 'AUTO';
   chip.paddingLeft = chip.paddingRight = TOKENS.space8;
   chip.paddingTop = chip.paddingBottom = TOKENS.space4 / 2;
-  chip.cornerRadius = TOKENS.radiusSM;
-  chip.fills = [{ type: 'SOLID', color: hexToRgb(TOKENS.fillsBackground) }];
-  chip.strokes = [{ type: 'SOLID', color: getCanvasTokens().border }];
-  chip.strokeWeight = 1;
+  applyPluginSubtleChip(chip);
   chip.name = 'Metric Chip';
   const txt = figma.createText();
   styleOverviewText(txt, 'fieldValue');

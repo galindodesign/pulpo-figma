@@ -4,7 +4,8 @@
   "description": "GrowthLab — Figma plugin to design and document experiment flows on the canvas",
   "main": "code.js",
   "scripts": {
-    "build": "node esbuild.config.js && npm run postbuild",
+    "generate:tokens": "node scripts/generate-design-tokens.mjs",
+    "build": "npm run generate:tokens && node esbuild.config.js && npm run postbuild",
     "postbuild": "mkdir -p build/fonts && cp design-tokens.css build/design-tokens.css && cp ui.css build/ui.css && cp ui.html build/ui.html && cp fonts/*.woff2 build/fonts/",
     "build:tsc": "tsc -p tsconfig.json",
     "lint": "eslint --ext .ts --ignore-pattern node_modules .",

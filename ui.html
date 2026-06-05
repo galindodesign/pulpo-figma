@@ -304,15 +304,26 @@
       --variant-card-border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
       --variant-card-shadow: 0 2px 8px 0 rgba(40,60,90,0.06);
       --variant-card-highlight-shadow: 0 0 0 1px var(--brand), 0 8px 20px rgba(111, 76, 255, 0.12);
-      --event-variants-badge-bg: color-mix(in srgb, var(--brand) 12%, var(--background-surface));
-      --event-variants-badge-border: color-mix(in srgb, var(--brand) 4%, transparent);
-      --event-variants-badge-color: color-mix(in srgb, var(--brand) 78%, var(--text-primary));
+      --event-variants-badge-bg: var(--badge-variants-bg);
+      --event-variants-badge-border: var(--badge-variants-border);
+      --event-variants-badge-color: var(--badge-variants-text);
       --event-variants-row-bg: var(--color-royal-blue-alpha-50);
       --event-variants-step-bg: var(--color-electric-violet-500);
       --event-variants-step-text: var(--color-white-100);
-      --rolledout-chip-bg: color-mix(in srgb, #FFF420 28%, var(--background-surface) 72%);
-      --rolledout-chip-border: color-mix(in srgb, #A88400 14%, transparent);  
-      --rolledout-chip-text: color-mix(in srgb, #22272f 72%, #A88400 28%);
+      --badge-height: 20px;
+      --badge-padding-x: 6px;
+      --badge-icon-size: 12px;
+      --badge-rolled-out-bg: #fffcc1;
+      --badge-rolled-out-border: #e8db9a;
+      --badge-rolled-out-text: #484122;
+      --badge-variants-bg: #eeeaff;
+      --badge-variants-border: #ddd6f5;
+      --badge-variants-text: #5e44d1;
+      --badge-neutral-bg: var(--color-azure-50);
+      --badge-neutral-border: var(--color-azure-100);
+      --rolledout-chip-bg: var(--badge-rolled-out-bg);
+      --rolledout-chip-border: var(--badge-rolled-out-border);
+      --rolledout-chip-text: var(--badge-rolled-out-text);
       --variant-name-input-bg: var(--color-white-alpha-700);
       --variant-name-input-hover-bg: var(--color-white-alpha-700);
       --variant-name-input-border-color: var(--color-azure-light-alpha-100);
@@ -2642,8 +2653,8 @@
 
     /* Event-level "Experiment" badge (informational only) */
     .event-variants-badge {
-      height: 20px;
-      padding: 0 6px;
+      height: var(--badge-height, 20px);
+      padding: 0 var(--badge-padding-x, 6px);
       margin: 0 var(--space-4);
       border-radius: var(--radius-xs);
       border: 1px solid var(--event-variants-badge-border);
@@ -3180,8 +3191,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 20px;
-      padding: 0 6px;
+      height: var(--badge-height, 20px);
+      padding: 0 var(--badge-padding-x, 6px);
       border-radius: var(--radius-xs);
       border: 1px solid transparent;
       font-size: var(--tooltip-font-size-sm);
@@ -3203,7 +3214,7 @@
       background: var(--rolledout-chip-bg);
       border-color: var(--rolledout-chip-border);
       color: var(--rolledout-chip-text);
-      width: 20px;
+      width: var(--badge-height, 20px);
       padding: 0;
     }
 

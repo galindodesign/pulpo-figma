@@ -7,31 +7,14 @@ import {
   EXPERIMENT_STATUS_STYLES,
   SUMMARY_TYPOGRAPHY,
   SUMMARY_BULLET_PX,
+  SECTION_PANEL_LAYOUT,
   createOverviewSectionTitle,
   styleOverviewText,
   formatDateForDisplay,
   getExperimentTypeLabel,
+  createRolledOutBadge,
 } from "./experiment-card-shared";
 import type { MetricDefinition } from "./types";
-
-const ROLLED_OUT_BADGE_BG = "#fffbb5";
-const ROLLED_OUT_BADGE_TEXT = "#484122";
-const TROPHY_ICON_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-  <path d="M6 9H4.5a1 1 0 0 1 0-5H6" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M18 9h1.5a1 1 0 0 0 0-5H18" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M4 22h16" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M6 9a6 6 0 0 0 12 0V3a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1z" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M10 14.66v1.626a2 2 0 0 1-.976 1.696A5 5 0 0 0 7 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M14 14.66v1.626a2 2 0 0 0 .976 1.696A5 5 0 0 1 17 21.978" stroke="${ROLLED_OUT_BADGE_TEXT}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-
-function createRolledOutIcon(): FrameNode {
-  const icon = figma.createNodeFromSvg(TROPHY_ICON_SVG);
-  icon.name = "Rolled Out Icon";
-  icon.resize(10, 10);
-  icon.fills = [];
-  return icon;
-}
 
 /**
  * Experiment Metrics Card
@@ -301,7 +284,6 @@ function formatPrimaryMetricFact(
 }
 
 const OUTCOME_SUMMARY_MIN_WIDTH = 728;
-const OUTCOME_SUMMARY_HORIZONTAL_PADDING = 16;
 
 function setWrappedText(text: TextNode, characters: string, width: number): void {
   text.textAutoResize = "HEIGHT";
@@ -354,10 +336,10 @@ export async function createExperimentOutcomeCard(
   card.layoutMode = "VERTICAL";
   card.counterAxisSizingMode = "AUTO";
   card.primaryAxisSizingMode = "AUTO";
-  card.itemSpacing = 24;
-  card.paddingLeft = card.paddingRight = 32;
-  card.paddingTop = card.paddingBottom = 32;
-  card.cornerRadius = 24;
+  card.itemSpacing = TOKENS.space24;
+  card.paddingLeft = card.paddingRight = TOKENS.space32;
+  card.paddingTop = card.paddingBottom = TOKENS.space32;
+  card.cornerRadius = TOKENS.radiusLG;
   applyCardShell(card);
   card.minWidth = 792;
   card.minHeight = 612;
@@ -374,14 +356,14 @@ export async function createExperimentOutcomeCard(
 
 export async function createOutcomeCardSections(
   data: ExperimentOutcomeData,
-  options?: { includeHeader?: boolean }
+  options?: { includeHeader?: boolean; embeddedSummary?: boolean }
 ): Promise<{ headerSection?: FrameNode; metricsTable: FrameNode; summarySection: FrameNode }> {
   await loadFonts();
 
   const includeHeader = options?.includeHeader !== false;
   const headerSection = includeHeader ? await createHeaderSection(data) : undefined;
   const metricsTable = await createMetricsTablesSection(data);
-  const summarySection = await createSummarySection(data);
+  const summarySection = await createSummarySection(data, { embedded: options?.embeddedSummary === true });
 
   return { headerSection, metricsTable, summarySection };
 }
@@ -409,12 +391,19 @@ async function createHeaderSection(data: ExperimentOutcomeData): Promise<FrameNo
   dateLabel.name = "Date Created Label";
   section.appendChild(dateLabel);
 
-  // Status badge - filled for rolled_out (yellow), outlined for others
+  // Status badge — chip style matching ui.html `.variant-passive-chip`
   const statusConfig = EXPERIMENT_STATUS_STYLES[data.status] || EXPERIMENT_STATUS_STYLES.running;
-  const statusStyle = data.status === 'rolled_out' ? 'filled' : 'outlined';
-  // For outlined badges, use textColor for stroke to match info-card; for filled, use bgColor
-  const strokeOrFillColor = statusStyle === 'outlined' ? statusConfig.textColor : statusConfig.bgColor;
-  const statusBadge = createBadge(statusConfig.label, statusStyle, strokeOrFillColor, statusConfig.textColor);
+  const statusBadge =
+    data.status === 'rolled_out'
+      ? createRolledOutBadge()
+      : createBadge(
+          statusConfig.label,
+          'chip',
+          statusConfig.bgColor,
+          statusConfig.textColor,
+          undefined,
+          statusConfig.borderColor
+        );
   section.appendChild(statusBadge);
 
   // Experiment name (Bold, 24px)
@@ -470,7 +459,8 @@ async function createMetricsTablesSection(data: ExperimentOutcomeData): Promise<
   section.counterAxisSizingMode = "FIXED";
   section.primaryAxisSizingMode = "AUTO";
   section.layoutAlign = "STRETCH";
-  section.itemSpacing = 16;
+  section.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+  section.layoutAlign = "STRETCH";
   section.fills = [];
   section.name = "Metrics Tables";
 
@@ -498,7 +488,7 @@ async function createMetricsTable(data: ExperimentOutcomeData): Promise<FrameNod
   table.layoutAlign = "STRETCH"; // Stretch to parent width
   table.itemSpacing = 0;
   applyTableShell(table);
-  table.cornerRadius = 8;
+  table.cornerRadius = TOKENS.radiusSM;
   table.name = "Metrics Table";
 
   // Table header row
@@ -524,7 +514,7 @@ async function createFlippedMetricsTable(data: ExperimentOutcomeData): Promise<F
   table.layoutAlign = "STRETCH";
   table.itemSpacing = 0;
   applyTableShell(table);
-  table.cornerRadius = 8;
+  table.cornerRadius = TOKENS.radiusSM;
   table.name = "Metrics Table — Variants as Rows";
 
   const headerRow = await createFlippedTableHeaderRow(data.metrics);
@@ -964,8 +954,7 @@ function createVariantNameCell(variant: VariantOutcome): FrameNode {
   nameRow.appendChild(nameText);
 
   if (variant.isRolledOut) {
-    const rolledOutBadge = createBadge('Rolled out', 'micro', ROLLED_OUT_BADGE_BG, ROLLED_OUT_BADGE_TEXT, createRolledOutIcon());
-    nameRow.appendChild(rolledOutBadge);
+    nameRow.appendChild(createRolledOutBadge());
   }
 
   cell.appendChild(nameRow);
@@ -1200,21 +1189,27 @@ function createTableCell(
 /**
  * Create summary/recommendation section
  */
-async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameNode> {
+async function createSummarySection(
+  data: ExperimentOutcomeData,
+  options?: { embedded?: boolean },
+): Promise<FrameNode> {
+  const embedded = options?.embedded === true;
   const section = figma.createFrame();
   section.layoutMode = "VERTICAL";
-  section.counterAxisSizingMode = "FIXED";
+  section.counterAxisSizingMode = embedded ? "AUTO" : "FIXED";
   section.primaryAxisSizingMode = "AUTO";
-  section.itemSpacing = 10;
-  section.paddingTop = section.paddingBottom = 16;
-  section.paddingLeft = section.paddingRight = OUTCOME_SUMMARY_HORIZONTAL_PADDING;
-  section.cornerRadius = 12;
+  section.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
+  section.paddingTop = section.paddingBottom = SECTION_PANEL_LAYOUT.panelPadding;
+  section.paddingLeft = section.paddingRight = SECTION_PANEL_LAYOUT.panelPadding;
+  section.cornerRadius = SECTION_PANEL_LAYOUT.panelCornerRadius;
   applySectionPanel(section);
   section.name = "Outcome Summary Section";
   section.layoutAlign = "STRETCH";
-  section.minWidth = OUTCOME_SUMMARY_MIN_WIDTH;
+  if (!embedded) {
+    section.minWidth = OUTCOME_SUMMARY_MIN_WIDTH;
+  }
 
-  const contentWidth = OUTCOME_SUMMARY_MIN_WIDTH - (OUTCOME_SUMMARY_HORIZONTAL_PADDING * 2);
+  const contentWidth = OUTCOME_SUMMARY_MIN_WIDTH - (SECTION_PANEL_LAYOUT.panelPadding * 2);
 
   const outcome = classifyOutcomeState(data);
 
@@ -1236,9 +1231,11 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
 
   const stateBadge = createBadge(
     outcome.state === "rolled_out" ? "Decision" : outcome.state === "running" ? "Live read" : "Guidance",
-    "micro",
-    TOKENS.fillsSurface,
-    badgeTextColor
+    "chip",
+    TOKENS.badgeNeutralBg,
+    badgeTextColor,
+    undefined,
+    TOKENS.badgeNeutralBorder
   );
   headerRow.appendChild(stateBadge);
   section.appendChild(headerRow);
@@ -1259,7 +1256,7 @@ async function createSummarySection(data: ExperimentOutcomeData): Promise<FrameN
   factsFrame.primaryAxisSizingMode = "AUTO";
   factsFrame.layoutAlign = "STRETCH";
   factsFrame.minWidth = contentWidth;
-  factsFrame.itemSpacing = 4;
+  factsFrame.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
   factsFrame.fills = [];
   factsFrame.name = "Outcome Evidence";
 

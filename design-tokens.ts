@@ -1,243 +1,321 @@
 // design-tokens.ts
-// Auto-generated from design-tokens.css for use in Figma plugin code
-// Only include tokens relevant for Figma node output (colors, radii, spacing, font sizes, etc.)
+// AUTO-GENERATED from design-tokens.css — do not edit by hand.
+// Run: npm run generate:tokens
 
 export const TOKENS = {
-  // ================================================================
-  // BASE COLORS (from design-tokens.css)
-  // ================================================================
-  
-  // Azure (Neutral Gray-Blue)
-  azure50: '#f6f7f9',
-  azure100: '#eceff2',
-  azure200: '#d4dae3',
-  azure300: '#afbbca',
-  azure400: '#8496ac',
-  azure500: '#647993',
-  azure600: '#506179',
-  azure700: '#3f4c5f',
-  azure800: '#394453',
-  azure900: '#333b47',
-  azure950: '#22272f',
-
-  // Pale Sky (Neutral Gray)
-  paleSky50: '#f7f8f8',
-  paleSky100: '#edeef1',
-  paleSky200: '#d8dbdf',
-  paleSky300: '#b6bac3',
-  paleSky400: '#8e95a2',
-  paleSky500: '#6b7280',
-  paleSky600: '#5b616e',
-  paleSky700: '#4a4e5a',
-  paleSky800: '#40444c',
-  paleSky900: '#383a42',
-  paleSky950: '#383a42',
-
-
-  // Electric Violet (Brand Purple)
-  electricViolet50: '#f4f2ff',
-  electricViolet100: '#e9e8ff',
-  electricViolet200: '#d6d4ff',
-  electricViolet300: '#b9b1ff',
-  electricViolet400: '#9785ff',
-  electricViolet500: '#6f4cff',
-  electricViolet600: '#6330f7',
-  electricViolet700: '#551ee3',
-  electricViolet800: '#4718bf',
-  electricViolet900: '#3b169c',
-  electricViolet950: '#230b6a',
-
-  // Royal Blue (Info/Link)
-  royalBlue50: '#eff7ff',
-  royalBlue100: '#dbecfe',
-  royalBlue200: '#bfdffe',
-  royalBlue300: '#93ccfd',
-  royalBlue400: '#60b0fa',
-  royalBlue500: '#3b8ff6',
-  royalBlue600: '#2563eb',
-  royalBlue700: '#1d5bd8',
-  royalBlue800: '#1e4aaf',
-  royalBlue900: '#1e418a',
-  royalBlue950: '#172954',
-
-  // Malachite (Success Green)
-  malachite50: '#effef4',
-  malachite100: '#dafee5',
-  malachite200: '#b8facd',
-  malachite300: '#80f5a6',
-  malachite400: '#42e679',
-  malachite500: '#1fe461',
-  malachite600: '#0eab43',
-  malachite700: '#0f8637',
-  malachite800: '#126930',
-  malachite900: '#10572a',
-  malachite950: '#033015',
-
-  // Yellow (Warning)
-  yellow50: '#fffbea',
-  yellow100: '#fff4c6',
-  yellow200: '#ffe270',
-  yellow300: '#ffd44a',
-  yellow400: '#ffc020',
-  yellow500: '#f99e07',
-  yellow600: '#dd7602',
-  yellow700: '#b75306',
-  yellow800: '#943f0c',
-  yellow900: '#7a340d',
-  yellow950: '#461a02',
-
-  // Coral Red (Error/Danger)
-  coralRed50: '#fff1f1',
-  coralRed100: '#ffdfdf',
-  coralRed200: '#ffc5c5',
-  coralRed300: '#ff9d9d',
-  coralRed400: '#ff6464',
-  coralRed500: '#ff3838',
-  coralRed600: '#ed1515',
-  coralRed700: '#c80d0d',
-  coralRed800: '#a50f0f',
-  coralRed900: '#881414',
-  coralRed950: '#4b0404',
-
-  // Lochinvar (Teal)
-  lochinvar50: '#eefffb',
-  lochinvar100: '#c6fff4',
-  lochinvar200: '#8effec',
-  lochinvar300: '#4efae0',
-  lochinvar400: '#19e8d0',
-  lochinvar500: '#01cbb7',
-  lochinvar600: '#00a496',
-  lochinvar700: '#03857c',
-  lochinvar800: '#086762',
-  lochinvar900: '#0c5551',
-  lochinvar950: '#003433',
-
-  // Pompadour (Pink/Magenta)
-  pompadour50: '#fef1fb',
-  pompadour100: '#fee5f9',
-  pompadour200: '#feccf5',
-  pompadour300: '#ffa2ed',
-  pompadour400: '#fe68dd',
-  pompadour500: '#f93bca',
-  pompadour600: '#e919ab',
-  pompadour700: '#cb0b8d',
-  pompadour800: '#a70d73',
-  pompadour900: '#740d51',
-  pompadour950: '#560139',
-
-  // White
-  white: '#ffffff',
-
-  // ================================================================
-  // SEMANTIC TOKENS (mapped from design-tokens.css)
-  // ================================================================
-
-  // Fills
-  fillsBackground: '#f6f7f9', // --fills-background (azure-50)
-  fillsSurface: '#ffffff',    // --fills-surface
-  fillsBrand: '#6f4cff',     // --fills-brand (electric-violet-500)
-  fillsSuccess: '#0eab4319', // --fills-success (malachite-alpha-100)
-  fillsLinkDefault: '#2563eb', // --fills-link-default (royal-blue-600)
-
-  // Text
-  textPrimary: '#333b47',    // --text-primary-default (azure-900)
+  // BASE COLORS
+  azure100: '#eceff2', // --color-azure-100
+  azure200: '#d4dae3', // --color-azure-200
+  azure300: '#afbbca', // --color-azure-300
+  azure400: '#8496ac', // --color-azure-400
+  azure50: '#f6f7f9', // --color-azure-50
+  azure500: '#647993', // --color-azure-500
+  azure600: '#506179', // --color-azure-600
+  azure700: '#3f4c5f', // --color-azure-700
+  azure800: '#394453', // --color-azure-800
+  azure900: '#333b47', // --color-azure-900
+  azure950: '#22272f', // --color-azure-950
+  azureDarkAlpha100: '#22272f19', // --color-azure-dark-alpha-100
+  azureDarkAlpha200: '#22272f33', // --color-azure-dark-alpha-200
+  azureDarkAlpha25: '#22272f06', // --color-azure-dark-alpha-25
+  azureDarkAlpha300: '#22272f4c', // --color-azure-dark-alpha-300
+  azureDarkAlpha400: '#22272f66', // --color-azure-dark-alpha-400
+  azureDarkAlpha50: '#22272f0c', // --color-azure-dark-alpha-50
+  azureDarkAlpha500: '#22272f7f', // --color-azure-dark-alpha-500
+  azureDarkAlpha600: '#22272f99', // --color-azure-dark-alpha-600
+  azureDarkAlpha700: '#22272fb2', // --color-azure-dark-alpha-700
+  azureDarkAlpha800: '#22272fcc', // --color-azure-dark-alpha-800
+  azureDarkAlpha900: '#22272fe5', // --color-azure-dark-alpha-900
+  azureDarkAlpha950: '#22272ff2', // --color-azure-dark-alpha-950
+  azureLightAlpha100: '#eceff219', // --color-azure-light-alpha-100
+  azureLightAlpha200: '#eceff233', // --color-azure-light-alpha-200
+  azureLightAlpha25: '#eceff206', // --color-azure-light-alpha-25
+  azureLightAlpha300: '#eceff24c', // --color-azure-light-alpha-300
+  azureLightAlpha400: '#eceff266', // --color-azure-light-alpha-400
+  azureLightAlpha50: '#eceff20c', // --color-azure-light-alpha-50
+  azureLightAlpha500: '#eceff27f', // --color-azure-light-alpha-500
+  azureLightAlpha600: '#eceff299', // --color-azure-light-alpha-600
+  azureLightAlpha700: '#eceff2b2', // --color-azure-light-alpha-700
+  azureLightAlpha800: '#eceff2cc', // --color-azure-light-alpha-800
+  azureLightAlpha900: '#eceff2e5', // --color-azure-light-alpha-900
+  azureLightAlpha950: '#eceff2f2', // --color-azure-light-alpha-950
+  coralRed100: '#ffdfdf', // --color-coral-red-100
+  coralRed200: '#ffc5c5', // --color-coral-red-200
+  coralRed300: '#ff9d9d', // --color-coral-red-300
+  coralRed400: '#ff6464', // --color-coral-red-400
+  coralRed50: '#fff1f1', // --color-coral-red-50
+  coralRed500: '#ff3838', // --color-coral-red-500
+  coralRed600: '#ed1515', // --color-coral-red-600
+  coralRed700: '#c80d0d', // --color-coral-red-700
+  coralRed800: '#a50f0f', // --color-coral-red-800
+  coralRed900: '#881414', // --color-coral-red-900
+  coralRed950: '#4b0404', // --color-coral-red-950
+  coralRedAlpha100: '#ff383819', // --color-coral-red-alpha-100
+  coralRedAlpha200: '#ff383833', // --color-coral-red-alpha-200
+  coralRedAlpha300: '#ff38384c', // --color-coral-red-alpha-300
+  coralRedAlpha400: '#ff383866', // --color-coral-red-alpha-400
+  coralRedAlpha500: '#ff38387f', // --color-coral-red-alpha-500
+  coralRedAlpha600: '#ff383899', // --color-coral-red-alpha-600
+  coralRedAlpha700: '#ff3838b2', // --color-coral-red-alpha-700
+  coralRedAlpha800: '#ff3838cc', // --color-coral-red-alpha-800
+  coralRedAlpha900: '#ff3838e5', // --color-coral-red-alpha-900
+  electricViolet100: '#e9e8ff', // --color-electric-violet-100
+  electricViolet200: '#d6d4ff', // --color-electric-violet-200
+  electricViolet300: '#b9b1ff', // --color-electric-violet-300
+  electricViolet400: '#9785ff', // --color-electric-violet-400
+  electricViolet50: '#f4f2ff', // --color-electric-violet-50
+  electricViolet500: '#6f4cff', // --color-electric-violet-500
+  electricViolet600: '#6330f7', // --color-electric-violet-600
+  electricViolet700: '#551ee3', // --color-electric-violet-700
+  electricViolet800: '#4718bf', // --color-electric-violet-800
+  electricViolet900: '#3b169c', // --color-electric-violet-900
+  electricViolet950: '#230b6a', // --color-electric-violet-950
+  electricVioletAlpha100: '#7f4dff19', // --color-electric-violet-alpha-100
+  electricVioletAlpha200: '#7f4dff33', // --color-electric-violet-alpha-200
+  electricVioletAlpha300: '#7f4dff4c', // --color-electric-violet-alpha-300
+  electricVioletAlpha400: '#7f4dff66', // --color-electric-violet-alpha-400
+  electricVioletAlpha500: '#7f4dff7f', // --color-electric-violet-alpha-500
+  electricVioletAlpha600: '#7f4dff99', // --color-electric-violet-alpha-600
+  lochinvar100: '#c6fff4', // --color-lochinvar-100
+  lochinvar200: '#8effec', // --color-lochinvar-200
+  lochinvar300: '#4efae0', // --color-lochinvar-300
+  lochinvar400: '#19e8d0', // --color-lochinvar-400
+  lochinvar50: '#eefffb', // --color-lochinvar-50
+  lochinvar500: '#01cbb7', // --color-lochinvar-500
+  lochinvar600: '#00a496', // --color-lochinvar-600
+  lochinvar700: '#03857c', // --color-lochinvar-700
+  lochinvar800: '#086762', // --color-lochinvar-800
+  lochinvar900: '#0c5551', // --color-lochinvar-900
+  lochinvar950: '#003433', // --color-lochinvar-950
+  malachite100: '#dafee5', // --color-malachite-100
+  malachite200: '#b8facd', // --color-malachite-200
+  malachite300: '#80f5a6', // --color-malachite-300
+  malachite400: '#42e679', // --color-malachite-400
+  malachite50: '#effef4', // --color-malachite-50
+  malachite500: '#1fe461', // --color-malachite-500
+  malachite600: '#0eab43', // --color-malachite-600
+  malachite700: '#0f8637', // --color-malachite-700
+  malachite800: '#126930', // --color-malachite-800
+  malachite900: '#10572a', // --color-malachite-900
+  malachite950: '#033015', // --color-malachite-950
+  malachiteAlpha100: '#0eab4319', // --color-malachite-alpha-100
+  malachiteAlpha20: '#0eab4305', // --color-malachite-alpha-20
+  malachiteAlpha200: '#0eab4333', // --color-malachite-alpha-200
+  malachiteAlpha300: '#0eab434c', // --color-malachite-alpha-300
+  malachiteAlpha400: '#0eab4366', // --color-malachite-alpha-400
+  malachiteAlpha50: '#0eab430c', // --color-malachite-alpha-50
+  malachiteAlpha500: '#0eab437f', // --color-malachite-alpha-500
+  malachiteAlpha600: '#0eab4399', // --color-malachite-alpha-600
+  malachiteAlpha900: '#0eab43e5', // --color-malachite-alpha-900
+  paleSky100: '#edeef1', // --color-pale-sky-100
+  paleSky200: '#d8dbdf', // --color-pale-sky-200
+  paleSky300: '#b6bac3', // --color-pale-sky-300
+  paleSky400: '#8e95a2', // --color-pale-sky-400
+  paleSky50: '#f7f8f8', // --color-pale-sky-50
+  paleSky500: '#6b7280', // --color-pale-sky-500
+  paleSky600: '#5b616e', // --color-pale-sky-600
+  paleSky700: '#4a4e5a', // --color-pale-sky-700
+  paleSky800: '#40444c', // --color-pale-sky-800
+  paleSky900: '#383a42', // --color-pale-sky-900
+  paleSky950: '#383a42', // --color-pale-sky-950
+  paleSkyDarkAlpha100: '#6b728019', // --color-pale-sky-dark-alpha-100
+  paleSkyDarkAlpha20: '#6b728005', // --color-pale-sky-dark-alpha-20
+  paleSkyDarkAlpha200: '#6b728033', // --color-pale-sky-dark-alpha-200
+  paleSkyDarkAlpha300: '#6b72804c', // --color-pale-sky-dark-alpha-300
+  paleSkyDarkAlpha400: '#6b728066', // --color-pale-sky-dark-alpha-400
+  paleSkyDarkAlpha50: '#6b72800c', // --color-pale-sky-dark-alpha-50
+  paleSkyDarkAlpha500: '#6b72807f', // --color-pale-sky-dark-alpha-500
+  paleSkyDarkAlpha600: '#6b728099', // --color-pale-sky-dark-alpha-600
+  paleSkyDarkAlpha700: '#6b7280b2', // --color-pale-sky-dark-alpha-700
+  paleSkyDarkAlpha80: '#6b728014', // --color-pale-sky-dark-alpha-80
+  paleSkyDarkAlpha800: '#6b7280cc', // --color-pale-sky-dark-alpha-800
+  paleSkyDarkAlpha900: '#6b7280e5', // --color-pale-sky-dark-alpha-900
+  paleSkyDarkAlpha950: '#6b7280f2', // --color-pale-sky-dark-alpha-950
+  paleSkyLightAlpha100: '#edeef119', // --color-pale-sky-light-alpha-100
+  paleSkyLightAlpha200: '#edeef133', // --color-pale-sky-light-alpha-200
+  paleSkyLightAlpha300: '#edeef14c', // --color-pale-sky-light-alpha-300
+  paleSkyLightAlpha400: '#edeef166', // --color-pale-sky-light-alpha-400
+  paleSkyLightAlpha50: '#edeef10c', // --color-pale-sky-light-alpha-50
+  paleSkyLightAlpha500: '#edeef17f', // --color-pale-sky-light-alpha-500
+  paleSkyLightAlpha600: '#edeef199', // --color-pale-sky-light-alpha-600
+  paleSkyLightAlpha700: '#edeef1b2', // --color-pale-sky-light-alpha-700
+  paleSkyLightAlpha800: '#edeef1cc', // --color-pale-sky-light-alpha-800
+  paleSkyLightAlpha900: '#edeef1e5', // --color-pale-sky-light-alpha-900
+  paleSkyLightAlpha950: '#edeef1f2', // --color-pale-sky-light-alpha-950
+  pompadour100: '#fee5f9', // --color-pompadour-100
+  pompadour200: '#feccf5', // --color-pompadour-200
+  pompadour300: '#ffa2ed', // --color-pompadour-300
+  pompadour400: '#fe68dd', // --color-pompadour-400
+  pompadour50: '#fef1fb', // --color-pompadour-50
+  pompadour500: '#f93bca', // --color-pompadour-500
+  pompadour600: '#e919ab', // --color-pompadour-600
+  pompadour700: '#cb0b8d', // --color-pompadour-700
+  pompadour800: '#a70d73', // --color-pompadour-800
+  pompadour900: '#740d51', // --color-pompadour-900
+  pompadour950: '#560139', // --color-pompadour-950
+  royalBlue100: '#dbecfe', // --color-royal-blue-100
+  royalBlue200: '#bfdffe', // --color-royal-blue-200
+  royalBlue300: '#93ccfd', // --color-royal-blue-300
+  royalBlue400: '#60b0fa', // --color-royal-blue-400
+  royalBlue50: '#eff7ff', // --color-royal-blue-50
+  royalBlue500: '#3b8ff6', // --color-royal-blue-500
+  royalBlue600: '#2563eb', // --color-royal-blue-600
+  royalBlue700: '#1d5bd8', // --color-royal-blue-700
+  royalBlue800: '#1e4aaf', // --color-royal-blue-800
+  royalBlue900: '#1e418a', // --color-royal-blue-900
+  royalBlue950: '#172954', // --color-royal-blue-950
+  royalBlueAlpha100: '#2470eb19', // --color-royal-blue-alpha-100
+  royalBlueAlpha200: '#2470eb33', // --color-royal-blue-alpha-200
+  royalBlueAlpha300: '#2470eb4c', // --color-royal-blue-alpha-300
+  royalBlueAlpha400: '#2470eb66', // --color-royal-blue-alpha-400
+  royalBlueAlpha50: '#2470eb0c', // --color-royal-blue-alpha-50
+  royalBlueAlpha500: '#2470eb7f', // --color-royal-blue-alpha-500
+  royalBlueAlpha600: '#2470eb99', // --color-royal-blue-alpha-600
+  royalBlueAlpha700: '#2470ebb2', // --color-royal-blue-alpha-700
+  royalBlueAlpha800: '#2470ebcc', // --color-royal-blue-alpha-800
+  royalBlueAlpha900: '#2470ebe5', // --color-royal-blue-alpha-900
+  whiteAlpha100: '#ffffff', // --color-white-alpha-100
+  whiteAlpha20: '#ffffff00', // --color-white-alpha-20
+  yellow100: '#fff4c6', // --color-yellow-100
+  yellow200: '#ffe270', // --color-yellow-200
+  yellow300: '#ffd44a', // --color-yellow-300
+  yellow400: '#ffc020', // --color-yellow-400
+  yellow50: '#fffbea', // --color-yellow-50
+  yellow500: '#f99e07', // --color-yellow-500
+  yellow600: '#dd7602', // --color-yellow-600
+  yellow700: '#b75306', // --color-yellow-700
+  yellow800: '#943f0c', // --color-yellow-800
+  yellow900: '#7a340d', // --color-yellow-900
+  yellow950: '#461a02', // --color-yellow-950
+  yellowAlpha100: '#f99e0719', // --color-yellow-alpha-100
+  yellowAlpha300: '#f99e074c', // --color-yellow-alpha-300
+  // SEMANTIC TOKENS
+  fillsBackground: '#eceff2', // --fills-background
+  fillsSurface: '#ffffff', // --fills-surface
+  fillsBrand: '#6f4cff', // --fills-brand
+  fillsSuccess: '#0eab4319', // --fills-success
+  fillsLinkDefault: '#2563eb', // --fills-link-default
+  textPrimary: '#333b47', // --text-primary-default
   textPrimaryInverted: '#ffffff', // --text-primary-inverted
-  textSecondary: '#7F7F7F',  // --text-secondary-default
-  textSecondaryInverted: '#afbbca', // --text-secondary-inverted (azure-300)
-  textTertiary: '#647993',   // --text-tertiary-default (azure-500)
-  textTertiaryInverted: '#d4dae3', // --text-tertiary-inverted (azure-200)
-  textLink: '#2563eb',        // --text-link-default (royal-blue-600)
-  textLabel: '#d8dbdf',      // --text-label-default (pale-sky-200)
-  textStatesSuccess: '#126930', // --text-states-success (malachite-800)
-  textMuted: '#3f4c5f',      // --text-muted (azure-700)
-
-  // Border
-  border: '#edeef1',         // --border-border (pale-sky-100)
-  borderInput: '#22272f19',  // --border-input-border (azure-dark-alpha-100)
-  borderDark: '#d8dbdf',     // --border-dark (pale-sky-200)
-  borderStrong: '#b6bac3',   // --border-strong (pale-sky-300)
-
-  // Accent/Status
-  accentBrand: '#8F4BFF',  // similar to --accent-brand (electric-violet-400)
-  accentSuccess: '#126930',  // --accent-success (malachite-800)
-  accentSuccessLight: '#42e679', // --accent-success-light (malachite-400)
-  accentSuccessBg: '#0eab4319',  // --accent-success-bg (malachite-alpha-100)
-  accentError: '#ff3838',    // --accent-error (coral-red-500)
-  accentWarning: '#dd7602',  // --accent-warning (yellow-600)
-  accentInfo: '#2563eb',     // --accent-info (royal-blue-600)
-  accentHighlight: '#01cbb7', // --accent-highlight (lochinvar-500)
-  accentPrimary: '#7F7F7F',  
-  accentPrimaryDark: '#22272f', // --accent-primary-dark (azure-950)
-
-  // Status Variant Colors (from indicators)
-  statusVariantA: '#3b8ff6',  // --status-variant-a (indicator-blue-1, royal-blue-500)
-  statusVariantB: '#6f4cff',  // --status-variant-b (indicator-violet-1, electric-violet-500)
-  statusVariantC: '#ff3838',  // --status-variant-c (indicator-coral-1, coral-red-500)
-
-  // Buttons
-  buttonBlackDefault: '#22272f', // --buttons-black-default (azure-950)
-  buttonBlackHover: '#333b47',  // --buttons-black-hover (azure-900)
-  buttonBlackSelected: '#394453', // --buttons-black-selected (azure-800)
-  buttonPurpleDefault: '#6f4cff', // --buttons-purple-default (electric-violet-500)
-  buttonPurpleHover: '#6330f7',  // --buttons-purple-hover (electric-violet-600)
-  buttonGreenDefault: '#42e679', // --buttons-button-green-default (malachite-400)
-  buttonGreenHover: '#1fe461',  // --buttons-button-green-hover (malachite-500)
-
-  // Shadow & Effects
-  shadowColor: { r: 0, g: 0, b: 0, a: 0.05 }, // Standard drop shadow
-  shadowCard: { r: 40, g: 60, b: 90, a: 0.06 }, // Card shadow (rgba(40,60,90,0.06))
-  
-  // Checker pattern (for placeholders)
-  checkerLight: { r: 0.96, g: 0.96, b: 0.96 }, // Light checker square
-  checkerDark: { r: 0.89, g: 0.89, b: 0.89 },  // Dark checker square
-
-  // ================================================================
-  // SPACING (from design-tokens.css)
-  // ================================================================
-  space0: 0,
-  space4: 4,
-  space8: 8,
-  space12: 12,
-  space16: 16,
-  space24: 24,
-  space32: 32,
-  space40: 40,
-
-  // ================================================================
-  // BORDER RADIUS (from design-tokens.css)
-  // ================================================================
-  radiusXS: 4,   // Buttons, inputs
-  radiusSM: 8,   // Small cards
-  radiusMD: 12,  // Medium cards
-  radiusLG: 16,  // Plugin container, large cards
-  radiusXL: 18,  // Large containers
-
-  // ================================================================
-  // TYPOGRAPHY (from design-tokens.css)
-  // ================================================================
+  textSecondary: '#7f7f7f', // --text-secondary-default
+  textSecondaryInverted: '#afbbca', // --text-secondary-inverted
+  textTertiary: '#647993', // --text-tertiary-default
+  textTertiaryInverted: '#d4dae3', // --text-tertiary-inverted
+  textLink: '#2563eb', // --text-link-default
+  textLabel: '#d8dbdf', // --text-label-default
+  textStatesSuccess: '#126930', // --text-states-success
+  textMuted: '#3f4c5f', // --text-muted
+  border: '#edeef1', // --border-border
+  borderInput: '#22272f19', // --border-input-border
+  borderDark: '#d8dbdf', // --border-dark
+  borderStrong: '#b6bac3', // --border-strong
+  canvasBorderDefault: '#edeef1', // --canvas-border-default
+  canvasBorderEmphasis: '#b6bac3', // --canvas-border-emphasis
+  canvasBorderOnDark: '#d8dbdf', // --canvas-border-on-dark
+  canvasSurface: '#ffffff', // --canvas-surface
+  canvasSectionTint: '#f6f7f9', // --canvas-section-tint
+  typographyH1Color: '#333b47', // --typography-h1-color
+  typographyH2Color: '#333b47', // --typography-h2-color
+  typographyH3Color: '#7f7f7f', // --typography-h3-color
+  typographyMetaColor: '#647993', // --typography-meta-color
+  typographyBodyColor: '#333b47', // --typography-body-color
+  typographyMutedColor: '#7f7f7f', // --typography-muted-color
+  typographyLinkColor: '#2563eb', // --typography-link-color
+  pluginCardSurface: '#ffffff', // --plugin-card-surface
+  pluginCardBorder: '#edeef1', // --plugin-card-border
+  pluginCardRadius: 16, // --plugin-card-radius
+  pluginSectionBorder: '#edeef1', // --plugin-section-border
+  pluginSectionRadius: 8, // --plugin-section-radius
+  pluginSectionPadding: 16, // --plugin-section-padding
+  pluginInputBg: '#ffffff', // --plugin-input-bg
+  pluginInputBorderColor: '#22272f19', // --plugin-input-border-color
+  pluginInputRadius: 4, // --plugin-input-radius
+  pluginChipBg: '#f6f7f9', // --plugin-chip-bg
+  pluginChipBorder: '#edeef1', // --plugin-chip-border
+  pluginSubtleFill: '#eceff2', // --plugin-subtle-fill
+  badgeRolledOutBg: '#fffcc1', // --badge-rolled-out-bg
+  badgeRolledOutBorder: '#e8db9a', // --badge-rolled-out-border
+  badgeRolledOutText: '#484122', // --badge-rolled-out-text
+  badgeVariantsBg: '#eeeaff', // --badge-variants-bg
+  badgeVariantsBorder: '#ddd6f5', // --badge-variants-border
+  badgeVariantsText: '#5e44d1', // --badge-variants-text
+  badgeNeutralBg: '#f6f7f9', // --badge-neutral-bg
+  badgeNeutralBorder: '#eceff2', // --badge-neutral-border
+  accentSuccess: '#126930', // --accent-success
+  accentSuccessLight: '#42e679', // --accent-success-light
+  accentSuccessBg: '#0eab4319', // --accent-success-bg
+  accentError: '#ff3838', // --accent-error
+  accentWarning: '#dd7602', // --accent-warning
+  accentInfo: '#2563eb', // --accent-info
+  accentHighlight: '#01cbb7', // --accent-highlight
+  accentPrimary: '#3f4c5f', // --accent-primary
+  accentPrimaryDark: '#22272f', // --accent-primary-dark
+  statusVariantA: '#3b8ff6', // --status-variant-a
+  statusVariantB: '#6f4cff', // --status-variant-b
+  statusVariantC: '#ff3838', // --status-variant-c
+  buttonBlackDefault: '#22272f', // --buttons-black-default
+  buttonBlackHover: '#333b47', // --buttons-black-hover
+  buttonBlackSelected: '#394453', // --buttons-black-selected
+  buttonPurpleDefault: '#6f4cff', // --buttons-purple-default
+  buttonPurpleHover: '#6330f7', // --buttons-purple-hover
+  buttonGreenDefault: '#42e679', // --buttons-button-green-default
+  buttonGreenHover: '#1fe461', // --buttons-button-green-hover
+  sectionPadding: 16, // --section-padding
+  sectionGap: 16, // --section-gap
+  variantCardRadius: 16, // --variant-card-radius
+  // SPACING
+  space0: 0, // --space-0
+  space4: 4, // --space-4
+  space8: 8, // --space-8
+  space12: 12, // --space-12
+  space16: 16, // --space-16
+  space24: 24, // --space-24
+  space32: 32, // --space-32
+  space40: 40, // --space-40
+  // BADGE LAYOUT
+  badgeHeight: 20, // --badge-height
+  badgePaddingX: 6, // --badge-padding-x
+  badgeIconSize: 12, // --badge-icon-size
+  badgeRolledOutIconSize: 10, // --badge-rolled-out-icon-size
+  // BORDER RADIUS
+  radiusXS: 4, // --radius-xs
+  radiusSM: 8, // --radius-sm
+  radiusMD: 12, // --radius-md
+  radiusLG: 16, // --radius-lg
+  radiusXL: 18, // --radius-xl
+  // TYPOGRAPHY SIZES
+  fontSizeH1: 12, // --heading-h1-size
+  fontSizeH2: 11, // --heading-h2-size
+  fontSizeBodyMd: 11, // --body-md-size
+  fontSizeBodyLg: 12, // --body-lg-size
+  fontSizeBodySm: 10, // --body-sm-size
+  fontSizeLabel: 9, // --label-size
+  fontSizeInput: 11, // --input-text-size
+  // TYPOGRAPHY WEIGHTS
+  fontWeightH1: 600, // --heading-h1-weight
+  fontWeightH2: 500, // --heading-h2-weight
+  fontWeightBodyMd: 400, // --body-md-weight
+  fontWeightBodyLg: 400, // --body-lg-weight
+  fontWeightBodySm: 400, // --body-sm-weight
+  fontWeightLabel: 500, // --label-weight
+  fontWeightInput: 400, // --input-text-weight
+  // TYPOGRAPHY LINE HEIGHTS
+  lineHeightH1: 1, // --heading-h1-line-height
+  lineHeightH2: 0.91, // --heading-h2-line-height
+  lineHeightBodyMd: 1.3, // --body-md-line-height
+  lineHeightBodyLg: 1.2, // --body-lg-line-height
+  lineHeightBodySm: 1.3, // --body-sm-line-height
+  lineHeightLabel: 1, // --label-line-height
+  lineHeightInput: 0.91, // --input-text-line-height
+  // STATIC / CANVAS-ONLY
+  accentBrand: '#9785ff', // --color-electric-violet-400 (canvas alias)
+  shadowColor: { r: 0, g: 0, b: 0, a: 0.05 },
+  shadowCard: { r: 40, g: 60, b: 90, a: 0.06 },
+  checkerLight: { r: 0.96, g: 0.96, b: 0.96 },
+  checkerDark: { r: 0.89, g: 0.89, b: 0.89 },
   fontFamily: 'Figtree',
-  
-  // Font Sizes
-  fontSizeH1: 12,
-  fontSizeH2: 11,
-  fontSizeBodyMd: 11,
-  fontSizeBodyLg: 12,
-  fontSizeBodySm: 10,
-  fontSizeLabel: 9,
-  fontSizeInput: 11,
-  
-  // Font Weights
   fontWeightRegular: 400,
   fontWeightMedium: 500,
   fontWeightSemiBold: 600,
   fontWeightBold: 700,
-  
-  // Line Heights
-  lineHeightH1: 1.0,      // 100%
-  lineHeightH2: 0.91,     // 91%
-  lineHeightBodyMd: 1.3,   // 130%
-  lineHeightBodyLg: 1.2,   // 120%
-  lineHeightBodySm: 1.3,   // 130%
-  lineHeightLabel: 1.0,    // 100%
-  lineHeightInput: 0.91,   // 91%
 };
