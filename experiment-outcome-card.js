@@ -114,9 +114,18 @@ function goalPerformancePhrase(goalMet) {
         return "below target";
     return "no target set";
 }
+function shouldShowEmbeddedNextStep(data) {
+    const hasRollout = data.variants.some(v => v.isRolledOut);
+    if (data.status === "rolled_out" || hasRollout)
+        return false;
+    if (data.status === "running" || data.status === "paused")
+        return false;
+    return true;
+}
 function classifyOutcomeState(data, options) {
     var _a, _b;
     const embeddedInOverview = (options === null || options === void 0 ? void 0 : options.embeddedInOverview) === true;
+    const showTargetInCopy = !embeddedInOverview;
     const rolledOutVariant = data.variants.find(v => v.isRolledOut);
     const leadingGoal = getLeadingGoal(data);
     const leadingVariant = leadingGoal ? getLeadingVariant(data, leadingGoal) : undefined;
@@ -148,11 +157,13 @@ function classifyOutcomeState(data, options) {
         return {
             state: "running",
             headline: leaderName
-                ? `${leaderName} leads on ${goalLabel}${goalTargetSuffix(goalMet)}`
+                ? `${leaderName} leads on ${goalLabel}${showTargetInCopy ? goalTargetSuffix(goalMet) : ""}`
                 : "Add variant results to compare",
             detail: "",
             facts,
-            nextStep: `Keep running until you reach ${sampleSizePhrase(data.totalSampleSize)} or your ${goalLabel} target.`,
+            nextStep: embeddedInOverview
+                ? ""
+                : `Keep running until you reach ${sampleSizePhrase(data.totalSampleSize)} or your ${goalLabel} target.`,
         };
     }
     if (data.status === "paused") {
@@ -163,7 +174,7 @@ function classifyOutcomeState(data, options) {
                 : "Test paused",
             detail: "",
             facts,
-            nextStep: "Resume the test or mark it concluded.",
+            nextStep: embeddedInOverview ? "" : "Resume the test or mark it concluded.",
         };
     }
     if (data.status === "rolled_out" || rolledOutVariant) {
@@ -176,18 +187,14 @@ function classifyOutcomeState(data, options) {
             leadingVariant &&
             rolledOutVariant.id !== leadingVariant.id);
         let headline = chosenName ? `${chosenName} rolled out` : "Rolled out";
-        if (chosenName && !rolloutDiffersFromLeader && chosenGoalMet !== undefined) {
+        if (chosenName && !rolloutDiffersFromLeader && showTargetInCopy && chosenGoalMet !== undefined) {
             headline = `${chosenName} rolled out${goalTargetSuffix(chosenGoalMet)}`;
         }
         let detail = "";
         if (rolloutDiffersFromLeader && leaderName && chosenName) {
             detail = `${leaderName} led on ${goalLabel}, but the team rolled out ${chosenName}.`;
-            const supportingDetail = supportingGoalsBelowTargetDetail(supportingIssues.failed);
-            if (supportingDetail) {
-                detail = `${detail} ${supportingDetail}`;
-            }
         }
-        else {
+        else if (!embeddedInOverview) {
             detail = supportingGoalsBelowTargetDetail(supportingIssues.failed);
         }
         return {
@@ -195,9 +202,11 @@ function classifyOutcomeState(data, options) {
             headline,
             detail,
             facts,
-            nextStep: supportingIssues.failed > 0
-                ? "Watch the other goals in production."
-                : "Confirm results hold in production.",
+            nextStep: embeddedInOverview
+                ? ""
+                : supportingIssues.failed > 0
+                    ? "Watch the other goals in production."
+                    : "Confirm results hold in production.",
         };
     }
     if (data.status === "completed" && leadingGoal && leadingVariant) {
@@ -211,10 +220,10 @@ function classifyOutcomeState(data, options) {
         }
         return {
             state: "recommendation",
-            headline: goalMet === false
+            headline: goalMet === false && showTargetInCopy
                 ? `${leader} leads on ${goalLabel}, but below target`
                 : `${leader} leads on ${goalLabel}`,
-            detail: supportingIssues.failed > 0
+            detail: !embeddedInOverview && supportingIssues.failed > 0
                 ? supportingGoalsBelowTargetDetail(supportingIssues.failed)
                 : "",
             facts,
@@ -393,17 +402,7 @@ function buildOutcomeFacts(data, leadingGoal, leadingVariant, options) {
     const embedded = (options === null || options === void 0 ? void 0 : options.embeddedInOverview) === true;
     const supportingFailed = (_a = options === null || options === void 0 ? void 0 : options.supportingIssuesFailed) !== null && _a !== void 0 ? _a : 0;
     if (embedded) {
-        const focusVariant = (options === null || options === void 0 ? void 0 : options.rolledOutVariant) || leadingVariant;
-        if (!leadingGoal || !focusVariant) {
-            return [];
-        }
-        const facts = [formatLeadingGoalFact(1, leadingGoal, focusVariant)];
-        const closeCallSource = leadingVariant || focusVariant;
-        const closeCall = getCloseCallFact(data, leadingGoal, closeCallSource);
-        if (closeCall) {
-            facts.push(closeCall);
-        }
-        return facts;
+        return [];
     }
     const facts = [];
     if (leadingGoal && leadingVariant) {
@@ -1222,18 +1221,7 @@ function createSummarySection(data, options) {
             section.itemSpacing = SECTION_PANEL_LAYOUT.sectionGap;
             section.fills = [];
             section.name = "Section: Outcome summary";
-            const summaryBadge = getOutcomeSummaryBadge(data);
-            const headerRow = figma.createFrame();
-            headerRow.layoutMode = "HORIZONTAL";
-            headerRow.counterAxisSizingMode = "AUTO";
-            headerRow.primaryAxisSizingMode = "AUTO";
-            headerRow.counterAxisAlignItems = "CENTER";
-            headerRow.itemSpacing = 8;
-            headerRow.fills = [];
-            headerRow.name = "Outcome Summary Header";
-            headerRow.appendChild(createOverviewSectionTitle("Outcome summary"));
-            headerRow.appendChild(createBadge(summaryBadge.label, "chip", summaryBadge.bgColor, summaryBadge.textColor, undefined, summaryBadge.borderColor));
-            section.appendChild(headerRow);
+            section.appendChild(createOverviewSectionTitle("Outcome summary"));
             const panelWidth = OUTCOME_SUMMARY_MIN_WIDTH;
             const contentWidth = panelWidth - (SECTION_PANEL_LAYOUT.panelPadding * 2);
             const panel = figma.createFrame();
@@ -1248,6 +1236,7 @@ function createSummarySection(data, options) {
             applySectionPanel(panel);
             panel.name = "Outcome Summary Panel";
             appendOutcomeSummaryBody(panel, outcome, data, contentWidth, {
+                embedded: true,
                 includeDecisionFields: true,
                 rolledOutVariant,
                 rationaleText,
@@ -1321,45 +1310,34 @@ function appendEmbeddedDecisionField(parent, label, value, contentWidth, valueDo
     }
 }
 function appendOutcomeSummaryBody(parent, outcome, data, contentWidth, options) {
-    const decisionBlock = figma.createFrame();
-    decisionBlock.layoutMode = "VERTICAL";
-    decisionBlock.counterAxisSizingMode = "AUTO";
-    decisionBlock.primaryAxisSizingMode = "AUTO";
-    decisionBlock.layoutAlign = "STRETCH";
-    decisionBlock.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
-    decisionBlock.fills = [];
-    decisionBlock.name = "Readout";
-    const headlineText = figma.createText();
-    styleOverviewText(headlineText, "headline");
-    setWrappedText(headlineText, outcome.headline, contentWidth);
-    decisionBlock.appendChild(headlineText);
-    const detailText = outcome.detail.trim();
-    if (detailText) {
+    const embedded = options.embedded === true;
+    const headline = outcome.headline.trim();
+    const detail = outcome.detail.trim();
+    if (headline) {
+        const headlineText = figma.createText();
+        styleOverviewText(headlineText, "headline");
+        setWrappedText(headlineText, headline, contentWidth);
+        headlineText.name = "Readout";
+        parent.appendChild(headlineText);
+    }
+    if (detail) {
         const outcomeDetail = figma.createText();
         styleOverviewText(outcomeDetail, "fieldValue");
-        setWrappedText(outcomeDetail, detailText, contentWidth);
-        decisionBlock.appendChild(outcomeDetail);
+        setWrappedText(outcomeDetail, detail, contentWidth);
+        parent.appendChild(outcomeDetail);
     }
-    parent.appendChild(decisionBlock);
     if (options.includeDecisionFields) {
-        const hasRolledOut = !!options.rolledOutVariant;
-        const hasRationale = !!options.rationaleText;
-        if (hasRolledOut || hasRationale) {
-            const decisionFrame = figma.createFrame();
-            decisionFrame.layoutMode = "VERTICAL";
-            decisionFrame.counterAxisSizingMode = "AUTO";
-            decisionFrame.primaryAxisSizingMode = "AUTO";
-            decisionFrame.layoutAlign = "STRETCH";
-            decisionFrame.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
-            decisionFrame.fills = [];
-            decisionFrame.name = "Decision";
-            if (options.rolledOutVariant) {
-                appendEmbeddedDecisionField(decisionFrame, "Rolled out", variantDisplayName(options.rolledOutVariant), contentWidth, options.rolledOutVariant.color || TOKENS.royalBlue600);
-            }
-            if (options.rationaleText) {
-                appendEmbeddedDecisionField(decisionFrame, "Decision rationale", options.rationaleText, contentWidth);
-            }
-            parent.appendChild(decisionFrame);
+        if (options.rationaleText) {
+            const rationaleFrame = figma.createFrame();
+            rationaleFrame.layoutMode = "VERTICAL";
+            rationaleFrame.counterAxisSizingMode = "AUTO";
+            rationaleFrame.primaryAxisSizingMode = "AUTO";
+            rationaleFrame.layoutAlign = "STRETCH";
+            rationaleFrame.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
+            rationaleFrame.fills = [];
+            rationaleFrame.name = "Row: Decision rationale";
+            appendEmbeddedDecisionField(rationaleFrame, "Decision rationale", options.rationaleText, contentWidth);
+            parent.appendChild(rationaleFrame);
         }
     }
     else if (options.rationaleText) {
@@ -1382,16 +1360,20 @@ function appendOutcomeSummaryBody(parent, outcome, data, contentWidth, options) 
         rationaleFrame.appendChild(rationaleBody);
         parent.appendChild(rationaleFrame);
     }
-    if (outcome.facts.length > 0) {
+    if (!embedded && outcome.facts.length > 0) {
         for (const fact of outcome.facts) {
             parent.appendChild(createSummaryFactRow(fact, contentWidth));
         }
     }
-    const nextStepText = figma.createText();
-    styleOverviewText(nextStepText, "bodyEmphasis");
-    setWrappedText(nextStepText, `Next step: ${outcome.nextStep}`, contentWidth);
-    nextStepText.name = "Next step";
-    parent.appendChild(nextStepText);
+    const nextStep = outcome.nextStep.trim();
+    const showNextStep = nextStep && (!embedded || shouldShowEmbeddedNextStep(data));
+    if (showNextStep) {
+        const nextStepText = figma.createText();
+        styleOverviewText(nextStepText, "bodyEmphasis");
+        setWrappedText(nextStepText, `Next step: ${nextStep}`, contentWidth);
+        nextStepText.name = "Next step";
+        parent.appendChild(nextStepText);
+    }
 }
 function createSummaryFactRow(fact, width) {
     const row = figma.createFrame();

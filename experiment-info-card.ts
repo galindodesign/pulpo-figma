@@ -416,16 +416,12 @@ export async function createExperimentInfoCard(
       ? options.totalSampleSize.toLocaleString()
       : "";
 
-  // === SECTION 1: HEADER (status, title, context, purpose) ===
+  // === SECTION 1: HEADER (status, title, purpose) ===
   const headerSection = await createStoryHeaderWithBadges(
     experimentName,
     description.trim(),
     statusConfig,
     CONTENT_MIN_WIDTH,
-    options,
-    runDatesValue,
-    runSampleSizeValue,
-    options?.hypothesis?.trim() || "",
   );
   card.appendChild(headerSection);
 
@@ -447,10 +443,19 @@ export async function createExperimentInfoCard(
   const ownerValue = options?.owner?.trim() || "";
 
   const contextGroups = buildContextDetailsGroups({
+    runDates: runDatesValue,
+    sampleSize: runSampleSizeValue,
+    experimentType: options?.experimentType,
     audience: audienceValue,
     owner: ownerValue,
-    experimentType: options?.experimentType,
+    hypothesis: options?.hypothesis?.trim() || "",
   });
+
+  try {
+    await appendDetailsSection(contentStack, "Details", contextGroups, CONTENT_MIN_WIDTH);
+  } catch (e) {
+    console.error('Error creating overview details sections:', e);
+  }
 
   const shouldShowInlineOutcome =
     options?.showOutcomeCard === true &&
@@ -502,12 +507,6 @@ export async function createExperimentInfoCard(
     } catch (e) {
       console.error('Error creating inline outcome sections:', e);
     }
-  }
-
-  try {
-    await appendDetailsSection(contentStack, "Context", contextGroups, CONTENT_MIN_WIDTH);
-  } catch (e) {
-    console.error('Error creating overview details sections:', e);
   }
 
   if (!options?.excludeResources) {
@@ -784,7 +783,7 @@ interface SummaryDetailGroup {
   fields: SummaryDetailField[];
   /** Render fields two per row when possible */
   pairFields?: boolean;
-  layout?: "default" | "setup";
+  layout?: "default" | "setup" | "details";
 }
 
 function buildDecisionDetailsGroups(input: {
@@ -825,22 +824,37 @@ function buildDecisionDetailsGroups(input: {
 }
 
 function buildContextDetailsGroups(input: {
+  runDates: string;
+  sampleSize: string;
   audience: string;
   owner: string;
   experimentType?: string;
+  hypothesis?: string;
 }): SummaryDetailGroup[] {
   const typeLabel = input.experimentType?.trim()
     ? getExperimentTypeLabel(input.experimentType.trim())
     : "";
+  const datesValue = input.runDates.trim() || "—";
+  const sampleSizeValue = input.sampleSize.trim()
+    ? `${input.sampleSize.trim()} users`
+    : "—";
+  const hypothesisValue = input.hypothesis?.trim() || "";
+
+  const fields: SummaryDetailField[] = [
+    { label: "Dates", value: datesValue },
+    { label: "Sample size", value: sampleSizeValue },
+    { label: "Experiment type", value: typeLabel || "—" },
+    { label: "Owner", value: input.owner.trim() || "—", wrap: true },
+    { label: "Audience", value: input.audience.trim() || "—", wrap: true },
+  ];
+  if (hypothesisValue) {
+    fields.unshift({ label: "Hypothesis", value: hypothesisValue, wrap: true });
+  }
 
   return [{
-    name: "Context",
-    pairFields: true,
-    fields: [
-      { label: "Audience", value: input.audience.trim() || "—", wrap: true },
-      { label: "Owner", value: input.owner.trim() || "—", wrap: true },
-      { label: "Experiment type", value: typeLabel || "—" },
-    ],
+    name: "Details",
+    layout: "details",
+    fields,
   }];
 }
 
@@ -849,17 +863,23 @@ function buildSummaryDetailsGroups(input: {
   rolledOutVariantName?: string;
   rolledOutVariantColor?: string;
   decisionRationale?: string;
+  runDates?: string;
+  sampleSize?: string;
   audience: string;
   owner: string;
   experimentType?: string;
+  hypothesis?: string;
   confidenceLevel?: number;
 }): SummaryDetailGroup[] {
   return [
     ...buildDecisionDetailsGroups(input),
     ...buildContextDetailsGroups({
+      runDates: input.runDates ?? "",
+      sampleSize: input.sampleSize ?? "",
       audience: input.audience,
       owner: input.owner,
       experimentType: input.experimentType,
+      hypothesis: input.hypothesis,
     }),
   ];
 }
@@ -1036,7 +1056,35 @@ async function appendDetailsSection(
     groupFrame.name = `Details Group: ${group.name}`;
 
     const fields = group.fields;
-    if (group.layout === "setup") {
+    if (group.layout === "details") {
+      const hypothesisField = fields.find(field => field.label === "Hypothesis");
+      const datesField = fields.find(field => field.label === "Dates");
+      const sampleField = fields.find(field => field.label === "Sample size");
+      const typeField = fields.find(field => field.label === "Experiment type");
+      const ownerField = fields.find(field => field.label === "Owner");
+      const audienceField = fields.find(field => field.label === "Audience");
+
+      if (hypothesisField) {
+        groupFrame.appendChild(createSummaryDetailFieldRow(hypothesisField, contentWidth));
+      }
+      if (datesField && sampleField) {
+        groupFrame.appendChild(createSummaryDetailPairRow([datesField, sampleField], contentWidth));
+      } else if (datesField) {
+        groupFrame.appendChild(createSummaryDetailFieldRow(datesField, contentWidth));
+      } else if (sampleField) {
+        groupFrame.appendChild(createSummaryDetailFieldRow(sampleField, contentWidth));
+      }
+      if (typeField && ownerField) {
+        groupFrame.appendChild(createSummaryDetailPairRow([typeField, ownerField], contentWidth));
+      } else if (typeField) {
+        groupFrame.appendChild(createSummaryDetailFieldRow(typeField, contentWidth));
+      } else if (ownerField) {
+        groupFrame.appendChild(createSummaryDetailFieldRow(ownerField, contentWidth));
+      }
+      if (audienceField) {
+        groupFrame.appendChild(createSummaryDetailFieldRow(audienceField, contentWidth));
+      }
+    } else if (group.layout === "setup") {
       const datesField = fields.find(field => field.label === "Dates");
       const sampleField = fields.find(field => field.label === "Sample size");
       const scalarFields = [datesField, sampleField].filter(
@@ -1075,16 +1123,12 @@ async function appendDetailsSection(
   parent.appendChild(section);
 }
 
-// SECTION 1: Header with date, status badge, title, and description
+// SECTION 1: Header with status badge, title, and description
 async function createStoryHeaderWithBadges(
   experimentName: string,
   description: string,
   statusConfig: ExperimentStatusConfig,
   contentWidth = 0,
-  options?: ExperimentCardOptions,
-  runDates = "",
-  runSampleSize = "",
-  hypothesis = "",
 ): Promise<FrameNode> {
   await loadFonts();
   const section = figma.createFrame();
@@ -1128,49 +1172,20 @@ async function createStoryHeaderWithBadges(
   titleText.characters = experimentName && experimentName.length > 0 ? experimentName : "Untitled Experiment";
   section.appendChild(titleText);
 
-  const contextParts: string[] = [];
-  contextParts.push(runDates.trim() || "No run dates set");
-  if (options?.experimentType?.trim()) {
-    contextParts.push(getExperimentTypeLabel(options.experimentType.trim()));
-  }
-  if (runSampleSize.trim()) {
-    contextParts.push(`${runSampleSize} users`);
-  }
-  const contextText = figma.createText();
-  styleOverviewText(contextText, "caption");
-  contextText.textAutoResize = "WIDTH_AND_HEIGHT";
-  contextText.characters = contextParts.join(" · ");
-  contextText.name = "Header Context";
-  section.appendChild(contextText);
-
   const descriptionText = description.trim();
-  const hypothesisText = hypothesis.trim();
   const purposeWidth = contentWidth > 0 ? contentWidth : SUMMARY_CONTENT_MIN_WIDTH;
 
-  if (descriptionText || hypothesisText) {
-    const purposeBlock = figma.createFrame();
-    purposeBlock.layoutMode = "VERTICAL";
-    purposeBlock.counterAxisSizingMode = "FIXED";
-    purposeBlock.primaryAxisSizingMode = "AUTO";
-    purposeBlock.layoutAlign = "STRETCH";
-    purposeBlock.itemSpacing = SECTION_PANEL_LAYOUT.panelItemSpacing;
-    purposeBlock.fills = [];
-    purposeBlock.name = "Header Purpose";
-
-    if (descriptionText) {
-      purposeBlock.appendChild(createSummaryDetailFieldRow(
-        { label: "What we're testing", value: descriptionText, wrap: true },
-        purposeWidth,
-      ));
+  if (descriptionText) {
+    const descriptionNode = figma.createText();
+    styleOverviewText(descriptionNode, "fieldValue");
+    descriptionNode.name = "Description";
+    if (purposeWidth > 0) {
+      setWrappedOverviewText(descriptionNode, descriptionText, purposeWidth);
+    } else {
+      descriptionNode.textAutoResize = "WIDTH_AND_HEIGHT";
+      descriptionNode.characters = descriptionText;
     }
-    if (hypothesisText) {
-      purposeBlock.appendChild(createSummaryDetailFieldRow(
-        { label: "Hypothesis", value: hypothesisText, wrap: true },
-        purposeWidth,
-      ));
-    }
-
-    section.appendChild(purposeBlock);
+    section.appendChild(descriptionNode);
   }
 
   return section;
