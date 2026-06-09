@@ -6,11 +6,12 @@ GrowthLab creates professional **experiment flow** diagrams on the Figma canvas:
 ## Experiment section
 Fields include:
 - **Title** (required)
-- Description
-- Audience, sample size, dates
-- **Details** (collapsible): status (Draft, Planned, Running, Paused, Concluded), rolled-out variant when Concluded, owner, resource links
+- **Description**
+- **Status** (Draft, Running, Paused, Concluded) — always visible; when Concluded, choose **Rolled out**
+- **Details** (collapsible): hypothesis, **Notes**, dates, sample size, owner, audience
+- **Resources** — links shown on the overview card (always visible, not inside Details)
 
-Hypothesis is **not** shown as a field in the current plugin UI (the load-example script may still set it for demos).
+**Notes** are optional and available at any status. They appear in the **Details** section on the overview card (blockers, context, rollout reasoning, etc.). The **Outcome summary** on the card is auto-generated from goals and status — it does not repeat Notes.
 
 ## Goals
 - Add multiple goals; each goal corresponds to a **metric** in the generated flow
@@ -22,6 +23,7 @@ Hypothesis is **not** shown as a field in the current plugin UI (the load-exampl
 - Add touchpoints for the user flow
 - Mark the **Experiment Step** (only this step can have variants)
 - Entry/Exit nodes are created automatically
+- Variant count auto-infers experiment type for the canvas (2 variants = A/B Test, 3+ = Multivariate)
 
 ## Variants
 - Add unlimited variants

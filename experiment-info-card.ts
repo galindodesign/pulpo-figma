@@ -449,6 +449,7 @@ export async function createExperimentInfoCard(
     audience: audienceValue,
     owner: ownerValue,
     hypothesis: options?.hypothesis?.trim() || "",
+    notes: options?.outcomeNotes?.trim() || "",
   });
 
   try {
@@ -806,13 +807,6 @@ function buildDecisionDetailsGroups(input: {
       valueDot: input.rolledOutVariantColor,
     });
   }
-  if (input.decisionRationale) {
-    decisionFields.push({
-      label: "Decision rationale",
-      value: input.decisionRationale,
-      wrap: true,
-    });
-  }
   if (decisionFields.length > 0) {
     groups.push({
       name: "Decision",
@@ -830,6 +824,7 @@ function buildContextDetailsGroups(input: {
   owner: string;
   experimentType?: string;
   hypothesis?: string;
+  notes?: string;
 }): SummaryDetailGroup[] {
   const typeLabel = input.experimentType?.trim()
     ? getExperimentTypeLabel(input.experimentType.trim())
@@ -839,17 +834,24 @@ function buildContextDetailsGroups(input: {
     ? `${input.sampleSize.trim()} users`
     : "—";
   const hypothesisValue = input.hypothesis?.trim() || "";
+  const notesValue = input.notes?.trim() || "";
 
-  const fields: SummaryDetailField[] = [
+  const scalarFields: SummaryDetailField[] = [
     { label: "Dates", value: datesValue },
     { label: "Sample size", value: sampleSizeValue },
     { label: "Experiment type", value: typeLabel || "—" },
     { label: "Owner", value: input.owner.trim() || "—", wrap: true },
     { label: "Audience", value: input.audience.trim() || "—", wrap: true },
   ];
+
+  const fields: SummaryDetailField[] = [];
   if (hypothesisValue) {
-    fields.unshift({ label: "Hypothesis", value: hypothesisValue, wrap: true });
+    fields.push({ label: "Hypothesis", value: hypothesisValue, wrap: true });
   }
+  if (notesValue) {
+    fields.push({ label: "Notes", value: notesValue, wrap: true });
+  }
+  fields.push(...scalarFields);
 
   return [{
     name: "Details",
@@ -880,6 +882,7 @@ function buildSummaryDetailsGroups(input: {
       owner: input.owner,
       experimentType: input.experimentType,
       hypothesis: input.hypothesis,
+      notes: input.decisionRationale,
     }),
   ];
 }
@@ -901,7 +904,7 @@ function shouldWrapDetailValue(label: string, wrap?: boolean): boolean {
     label === "Description" ||
     label === "Hypothesis" ||
     label === "What we're testing" ||
-    label === "Decision rationale" ||
+    label === "Notes" ||
     label === "Audience" ||
     label === "Owner"
   );
@@ -1058,6 +1061,7 @@ async function appendDetailsSection(
     const fields = group.fields;
     if (group.layout === "details") {
       const hypothesisField = fields.find(field => field.label === "Hypothesis");
+      const notesField = fields.find(field => field.label === "Notes");
       const datesField = fields.find(field => field.label === "Dates");
       const sampleField = fields.find(field => field.label === "Sample size");
       const typeField = fields.find(field => field.label === "Experiment type");
@@ -1066,6 +1070,9 @@ async function appendDetailsSection(
 
       if (hypothesisField) {
         groupFrame.appendChild(createSummaryDetailFieldRow(hypothesisField, contentWidth));
+      }
+      if (notesField) {
+        groupFrame.appendChild(createSummaryDetailFieldRow(notesField, contentWidth));
       }
       if (datesField && sampleField) {
         groupFrame.appendChild(createSummaryDetailPairRow([datesField, sampleField], contentWidth));

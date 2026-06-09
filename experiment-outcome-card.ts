@@ -1463,8 +1463,6 @@ async function createSummarySection(
 ): Promise<FrameNode> {
   const embedded = options?.embedded === true;
   const outcome = classifyOutcomeState(data, { compact: embedded, embeddedInOverview: embedded });
-  const rationaleText = (data.outcomeNotes || "").trim();
-  const rolledOutVariant = data.variants.find(v => v.isRolledOut);
 
   if (embedded) {
     const section = figma.createFrame();
@@ -1494,9 +1492,6 @@ async function createSummarySection(
 
     appendOutcomeSummaryBody(panel, outcome, data, contentWidth, {
       embedded: true,
-      includeDecisionFields: true,
-      rolledOutVariant,
-      rationaleText,
     });
 
     section.appendChild(panel);
@@ -1544,51 +1539,10 @@ async function createSummarySection(
   section.appendChild(headerRow);
 
   appendOutcomeSummaryBody(section, outcome, data, contentWidth, {
-    includeDecisionFields: false,
-    rolledOutVariant,
-    rationaleText,
+    embedded: false,
   });
 
   return section;
-}
-
-function appendEmbeddedDecisionField(
-  parent: FrameNode,
-  label: string,
-  value: string,
-  contentWidth: number,
-  valueDot?: string,
-): void {
-  const labelNode = figma.createText();
-  styleOverviewText(labelNode, "fieldLabel");
-  labelNode.textAutoResize = "WIDTH_AND_HEIGHT";
-  labelNode.characters = label;
-  parent.appendChild(labelNode);
-
-  const valueNode = figma.createText();
-  styleOverviewText(valueNode, "fieldValue");
-  if (valueDot) {
-    const valueRow = figma.createFrame();
-    valueRow.layoutMode = "HORIZONTAL";
-    valueRow.counterAxisSizingMode = "AUTO";
-    valueRow.primaryAxisSizingMode = "AUTO";
-    valueRow.counterAxisAlignItems = "CENTER";
-    valueRow.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
-    valueRow.fills = [];
-    valueRow.name = "Value Row";
-
-    const dot = figma.createEllipse();
-    dot.resize(8, 8);
-    dot.fills = [{ type: "SOLID", color: hexToRgb(valueDot) }];
-    valueRow.appendChild(dot);
-
-    setWrappedText(valueNode, value, contentWidth);
-    valueRow.appendChild(valueNode);
-    parent.appendChild(valueRow);
-  } else {
-    setWrappedText(valueNode, value, contentWidth);
-    parent.appendChild(valueNode);
-  }
 }
 
 function appendOutcomeSummaryBody(
@@ -1596,14 +1550,11 @@ function appendOutcomeSummaryBody(
   outcome: OutcomeSummaryContent,
   data: ExperimentOutcomeData,
   contentWidth: number,
-  options: {
+  options?: {
     embedded?: boolean;
-    includeDecisionFields: boolean;
-    rolledOutVariant?: VariantOutcome;
-    rationaleText: string;
   },
 ): void {
-  const embedded = options.embedded === true;
+  const embedded = options?.embedded === true;
   const headline = outcome.headline.trim();
   const detail = outcome.detail.trim();
 
@@ -1620,47 +1571,6 @@ function appendOutcomeSummaryBody(
     styleOverviewText(outcomeDetail, "fieldValue");
     setWrappedText(outcomeDetail, detail, contentWidth);
     parent.appendChild(outcomeDetail);
-  }
-
-  if (options.includeDecisionFields) {
-    if (options.rationaleText) {
-      const rationaleFrame = figma.createFrame();
-      rationaleFrame.layoutMode = "VERTICAL";
-      rationaleFrame.counterAxisSizingMode = "AUTO";
-      rationaleFrame.primaryAxisSizingMode = "AUTO";
-      rationaleFrame.layoutAlign = "STRETCH";
-      rationaleFrame.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
-      rationaleFrame.fills = [];
-      rationaleFrame.name = "Row: Decision rationale";
-      appendEmbeddedDecisionField(
-        rationaleFrame,
-        "Decision rationale",
-        options.rationaleText,
-        contentWidth,
-      );
-      parent.appendChild(rationaleFrame);
-    }
-  } else if (options.rationaleText) {
-    const rationaleFrame = figma.createFrame();
-    rationaleFrame.layoutMode = "VERTICAL";
-    rationaleFrame.counterAxisSizingMode = "AUTO";
-    rationaleFrame.primaryAxisSizingMode = "AUTO";
-    rationaleFrame.layoutAlign = "STRETCH";
-    rationaleFrame.itemSpacing = SECTION_PANEL_LAYOUT.rowItemSpacing;
-    rationaleFrame.fills = [];
-    rationaleFrame.name = "Decision Rationale";
-
-    const rationaleLabel = figma.createText();
-    styleOverviewText(rationaleLabel, "fieldLabel");
-    rationaleLabel.textAutoResize = "WIDTH_AND_HEIGHT";
-    rationaleLabel.characters = "Decision rationale";
-    rationaleFrame.appendChild(rationaleLabel);
-
-    const rationaleBody = figma.createText();
-    styleOverviewText(rationaleBody, "fieldValue");
-    setWrappedText(rationaleBody, options.rationaleText, contentWidth);
-    rationaleFrame.appendChild(rationaleBody);
-    parent.appendChild(rationaleFrame);
   }
 
   if (!embedded && outcome.facts.length > 0) {

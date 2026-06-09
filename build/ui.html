@@ -588,6 +588,29 @@
       padding-top: var(--space-8);
     }
 
+    .experiment-detail-pair {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-12);
+      align-items: flex-end;
+    }
+
+    .experiment-detail-pair > .InputField,
+    .experiment-detail-pair > .SelectField,
+    .experiment-detail-pair > .date-range-field {
+      flex: 1 1 140px;
+      min-width: 0;
+    }
+
+    .header-resources-block {
+      margin-top: var(--space-4);
+    }
+
+    .InputField__label.required::after {
+      content: ' *';
+      color: var(--select-field-error-border);
+    }
+
     /* ============================================
      * INTRO SCREEN
      * ============================================ */
@@ -3534,27 +3557,23 @@
 
     .experiment-status-row {
       display: flex;
+      flex-wrap: wrap;
       align-items: flex-end;
-      gap: var(--space-8);
+      gap: var(--space-12);
     }
 
     .status-field {
-      flex: 0 0 calc(40% - var(--space-12) / 2);
+      flex: 1 1 140px;
+      max-width: 200px;
+      min-width: 0;
     }
 
     .rolledout-field {
-      flex: 1;
+      flex: 2 1 200px;
+      min-width: 0;
     }
 
     .rolledout-field.hidden {
-      display: none;
-    }
-
-    .decision-rationale-field {
-      width: 100%;
-    }
-
-    .decision-rationale-field.hidden {
       display: none;
     }
 
@@ -4987,7 +5006,7 @@
           <div class="header-content">
             <div style="display: flex; align-items: center; gap: var(--space-4);">
               <h2>Experiment</h2>
-              <span class="section-info-icon" data-tooltip="Define the experiment details" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Define the experiment details">
+              <span class="section-info-icon" data-tooltip="Name the experiment, set status, then add context that appears on the overview card." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Name the experiment, set status, then add context that appears on the overview card.">
                 <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
                   <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
                   <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
@@ -4998,195 +5017,188 @@
           </div>
         </div>
         <div class="header-inputs">
-          <!-- Experiment Name (Required - Always Visible) -->
+          <!-- Title (required) -->
           <div class="InputField" data-state="default" data-variant="vertical">
-            <label class="InputField__label">Title</label>
+            <label class="InputField__label required" for="experimentName">Title</label>
             <div class="InputField__wrapper">
-              <input class="InputField__input" type="text" id="experimentName" placeholder="Landing page CTA: Primary button copy">
+              <input class="InputField__input" type="text" id="experimentName" placeholder="e.g., Landing page CTA: Primary button copy">
             </div>
           </div>
+
           <!-- Description -->
           <div class="InputField" data-state="default" data-variant="vertical">
-            <label class="InputField__label">Description</label>
+            <label class="InputField__label" for="experimentDescription">Description</label>
             <div class="InputField__wrapper">
               <input class="InputField__input" type="text" id="experimentDescription" placeholder="What change are you testing and where?">
             </div>
           </div>
 
-          <!-- Audience -->
-          <div class="audience-sample-fields" style="display: flex; flex-direction: column; gap: var(--space-12);">
-            <div class="InputField" data-state="default" data-variant="vertical">
-              <label class="InputField__label">Audience</label>
-              <div class="InputField__wrapper">
-                <input class="InputField__input" type="text" id="experimentAudience" placeholder="All users">
-              </div>
-            </div>
-
-            <!-- Hidden date inputs -->
-            <input type="hidden" id="experimentStartDate">
-            <input type="hidden" id="experimentEndDate">
-
-            <!-- Sample Size + Dates -->
-            <div style="display: flex; gap: var(--space-12); align-items: flex-end;">
-              <div class="InputField" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
-                <label class="InputField__label">Sample Size</label>
-                <div class="InputField__wrapper">
-                  <input class="InputField__input" type="number" id="experimentSampleSize" placeholder="10000" min="0">
+          <!-- Status + Rolled out (always visible) -->
+          <div class="experiment-status-section">
+            <div class="experiment-status-row">
+              <div class="status-field">
+                <div class="SelectField">
+                  <label class="SelectField__label" for="statusTrigger">Status</label>
+                  <div class="CustomDropdown" id="statusDropdown">
+                    <button type="button" class="CustomDropdown__trigger" id="statusTrigger">
+                      <span class="CustomDropdown__text">Running</span>
+                      <span class="CustomDropdown__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                      </span>
+                    </button>
+                    <div class="CustomDropdown__menu" id="statusMenu"></div>
+                    <input type="hidden" id="experimentStatus" name="experimentStatus" value="running">
+                  </div>
                 </div>
               </div>
 
-              <!-- Dates picker -->
-              <div class="InputField date-range-field" data-state="default" data-variant="vertical" style="flex: 1; min-width: 0;">
-                <label class="InputField__label">Dates</label>
-                <div class="date-range-wrapper" id="dateRangeWrapper">
-                  <button type="button" class="date-range-trigger" id="dateRangeTrigger" aria-haspopup="true" aria-expanded="false">
-                    <svg class="date-range-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
-                      <path d="M2 6.5h12" stroke="currentColor" stroke-width="1.25"/>
-                      <path d="M5.5 2v2M10.5 2v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-                    </svg>
-                    <span class="date-range-label placeholder" id="dateRangeLabel">Pick dates</span>
-                  </button>
-                  <div class="date-range-popover" id="dateRangePopover" role="dialog" aria-label="Date range picker">
-                    <div class="drp-header">
-                      <button type="button" class="drp-nav" id="drpPrev" aria-label="Previous month">‹</button>
-                      <span class="drp-month-label" id="drpMonthLabel"></span>
-                      <button type="button" class="drp-nav" id="drpNext" aria-label="Next month">›</button>
-                    </div>
-                    <div class="drp-weekdays">
-                      <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
-                    </div>
-                    <div class="drp-grid" id="drpGrid"></div>
-                    <div class="drp-hint" id="drpHint">Select start date</div>
+              <div class="status-arrow hidden" id="statusArrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="m12 5 7 7-7 7"/>
+                </svg>
+              </div>
+
+              <div class="rolledout-field hidden" id="rolledoutField" aria-hidden="true">
+                <div class="SelectField">
+                  <label class="SelectField__label SelectField__label--with-info">
+                    <span>Rolled out</span>
+                    <span class="section-info-icon" data-tooltip="Marking a rolled-out variant records the team decision on the overview card." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Marking a rolled-out variant records the team decision on the overview card.">
+                      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
+                        <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
+                        <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                        <circle cx="8" cy="5.25" r="0.75" fill="currentColor"/>
+                      </svg>
+                    </span>
+                  </label>
+                  <div class="CustomDropdown" id="rolledoutVariantDropdown">
+                    <button type="button" class="CustomDropdown__trigger placeholder" id="rolledoutVariantTrigger">
+                      <span class="CustomDropdown__text">Add variants first</span>
+                      <span class="CustomDropdown__icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                      </span>
+                    </button>
+                    <div class="CustomDropdown__menu" id="rolledoutVariantMenu"></div>
+                    <input type="hidden" id="rolledoutVariant" name="rolledoutVariant" value="">
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Hidden Experiment Type (auto-inferred from variant count) -->
+          <!-- Hidden date inputs -->
+          <input type="hidden" id="experimentStartDate">
+          <input type="hidden" id="experimentEndDate">
           <input type="hidden" id="experimentType" name="experimentType" value="ab_test">
+          <input type="hidden" id="experimentConfidenceLevel" value="95">
 
-          <!-- Collapsible More Options Section -->
+          <!-- Details (collapsible) -->
           <details class="more-options" id="moreOptionsSection">
-            <summary>
-              <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <summary id="moreOptionsSummary" aria-label="Experiment details, collapsed">
+              <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="m9 18 6-6-6-6"/>
               </svg>
               Details
             </summary>
             <div class="more-options-content">
 
-              <!-- Status + Rolled out Row -->
-              <div class="experiment-status-section">
-                <div class="experiment-status-row">
-                  <!-- Status Dropdown -->
-                  <div class="status-field">
-                    <div class="SelectField">
-                      <label class="SelectField__label">Status</label>
-                      <div class="CustomDropdown" id="statusDropdown">
-                        <button type="button" class="CustomDropdown__trigger" id="statusTrigger">
-                          <span class="CustomDropdown__text">Running</span>
-                          <span class="CustomDropdown__icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="m6 9 6 6 6-6"/>
-                            </svg>
-                          </span>
-                        </button>
-                        <div class="CustomDropdown__menu" id="statusMenu"></div>
-                        <input type="hidden" id="experimentStatus" name="experimentStatus" value="running">
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Arrow indicator (shown when Concluded is selected) -->
-                  <div class="status-arrow hidden" id="statusArrow">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M5 12h14"/>
-                      <path d="m12 5 7 7-7 7"/>
-                    </svg>
-                  </div>
-
-                  <!-- Rolled-out Variant Dropdown (shown only when status is "Concluded") -->
-                  <div class="rolledout-field hidden" id="rolledoutField">
-                    <div class="SelectField">
-                      <label class="SelectField__label SelectField__label--with-info">
-                        <span>Rolled out</span>
-                        <span class="section-info-icon" data-tooltip="Marking a rolled-out variant records the team decision on the overview card." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Marking a rolled-out variant records the team decision on the overview card.">
-                          <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
-                            <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
-                            <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
-                            <circle cx="8" cy="5.25" r="0.75" fill="currentColor"/>
-                          </svg>
-                        </span>
-                      </label>
-                      <div class="CustomDropdown" id="rolledoutVariantDropdown">
-                        <button type="button" class="CustomDropdown__trigger placeholder" id="rolledoutVariantTrigger">
-                          <span class="CustomDropdown__text">Add variants first</span>
-                          <span class="CustomDropdown__icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="m6 9 6 6 6-6"/>
-                            </svg>
-                          </span>
-                        </button>
-                        <div class="CustomDropdown__menu" id="rolledoutVariantMenu"></div>
-                        <input type="hidden" id="rolledoutVariant" name="rolledoutVariant" value="">
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Decision rationale (shown when status is Concluded) -->
-                <div class="decision-rationale-field hidden" id="decisionRationaleField">
-                  <div class="InputField" data-state="default" data-variant="vertical">
-                    <label class="InputField__label">Decision rationale</label>
-                    <div class="InputField__wrapper">
-                      <input class="InputField__input" type="text" id="experimentDecisionRationale" placeholder="Optional: why you chose this outcome">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Hypothesis -->
-                <div class="InputField" data-state="default" data-variant="vertical">
-                  <label class="InputField__label">Hypothesis</label>
-                  <div class="InputField__wrapper">
-                    <input class="InputField__input" type="text" id="experimentHypothesis" placeholder="If we [change], then [metric] will [improve], because [reason]">
-                  </div>
-                </div>
-
-              <!-- Confidence Level (hardcoded to 95%) -->
-              <input type="hidden" id="experimentConfidenceLevel" value="95">
-
-              <!-- Owner -->
               <div class="InputField" data-state="default" data-variant="vertical">
-                <label class="InputField__label">Owner</label>
+                <label class="InputField__label" for="experimentHypothesis">Hypothesis</label>
                 <div class="InputField__wrapper">
-                  <input class="InputField__input" type="text" id="experimentOwner" placeholder="e.g., John Smith or Growth Team">
+                  <input class="InputField__input" type="text" id="experimentHypothesis" placeholder="If we [change], then [metric] will [improve], because [reason]">
                 </div>
               </div>
 
-              <!-- Resources/Links -->
-              <div class="links-subsection" id="linksSubsection">
-                <div class="links-header" id="linksHeader">
-                  <span class="links-header__label">Resources</span>
+              <div class="InputField" data-state="default" data-variant="vertical">
+                <label class="InputField__label" for="experimentDecisionRationale">Notes</label>
+                <div class="InputField__wrapper">
+                  <input class="InputField__input" type="text" id="experimentDecisionRationale" placeholder="Blockers, context, or rollout reasoning">
                 </div>
-                <div class="links-content">
-                  <div class="links-list" id="linksList"></div>
-                  <div class="link-input-wrapper">
-                    <div class="link-input-row">
-                      <div class="InputField" data-state="default" data-variant="horizontal">
-                        <div class="InputField__wrapper">
-                          <input class="InputField__input" type="text" id="linkInput" placeholder="e.g., Figma, Miro, Jira, Notion, Amplitude...">
-                        </div>
+              </div>
+
+              <div class="experiment-detail-pair">
+                <div class="InputField date-range-field" data-state="default" data-variant="vertical">
+                  <label class="InputField__label">Dates</label>
+                  <div class="date-range-wrapper" id="dateRangeWrapper">
+                    <button type="button" class="date-range-trigger" id="dateRangeTrigger" aria-haspopup="true" aria-expanded="false">
+                      <svg class="date-range-icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+                        <path d="M2 6.5h12" stroke="currentColor" stroke-width="1.25"/>
+                        <path d="M5.5 2v2M10.5 2v2" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                      </svg>
+                      <span class="date-range-label placeholder" id="dateRangeLabel">Pick dates</span>
+                    </button>
+                    <div class="date-range-popover" id="dateRangePopover" role="dialog" aria-label="Date range picker">
+                      <div class="drp-header">
+                        <button type="button" class="drp-nav" id="drpPrev" aria-label="Previous month">‹</button>
+                        <span class="drp-month-label" id="drpMonthLabel"></span>
+                        <button type="button" class="drp-nav" id="drpNext" aria-label="Next month">›</button>
                       </div>
+                      <div class="drp-weekdays">
+                        <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                      </div>
+                      <div class="drp-grid" id="drpGrid"></div>
+                      <div class="drp-hint" id="drpHint">Select start date</div>
                     </div>
-                    <div class="link-input-error" id="linkInputError" style="display: none;"></div>
+                  </div>
+                </div>
+
+                <div class="InputField" data-state="default" data-variant="vertical">
+                  <label class="InputField__label" for="experimentSampleSize">Sample size</label>
+                  <div class="InputField__wrapper">
+                    <input class="InputField__input" type="number" id="experimentSampleSize" placeholder="e.g. 10000 total users" min="0">
+                  </div>
+                </div>
+              </div>
+
+              <div class="experiment-detail-pair">
+                <div class="InputField" data-state="default" data-variant="vertical">
+                  <label class="InputField__label" for="experimentOwner">Owner</label>
+                  <div class="InputField__wrapper">
+                    <input class="InputField__input" type="text" id="experimentOwner" placeholder="e.g., John Smith or Growth Team">
+                  </div>
+                </div>
+
+                <div class="InputField" data-state="default" data-variant="vertical">
+                  <label class="InputField__label" for="experimentAudience">Audience</label>
+                  <div class="InputField__wrapper">
+                    <input class="InputField__input" type="text" id="experimentAudience" placeholder="e.g. all signed-in users">
                   </div>
                 </div>
               </div>
             </div>
           </details>
+
+          <!-- Resources -->
+          <div class="links-subsection header-resources-block" id="linksSubsection">
+            <div class="links-header" id="linksHeader">
+              <span class="links-header__label">Resources</span>
+              <span class="section-info-icon" data-tooltip="Links appear in the Resources section on the overview card." data-tooltip-multiline="wide" data-tooltip-position="right" data-tooltip-cursor="default" aria-label="Links appear in the Resources section on the overview card.">
+                <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" width="13" height="13">
+                  <circle cx="8" cy="8" r="6.25" stroke="currentColor" stroke-width="1.25"/>
+                  <path d="M8 7.5v4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+                  <circle cx="8" cy="5.25" r="0.75" fill="currentColor"/>
+                </svg>
+              </span>
+            </div>
+            <div class="links-content">
+              <div class="links-list" id="linksList"></div>
+              <div class="link-input-wrapper">
+                <div class="link-input-row">
+                  <div class="InputField" data-state="default" data-variant="horizontal">
+                    <div class="InputField__wrapper">
+                      <input class="InputField__input" type="text" id="linkInput" placeholder="e.g., Figma, Miro, Jira, Notion, Amplitude...">
+                    </div>
+                  </div>
+                </div>
+                <div class="link-input-error" id="linkInputError" style="display: none;"></div>
+              </div>
+            </div>
+          </div>
 
         </div>
 
@@ -8216,8 +8228,39 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       // Auto-infer experiment type based on variant count
       // 3+ variants = Multivariate, otherwise A/B Test
       const inferredType = variantCount >= 3 ? 'multivariate' : 'ab_test';
-      const inferredLabel = variantCount >= 3 ? 'Multivariate' : 'A/B Test';
-      selectExperimentType(inferredType, inferredLabel);
+      selectExperimentType(inferredType);
+    }
+
+    function updateDetailsSummaryAria() {
+      const details = document.getElementById('moreOptionsSection');
+      const summary = document.getElementById('moreOptionsSummary');
+      if (!details || !summary) return;
+      summary.setAttribute(
+        'aria-label',
+        details.open ? 'Experiment details, expanded' : 'Experiment details, collapsed',
+      );
+    }
+
+    function syncDetailsOpenState() {
+      const detailIds = [
+        'experimentHypothesis',
+        'experimentDecisionRationale',
+        'experimentSampleSize',
+        'experimentOwner',
+        'experimentAudience',
+      ];
+      const startEl = document.getElementById('experimentStartDate');
+      const endEl = document.getElementById('experimentEndDate');
+      const hasDates = Boolean((startEl?.value || '').trim() || (endEl?.value || '').trim());
+      const hasDetailContent = hasDates || detailIds.some((id) => {
+        const el = document.getElementById(id);
+        return el && String(el.value || '').trim();
+      });
+      const moreOptionsEl = document.getElementById('moreOptionsSection');
+      if (moreOptionsEl && hasDetailContent) {
+        moreOptionsEl.setAttribute('open', '');
+      }
+      updateDetailsSummaryAria();
     }
 
     /**
@@ -9471,13 +9514,12 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
      */
     function initExperimentTypeDropdown() {
       // Type is auto-inferred in updateEventsCount() based on variant count
-      // No dropdown initialization needed
     }
 
     /**
-     * Select an experiment type (auto-inferred, no visible dropdown)
+     * Select an experiment type (auto-inferred, hidden field only)
      */
-    function selectExperimentType(value, label) {
+    function selectExperimentType(value) {
       const hiddenInput = document.getElementById('experimentType');
       if (hiddenInput) {
         hiddenInput.value = value;
@@ -9565,21 +9607,30 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
     function handleStatusChange() {
       const statusInput = document.getElementById('experimentStatus');
       const rolledoutField = document.getElementById('rolledoutField');
-      const decisionRationaleField = document.getElementById('decisionRationaleField');
       const statusArrow = document.getElementById('statusArrow');
-      
-      if (statusInput.value === 'completed') {
+      const isConcluded = statusInput.value === 'completed';
+
+      if (isConcluded) {
         statusArrow.classList.remove('hidden');
+        statusArrow.setAttribute('aria-hidden', 'false');
         rolledoutField.classList.remove('hidden');
-        if (decisionRationaleField) decisionRationaleField.classList.remove('hidden');
+        rolledoutField.setAttribute('aria-hidden', 'false');
         updateRolledoutOptions();
       } else {
         statusArrow.classList.add('hidden');
+        statusArrow.setAttribute('aria-hidden', 'true');
         rolledoutField.classList.add('hidden');
-        if (decisionRationaleField) decisionRationaleField.classList.add('hidden');
+        rolledoutField.setAttribute('aria-hidden', 'true');
       }
 
       renderEvents(events);
+    }
+
+    function initDetailsSection() {
+      const details = document.getElementById('moreOptionsSection');
+      if (!details) return;
+      details.addEventListener('toggle', updateDetailsSummaryAria);
+      updateDetailsSummaryAria();
     }
 
     // Global click handler for closing dropdowns
@@ -9724,6 +9775,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         if (linkInputErrorEl) { linkInputErrorEl.style.display = 'none'; linkInputErrorEl.textContent = ''; }
         const moreOptionsEl = document.getElementById('moreOptionsSection');
         if (moreOptionsEl) moreOptionsEl.removeAttribute('open');
+        updateDetailsSummaryAria();
       }
 
       function loadExample() {
@@ -9767,7 +9819,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           } catch(_) {}
         }
 
-        try { selectStatus('completed', '#0EAB43', 'Completed'); } catch(_) {}
+        try { selectStatus('completed', '#506179', 'Concluded'); } catch(_) {}
         try { selectRolledoutVariant('var-1', '#FF3838', 'Red button'); } catch(_) {
           const rolledoutInput = document.getElementById('rolledoutVariant');
           if (rolledoutInput) rolledoutInput.value = 'var-1';
@@ -9782,8 +9834,8 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         if (linkInputEl) linkInputEl.value = '';
         const linkInputErrorEl = document.getElementById('linkInputError');
         if (linkInputErrorEl) { linkInputErrorEl.style.display = 'none'; linkInputErrorEl.textContent = ''; }
-        const moreOptionsEl = document.getElementById('moreOptionsSection');
-        if (moreOptionsEl) moreOptionsEl.setAttribute('open', '');
+        syncDetailsOpenState();
+        updateEventsCount();
       }
 
       // ── Date Range Picker (custom calendar) ─────────────────
@@ -10052,6 +10104,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       initExperimentTypeDropdown();
       initStatusDropdown();
       initRolledoutDropdown();
+      initDetailsSection();
       initExpandButton();
       applyGrowthLabFeedbackButton();
     }

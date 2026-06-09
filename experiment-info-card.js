@@ -346,15 +346,16 @@ export function createExperimentInfoCard(experimentName_1) {
         contentStack.strokes = [];
         contentStack.minWidth = CONTENT_MIN_WIDTH;
         card.appendChild(contentStack);
-        const audienceValue = ((_c = options === null || options === void 0 ? void 0 : options.audience) === null || _c === void 0 ? void 0 : _c.trim()) || "";
-        const ownerValue = ((_d = options === null || options === void 0 ? void 0 : options.owner) === null || _d === void 0 ? void 0 : _d.trim()) || "";
+        const audienceValue = ((_b = options === null || options === void 0 ? void 0 : options.audience) === null || _b === void 0 ? void 0 : _b.trim()) || "";
+        const ownerValue = ((_c = options === null || options === void 0 ? void 0 : options.owner) === null || _c === void 0 ? void 0 : _c.trim()) || "";
         const contextGroups = buildContextDetailsGroups({
             runDates: runDatesValue,
             sampleSize: runSampleSizeValue,
             experimentType: options === null || options === void 0 ? void 0 : options.experimentType,
             audience: audienceValue,
             owner: ownerValue,
-            hypothesis: ((_e = options === null || options === void 0 ? void 0 : options.hypothesis) === null || _e === void 0 ? void 0 : _e.trim()) || "",
+            hypothesis: ((_d = options === null || options === void 0 ? void 0 : options.hypothesis) === null || _d === void 0 ? void 0 : _d.trim()) || "",
+            notes: ((_e = options === null || options === void 0 ? void 0 : options.outcomeNotes) === null || _e === void 0 ? void 0 : _e.trim()) || "",
         });
         try {
             yield appendDetailsSection(contentStack, "Details", contextGroups, CONTENT_MIN_WIDTH);
@@ -576,13 +577,6 @@ function buildDecisionDetailsGroups(input) {
             valueDot: input.rolledOutVariantColor,
         });
     }
-    if (input.decisionRationale) {
-        decisionFields.push({
-            label: "Decision rationale",
-            value: input.decisionRationale,
-            wrap: true,
-        });
-    }
     if (decisionFields.length > 0) {
         groups.push({
             name: "Decision",
@@ -592,7 +586,7 @@ function buildDecisionDetailsGroups(input) {
     return groups;
 }
 function buildContextDetailsGroups(input) {
-    var _a, _b;
+    var _a, _b, _c;
     const typeLabel = ((_a = input.experimentType) === null || _a === void 0 ? void 0 : _a.trim())
         ? getExperimentTypeLabel(input.experimentType.trim())
         : "";
@@ -601,16 +595,22 @@ function buildContextDetailsGroups(input) {
         ? `${input.sampleSize.trim()} users`
         : "—";
     const hypothesisValue = ((_b = input.hypothesis) === null || _b === void 0 ? void 0 : _b.trim()) || "";
-    const fields = [
+    const notesValue = ((_c = input.notes) === null || _c === void 0 ? void 0 : _c.trim()) || "";
+    const scalarFields = [
         { label: "Dates", value: datesValue },
         { label: "Sample size", value: sampleSizeValue },
         { label: "Experiment type", value: typeLabel || "—" },
         { label: "Owner", value: input.owner.trim() || "—", wrap: true },
         { label: "Audience", value: input.audience.trim() || "—", wrap: true },
     ];
+    const fields = [];
     if (hypothesisValue) {
-        fields.unshift({ label: "Hypothesis", value: hypothesisValue, wrap: true });
+        fields.push({ label: "Hypothesis", value: hypothesisValue, wrap: true });
     }
+    if (notesValue) {
+        fields.push({ label: "Notes", value: notesValue, wrap: true });
+    }
+    fields.push(...scalarFields);
     return [{
             name: "Details",
             layout: "details",
@@ -618,7 +618,7 @@ function buildContextDetailsGroups(input) {
         }];
 }
 function buildSummaryDetailsGroups(input) {
-    var _a, _b, _c;
+    var _a, _b;
     return [
         ...buildDecisionDetailsGroups(input),
         ...buildContextDetailsGroups({
@@ -628,6 +628,7 @@ function buildSummaryDetailsGroups(input) {
             owner: input.owner,
             experimentType: input.experimentType,
             hypothesis: input.hypothesis,
+            notes: input.decisionRationale,
         }),
     ];
 }
@@ -647,7 +648,7 @@ function shouldWrapDetailValue(label, wrap) {
     return (label === "Description" ||
         label === "Hypothesis" ||
         label === "What we're testing" ||
-        label === "Decision rationale" ||
+        label === "Notes" ||
         label === "Audience" ||
         label === "Owner");
 }
@@ -771,6 +772,7 @@ function appendDetailsSection(parent_1, title_1, groups_1) {
             const fields = group.fields;
             if (group.layout === "details") {
                 const hypothesisField = fields.find(field => field.label === "Hypothesis");
+                const notesField = fields.find(field => field.label === "Notes");
                 const datesField = fields.find(field => field.label === "Dates");
                 const sampleField = fields.find(field => field.label === "Sample size");
                 const typeField = fields.find(field => field.label === "Experiment type");
@@ -778,6 +780,9 @@ function appendDetailsSection(parent_1, title_1, groups_1) {
                 const audienceField = fields.find(field => field.label === "Audience");
                 if (hypothesisField) {
                     groupFrame.appendChild(createSummaryDetailFieldRow(hypothesisField, contentWidth));
+                }
+                if (notesField) {
+                    groupFrame.appendChild(createSummaryDetailFieldRow(notesField, contentWidth));
                 }
                 if (datesField && sampleField) {
                     groupFrame.appendChild(createSummaryDetailPairRow([datesField, sampleField], contentWidth));
