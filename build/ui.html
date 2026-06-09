@@ -229,11 +229,27 @@
       --color-lochinvar-900: #0c5551;
       --color-lochinvar-950: #003433;
 
+      /* --- Buttons (mirrors design-tokens.css) --- */
+      --buttons-black-default: var(--color-azure-950);
+      --buttons-black-hover: var(--color-azure-900);
+      --buttons-black-selected: var(--color-azure-800);
+      --buttons-secondary-default: var(--color-azure-dark-alpha-25);
+      --buttons-secondary-hover: var(--color-azure-dark-alpha-50);
+      --buttons-secondary-selected: var(--color-azure-dark-alpha-100);
+      --buttons-purple-default: var(--color-electric-violet-500);
+      --buttons-purple-hover: var(--color-electric-violet-600);
+      --buttons-purple-selected: var(--color-electric-violet-500);
+      --buttons-button-green-default: var(--color-malachite-400);
+      --buttons-button-green-hover: var(--color-malachite-500);
+      --buttons-tertiary-hover: var(--color-azure-dark-alpha-50);
+      --buttons-tertiary-selected: var(--color-azure-dark-alpha-100);
+
     /* === Color Core === */
       color-scheme: light;
-      --brand: var(--figma-color-bg-brand, var(--color-electric-violet-500));
-      --brand-hover: var(--figma-color-bg-brand-hover, var(--color-electric-violet-600));
-      --brand-active: var(--figma-color-bg-brand-pressed, var(--color-electric-violet-500));
+      /* GrowthLab brand — always violet; do not use --figma-color-bg-brand (Figma Design is blue) */
+      --brand: var(--buttons-purple-default);
+      --brand-hover: var(--buttons-purple-hover);
+      --brand-active: var(--buttons-purple-selected);
       --background: var(--figma-color-bg-secondary, var(--color-azure-100));
       --background-surface: var(--figma-color-bg, var(--color-white-100));
       --foreground: var(--figma-color-text, var(--color-azure-900));
@@ -246,10 +262,10 @@
       --accent-success: var(--color-white-100);
       --accent-success-bg: var(--color-malachite-600);
       --accent-primary-dark: var(--color-azure-900);
-      --primary-button-bg: var(--brand);
-      --primary-button-hover-bg: var(--brand-hover);
-      --primary-button-active-bg: var(--brand-active);
-      --primary-button-text: var(--text-primary-inverse);
+      --primary-button-bg: var(--buttons-black-default);
+      --primary-button-hover-bg: var(--buttons-black-hover);
+      --primary-button-active-bg: var(--buttons-black-selected);
+      --primary-button-text: var(--color-white-100);
       --primary-button-shadow: none;
       --logo-wordmark-color: #0F1729;
       --background-transparent: var(--color-transparent);
@@ -284,7 +300,7 @@
       --input-height: 40px;
       --button-height: 32px;
       --button-secondary-bg: var(--background-transparent);
-      /* Solid azure tints (replace alpha tokens) so hovers mask e.g. journey spine */
+      /* Solid azure-50 (not --buttons-secondary-hover) so hovers mask e.g. journey spine */
       --button-secondary-hover-bg: var(--color-azure-50);
       --button-secondary-selected-bg: var(--figma-color-bg-selected-secondary, var(--color-azure-100));
       --button-padding: 6px;
@@ -383,10 +399,10 @@
 
     :root[data-figma-theme="light"] {
       color-scheme: light;
-      --primary-button-bg: var(--brand);
-      --primary-button-hover-bg: var(--brand-hover);
-      --primary-button-active-bg: var(--brand-active);
-      --primary-button-text: var(--text-primary-inverse);
+      --primary-button-bg: var(--buttons-black-default);
+      --primary-button-hover-bg: var(--buttons-black-hover);
+      --primary-button-active-bg: var(--buttons-black-selected);
+      --primary-button-text: var(--color-white-100);
       --primary-button-shadow: none;
       --logo-wordmark-color: #0F1729;
       --variant-card-bg: var(--color-azure-dark-alpha-25);
@@ -403,11 +419,11 @@
     :root[data-figma-theme="dark"] {
       color-scheme: dark;
       --section-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.24);
-      --primary-button-bg: #ffffff;
-      --primary-button-hover-bg: color-mix(in srgb, #ffffff 88%, var(--figma-color-bg-secondary, #2c2c30) 12%);
-      --primary-button-active-bg: color-mix(in srgb, #ffffff 80%, var(--figma-color-bg-secondary, #2c2c30) 20%);
-      --primary-button-text: #22272f;
-      --primary-button-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 6px 16px rgba(0, 0, 0, 0.24);
+      --primary-button-bg: var(--color-white-100);
+      --primary-button-hover-bg: color-mix(in srgb, var(--color-white-100) 88%, var(--background) 12%);
+      --primary-button-active-bg: color-mix(in srgb, var(--color-white-100) 80%, var(--background) 20%);
+      --primary-button-text: var(--buttons-black-default);
+      --primary-button-shadow: 0 1px 0 var(--color-white-alpha-200) inset, 0 6px 16px var(--color-azure-dark-alpha-400);
       --logo-wordmark-color: #ffffff;
       --variant-card-bg: var(--color-azure-light-alpha-25);
       --variant-card-hover-bg: color-mix(in srgb, var(--color-azure-light-alpha-25) 93%, var(--brand) 7%);
