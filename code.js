@@ -1818,7 +1818,7 @@ function deleteExperimentFlowFrames() {
         frame.remove();
     }
 }
-const GROWTHLAB_FLOW_ROLES = new Set([
+const PULPO_FLOW_ROLES = new Set([
     'experiment-info',
     'entry',
     'event',
@@ -1827,7 +1827,7 @@ const GROWTHLAB_FLOW_ROLES = new Set([
     'entry-note',
 ]);
 /** Top-level canvas nodes created by flow generation (including failed/partial runs). */
-function isGrowthLabFlowSurfaceNode(node) {
+function isPulpoFlowSurfaceNode(node) {
     var _a;
     if (((_a = node.parent) === null || _a === void 0 ? void 0 : _a.type) !== 'PAGE')
         return false;
@@ -1866,7 +1866,7 @@ function deleteExperimentCanvasArtifacts(experimentId, experimentName) {
         toRemove.add(node);
     }
     for (const child of figma.currentPage.children) {
-        if (isGrowthLabFlowSurfaceNode(child)) {
+        if (isPulpoFlowSurfaceNode(child)) {
             toRemove.add(child);
         }
     }
@@ -1880,7 +1880,7 @@ function deleteExperimentCanvasArtifacts(experimentId, experimentName) {
         const extra = meta === null || meta === void 0 ? void 0 : meta.extra;
         const role = typeof (extra === null || extra === void 0 ? void 0 : extra.role) === 'string' ? extra.role : undefined;
         const matchesCurrentExperiment = (extra === null || extra === void 0 ? void 0 : extra.experimentId) === experimentId;
-        const matchesFlowRole = !!role && GROWTHLAB_FLOW_ROLES.has(role);
+        const matchesFlowRole = !!role && PULPO_FLOW_ROLES.has(role);
         if (matchesCurrentExperiment || matchesFlowRole) {
             toRemove.add(node);
             return;
@@ -2314,7 +2314,7 @@ if (figma.editorType === 'figma') {
     figma.showUI(__html__, {
         width: MIN_UI_WIDTH,
         height: 720,
-        title: 'GrowthLab',
+        title: 'Pulpo',
         themeColors: true,
     });
     figma.ui.postMessage({ type: 'plugin-version', version: PLUGIN_VERSION });
@@ -2605,7 +2605,7 @@ if (figma.editorType === 'figma') {
                 const validation = validateFlowData(experiment, flow);
                 if (!validation.isValid) {
                     postValidationFailedToUi(validation.issues);
-                    console.error('[GrowthLab] createFlowV2FromData validation', validation.issues);
+                    console.error('[Pulpo] createFlowV2FromData validation', validation.issues);
                     const preview = validation.issues.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
                     notifyUser({
                         type: 'error',
@@ -3260,7 +3260,7 @@ if (figma.editorType === 'figma') {
                 });
             }
             catch (error) {
-                console.error('[GrowthLab] createFlowV2FromData failed', error);
+                console.error('[Pulpo] createFlowV2FromData failed', error);
                 notifyUser({
                     type: 'error',
                     title: 'Could not finish the experiment flow',
@@ -3319,7 +3319,7 @@ if (figma.editorType === 'figma') {
                     if (!experimentValidation.isValid || !flowValidation.isValid) {
                         const merged = [...experimentValidation.issues, ...flowValidation.issues];
                         postValidationFailedToUi(merged);
-                        console.error('[GrowthLab] create-flow-v2 validation', merged);
+                        console.error('[Pulpo] create-flow-v2 validation', merged);
                         const preview = merged.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
                         notifyUser({
                             type: 'error',
@@ -3333,7 +3333,7 @@ if (figma.editorType === 'figma') {
                     if (metrics && !isMetricDefinitionArray(metrics)) {
                         const goalsIssues = [validationIssue('goals', 'metrics', 'One or more goals are incomplete or invalid.')];
                         postValidationFailedToUi(goalsIssues);
-                        console.error('[GrowthLab] invalid metrics payload', metrics);
+                        console.error('[Pulpo] invalid metrics payload', metrics);
                         notifyUser({
                             type: 'error',
                             title: 'Fix goals before creating the flow',

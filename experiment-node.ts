@@ -1,6 +1,7 @@
 // experiment-node.ts
 // Modularized node creation functions for Figma plugin
 
+import { BRAND_SVGS } from './brand-icons';
 import { TOKENS } from './design-tokens';
 import { applyPluginCard, applyPluginSubtleChip, getCanvasTokens } from './canvas-theme';
 import { styleOverviewText, SUMMARY_TYPOGRAPHY, createRolledOutBadge } from './experiment-card-shared';
@@ -63,7 +64,7 @@ export const THUMBNAIL_REQUIRES_FRAME_HELPER = THUMBNAIL_MESSAGES.unsupported.he
 export const THUMBNAIL_CROSS_FILE_TITLE = THUMBNAIL_MESSAGES.crossFile.title;
 export const THUMBNAIL_CROSS_FILE_HELPER = THUMBNAIL_MESSAGES.crossFile.helper;
 
-const GROWTHLAB_FLOW_ROLES = new Set([
+const PULPO_FLOW_ROLES = new Set([
   'experiment-info',
   'entry',
   'event',
@@ -72,7 +73,7 @@ const GROWTHLAB_FLOW_ROLES = new Set([
   'entry-note',
 ]);
 
-/** True when the node is (or is inside) a GrowthLab-generated flow card — unsafe as a thumbnail source. */
+/** True when the node is (or is inside) a Pulpo-generated flow card — unsafe as a thumbnail source. */
 export function isExperimentFlowCardNode(node: BaseNode): boolean {
   let current: BaseNode | null = node;
   while (current && current.type !== 'PAGE' && current.type !== 'DOCUMENT') {
@@ -86,7 +87,7 @@ export function isExperimentFlowCardNode(node: BaseNode): boolean {
       try {
         const meta = JSON.parse(metaRaw) as { extra?: { role?: string } };
         const role = meta?.extra?.role;
-        if (typeof role === 'string' && GROWTHLAB_FLOW_ROLES.has(role)) return true;
+        if (typeof role === 'string' && PULPO_FLOW_ROLES.has(role)) return true;
       } catch {
         // ignore malformed plugin data
       }
@@ -96,14 +97,7 @@ export function isExperimentFlowCardNode(node: BaseNode): boolean {
   return false;
 }
 
-/** Official Figma multi-color mark (paths align with plugin UI `brandIcons.figma`) */
-const FIGMA_BRAND_LOGO_SVG = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M8 24c2.208 0 4-1.792 4-4v-4H8c-2.208 0-4 1.792-4 4s1.792 4 4 4z" fill="#0ACF83"/>
-  <path d="M4 12c0-2.208 1.792-4 4-4h4v8H8c-2.208 0-4-1.792-4-4z" fill="#A259FF"/>
-  <path d="M4 4c0-2.208 1.792-4 4-4h4v8H8C5.792 8 4 6.208 4 4z" fill="#F24E1E"/>
-  <path d="M12 0h4c2.208 0 4 1.792 4 4s-1.792 4-4 4h-4V0z" fill="#FF7262"/>
-  <path d="M20 12c0 2.208-1.792 4-4 4s-4-1.792-4-4 1.792-4 4-4 4 1.792 4 4z" fill="#1ABCFE"/>
-</svg>`;
+const FIGMA_BRAND_LOGO_SVG = BRAND_SVGS.figma;
 
 /**
  * Row with Figma brand icon + "Open in Figma" hyperlink (top border). Caller passes a non-empty URL string.

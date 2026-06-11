@@ -1,7 +1,7 @@
-# GitBook Content Design — Growthlab Builder
+# GitBook Content Design — Pulpo
 
 ## Purpose
-Provide a clear, task‑first documentation experience for Growthlab Builder users (product, growth, and design teams) and plugin maintainers.
+Provide a clear, task‑first documentation experience for Pulpo users (product, growth, and design teams) and plugin maintainers.
 
 ## Goals
 - Help new users create their first experiment flow in minutes.

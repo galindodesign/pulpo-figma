@@ -2058,7 +2058,7 @@ function deleteExperimentFlowFrames() {
     }
   }
 
-const GROWTHLAB_FLOW_ROLES = new Set([
+const PULPO_FLOW_ROLES = new Set([
   'experiment-info',
   'entry',
   'event',
@@ -2068,7 +2068,7 @@ const GROWTHLAB_FLOW_ROLES = new Set([
 ]);
 
 /** Top-level canvas nodes created by flow generation (including failed/partial runs). */
-function isGrowthLabFlowSurfaceNode(node: BaseNode): boolean {
+function isPulpoFlowSurfaceNode(node: BaseNode): boolean {
   if (node.parent?.type !== 'PAGE') return false;
   if (node.type === 'VECTOR' || node.type === 'CONNECTOR') {
     return /PRIMARY_FLOW_LINE|BRANCH_LINE|MERGE_LINE/.test(node.name);
@@ -2110,7 +2110,7 @@ function deleteExperimentCanvasArtifacts(experimentId: string, experimentName: s
   }
 
   for (const child of figma.currentPage.children) {
-    if (isGrowthLabFlowSurfaceNode(child)) {
+    if (isPulpoFlowSurfaceNode(child)) {
       toRemove.add(child as SceneNode);
     }
   }
@@ -2124,7 +2124,7 @@ function deleteExperimentCanvasArtifacts(experimentId: string, experimentName: s
     const extra = meta?.extra as Record<string, unknown> | undefined;
     const role = typeof extra?.role === 'string' ? extra.role : undefined;
     const matchesCurrentExperiment = extra?.experimentId === experimentId;
-    const matchesFlowRole = !!role && GROWTHLAB_FLOW_ROLES.has(role);
+    const matchesFlowRole = !!role && PULPO_FLOW_ROLES.has(role);
     if (matchesCurrentExperiment || matchesFlowRole) {
       toRemove.add(node as SceneNode);
       return;
@@ -2618,7 +2618,7 @@ if (figma.editorType === 'figma') {
   figma.showUI(__html__, {
     width: MIN_UI_WIDTH,
     height: 720,
-    title: 'GrowthLab',
+    title: 'Pulpo',
     themeColors: true,
   });
 
@@ -2940,7 +2940,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     const validation = validateFlowData(experiment, flow);
     if (!validation.isValid) {
       postValidationFailedToUi(validation.issues);
-      console.error('[GrowthLab] createFlowV2FromData validation', validation.issues);
+      console.error('[Pulpo] createFlowV2FromData validation', validation.issues);
       const preview = validation.issues.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
       notifyUser({
         type: 'error',
@@ -3733,7 +3733,7 @@ async function createFlowV2FromData(experiment: ExperimentV2, flow: FlowV2, metr
     setupAutoRefreshConnectors().catch(err => {
     });
   } catch (error) {
-    console.error('[GrowthLab] createFlowV2FromData failed', error);
+    console.error('[Pulpo] createFlowV2FromData failed', error);
     notifyUser({
       type: 'error',
       title: 'Could not finish the experiment flow',
@@ -3794,7 +3794,7 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
       if (!experimentValidation.isValid || !flowValidation.isValid) {
         const merged = [...experimentValidation.issues, ...flowValidation.issues];
         postValidationFailedToUi(merged);
-        console.error('[GrowthLab] create-flow-v2 validation', merged);
+        console.error('[Pulpo] create-flow-v2 validation', merged);
         const preview = merged.slice(0, 3).map((i) => `${validationSectionLabel(i.section)}: ${i.message}`).join('\n');
         notifyUser({
           type: 'error',
@@ -3809,7 +3809,7 @@ async function handlePluginMessage(msg: PluginMessage | PluginMessageV2 | { type
       if (metrics && !isMetricDefinitionArray(metrics)) {
         const goalsIssues = [validationIssue('goals', 'metrics', 'One or more goals are incomplete or invalid.')];
         postValidationFailedToUi(goalsIssues);
-        console.error('[GrowthLab] invalid metrics payload', metrics);
+        console.error('[Pulpo] invalid metrics payload', metrics);
         notifyUser({
           type: 'error',
           title: 'Fix goals before creating the flow',

@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: "Growthlab Builder"
+  name: "Pulpo"
   text: "Experiment Flows for Figma"
   tagline: Create professional experiment flow diagrams in seconds.
   actions:

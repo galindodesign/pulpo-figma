@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'Growthlab Builder',
+  title: 'Pulpo',
   description: 'Figma plugin to visually build and manage experiment flows',
   themeConfig: {
     nav: [

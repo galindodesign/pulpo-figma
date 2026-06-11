@@ -17,9 +17,9 @@ For TypeScript info: https://www.typescriptlang.org/
 **Feb 2026 - Code Cleanup & Optimization:**
 - ✅ Removed ~1.1 MB of build artifacts from root directory (source maps, compiled JS)
 - ✅ Archived 13 historical process documents to `_archive/` folder for cleaner root
-## GrowthLab (Figma plugin)
+## Pulpo (Figma plugin)
 
-**GrowthLab** is the customer-facing name in Figma (see [`manifest.json`](manifest.json)). The npm package may still be named `growthlab-flow-builder`.
+**Pulpo** is the customer-facing name in Figma (see [`manifest.json`](manifest.json)). The npm package may still be named `growthlab-flow-builder`.
 
 This plugin helps you quickly create clean, Growth Labs–style **experiment flows** on the Figma canvas: journey, goals, and variants in one diagram.
 
@@ -60,7 +60,7 @@ This plugin helps you quickly create clean, Growth Labs–style **experiment flo
 - **Refresh** (when shown) updates connector lines on an existing flow
 
 ### Usage
-1. Open your Figma file and run **GrowthLab**
+1. Open your Figma file and run **Pulpo**
 2. Fill in the experiment title and optional fields
 3. Add goals and set order (first = primary)
 4. Define journey touchpoints and mark the experiment step

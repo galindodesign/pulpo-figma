@@ -1,4 +1,4 @@
-# Copilot Instructions for Growthlab Builder
+# Copilot Instructions for Pulpo
 
 ## Project Overview
 - **Purpose:** Figma plugin to visually build and manage experiment flows (entry/exit nodes, variants, metrics, integrations).

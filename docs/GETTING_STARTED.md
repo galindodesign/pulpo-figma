@@ -3,7 +3,7 @@
 Create a complete experiment flow in minutes.
 
 ## 1) Run the plugin
-Open your Figma file → Plugins → **GrowthLab**.
+Open your Figma file → Plugins → **Pulpo**.
 
 ## 2) Fill in the basics
 - **Experiment name** (required)

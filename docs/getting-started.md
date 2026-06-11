@@ -1,4 +1,4 @@
-# Getting Started with Growthlab Builder
+# Getting Started with Pulpo
 
 This guide will walk you through creating your first experiment flow diagram in just a few minutes.
 
@@ -7,7 +7,7 @@ This guide will walk you through creating your first experiment flow diagram in 
 Before you begin:
 - ✅ Figma Desktop or Figma in browser
 - ✅ [Figtree font](https://fonts.google.com/specimen/Figtree) installed (recommended)
-- ✅ Growthlab Builder plugin installed
+- ✅ Pulpo plugin installed
 
 ---
 
@@ -15,7 +15,7 @@ Before you begin:
 
 1. Open your Figma file
 2. Press **Shift + I** or go to **Plugins** menu
-3. Search for **"Growthlab Builder"**
+3. Search for **"Pulpo"**
 4. Click **Run**
 
 You'll see the intro screen with a welcome message.

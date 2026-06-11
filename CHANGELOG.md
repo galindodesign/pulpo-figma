@@ -1,13 +1,13 @@
 # Changelog
 
-All notable changes to **GrowthLab** (this Figma plugin) are documented here. Versions follow [package.json](package.json) (`version` field) and should match what you publish in **Figma Community** (or your org’s distribution).
+All notable changes to **Pulpo** (this Figma plugin) are documented here. Versions follow [package.json](package.json) (`version` field) and should match what you publish in **Figma Community** (or your org’s distribution).
 
 The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
 ### Changed
-- Rebrand from Petri to **GrowthLab** (plugin name, intro screen logo, copy, and docs).
+- Rebrand from Petri to **Pulpo** (plugin name, intro screen logo, copy, and docs).
 
 ### Maintenance
 - Add your changes under **Unreleased** during development, then move them under a dated heading when you cut a release.
@@ -17,7 +17,7 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 ## [1.0.0] — 2026-05-13
 
 ### Summary
-Initial documented release baseline for this repo: GrowthLab-branded UI, structured validation, tabbed form (Experiment / Goals / Journey), goals and journey UX cleanup, thumbnails via variant Figma links, removal of legacy “create from selection” path.
+Initial documented release baseline for this repo: Pulpo-branded UI, structured validation, tabbed form (Experiment / Goals / Journey), goals and journey UX cleanup, thumbnails via variant Figma links, removal of legacy “create from selection” path.
 
 ### For maintainers
 When you publish a new plugin version:

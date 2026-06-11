@@ -64,7 +64,7 @@ export const THUMBNAIL_REQUIRES_FRAME_TITLE = THUMBNAIL_MESSAGES.unsupported.tit
 export const THUMBNAIL_REQUIRES_FRAME_HELPER = THUMBNAIL_MESSAGES.unsupported.helper;
 export const THUMBNAIL_CROSS_FILE_TITLE = THUMBNAIL_MESSAGES.crossFile.title;
 export const THUMBNAIL_CROSS_FILE_HELPER = THUMBNAIL_MESSAGES.crossFile.helper;
-const GROWTHLAB_FLOW_ROLES = new Set([
+const PULPO_FLOW_ROLES = new Set([
     'experiment-info',
     'entry',
     'event',
@@ -72,7 +72,7 @@ const GROWTHLAB_FLOW_ROLES = new Set([
     'exit',
     'entry-note',
 ]);
-/** True when the node is (or is inside) a GrowthLab-generated flow card — unsafe as a thumbnail source. */
+/** True when the node is (or is inside) a Pulpo-generated flow card — unsafe as a thumbnail source. */
 export function isExperimentFlowCardNode(node) {
     var _a;
     let current = node;
@@ -89,7 +89,7 @@ export function isExperimentFlowCardNode(node) {
             try {
                 const meta = JSON.parse(metaRaw);
                 const role = (_a = meta === null || meta === void 0 ? void 0 : meta.extra) === null || _a === void 0 ? void 0 : _a.role;
-                if (typeof role === 'string' && GROWTHLAB_FLOW_ROLES.has(role))
+                if (typeof role === 'string' && PULPO_FLOW_ROLES.has(role))
                     return true;
             }
             catch (_b) {

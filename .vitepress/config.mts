@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'Growthlab Builder',
+  title: 'Pulpo',
   description: 'Create professional experiment flow diagrams in Figma',
   base: '/growthlab-infigma/',
   themeConfig: {
@@ -40,7 +40,7 @@ export default defineConfig({
     },
     footer: {
       message: 'Built for Growth Teams',
-      copyright: 'Copyright © 2026 Growthlab'
+      copyright: 'Copyright © 2026 Pulpo'
     }
   }
 })

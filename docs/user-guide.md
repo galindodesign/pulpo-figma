@@ -1,9 +1,9 @@
-# Growthlab Builder - User Guide
+# Pulpo - User Guide
 
-Welcome to **Growthlab Builder**, a Figma plugin designed to help you quickly create clean, professional experiment flow diagrams for A/B tests, multivariate tests, and other growth experiments.
+Welcome to **Pulpo**, a Figma plugin designed to help you quickly create clean, professional experiment flow diagrams for A/B tests, multivariate tests, and other growth experiments.
 
 ## Table of Contents
-- [What is Growthlab Builder?](#what-is-growthlab-builder)
+- [What is Pulpo?](#what-is-pulpo)
 - [Getting Started](#getting-started)
 - [Creating Your First Experiment Flow](#creating-your-first-experiment-flow)
 - [Understanding the Interface](#understanding-the-interface)
@@ -12,9 +12,9 @@ Welcome to **Growthlab Builder**, a Figma plugin designed to help you quickly cr
 
 ---
 
-## What is Growthlab Builder?
+## What is Pulpo?
 
-Growthlab Builder is a Figma plugin that generates structured experiment flow diagrams with:
+Pulpo is a Figma plugin that generates structured experiment flow diagrams with:
 - **Experiment information cards** with all key details
 - **Journey touchpoints** showing the user flow
 - **Variant cards** for each test variation
@@ -31,7 +31,7 @@ Perfect for product teams, growth teams, UX researchers, and anyone documenting 
 ### Installation
 1. Open your Figma file
 2. Go to **Resources** (Shift + I) or **Plugins** menu
-3. Search for **"Growthlab Builder"**
+3. Search for **"Pulpo"**
 4. Click **Run** to start the plugin
 
 ### Requirements
