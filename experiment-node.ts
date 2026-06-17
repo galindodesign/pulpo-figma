@@ -227,7 +227,7 @@ async function createThumbnailFrame(
   thumb.resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
   thumb.cornerRadius = options.cornerRadius ?? TOKENS.radiusMD;
   thumb.name = 'Thumbnail - Link Figma frame or replace with image';
-  thumb.layoutAlign = 'MIN';
+  thumb.layoutAlign = 'INHERIT';
   thumb.clipsContent = true;
 
   if (!sourceNode) {

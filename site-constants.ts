@@ -20,7 +20,7 @@ export const DOCS_SITE_URL = 'https://galindodesign.github.io/pulpo-figma/';
 
 /** VitePress `base` — derived from {@link DOCS_SITE_URL}. */
 export const DOCS_SITE_BASE_PATH = (() => {
-  const path = new URL(DOCS_SITE_URL).pathname;
+  const path = DOCS_SITE_URL.replace(/^https?:\/\/[^/?#]+/, '') || '/';
   return path.endsWith('/') ? path : `${path}/`;
 })();
 
