@@ -15,8 +15,7 @@ Variants are the **things you're comparing** at the experiment step — control,
 
 ### Variant thumbnails
 
-- **Create from selection** — select up to 3 frames on the canvas before creating the flow
-- Or add **Figma links** on individual variants
+Paste a **Figma frame link** on each variant — in Figma, select a frame and use **Copy link to selection**. Pulpo uses it as the variant thumbnail on the canvas.
 
 ## Expected result
 

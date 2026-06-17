@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Tell us what problem you're solving. Search [existing issues](https://github.com/galindodesign/pulpo-figma/issues) first and add a 👍 if it's already there.
+        Tell us what problem you're solving. Check [FAQ](https://galindodesign.github.io/pulpo-figma/FAQ) and [existing issues](https://github.com/galindodesign/pulpo-figma/issues) first — add a 👍 if someone already requested it.
   - type: input
     id: email
     attributes:

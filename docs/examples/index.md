@@ -1,6 +1,8 @@
 # Examples & templates
 
-Copy-ready experiment setups. Click **Load example** in the plugin to pre-fill one, or enter the values below manually.
+Copy-ready experiment setups. In the plugin, click **Load example** on the intro screen to pre-fill a sample — or enter the values below manually.
+
+New to Pulpo? Start with the [quick start](/GETTING_STARTED) guide.
 
 ## Written examples
 

@@ -8,6 +8,10 @@ Create a complete experiment flow in about five minutes.
 2. Search for **Pulpo**
 3. Click **Install**
 
+Or open [Pulpo on Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo).
+
+Works in **Figma Design**, **FigJam**, **Figma Slides**, and **Buzz**.
+
 ## Create your first flow
 
 ### 1. Open Pulpo
@@ -45,3 +49,4 @@ Click **Create flow**. Pulpo generates the diagram on **your canvas**:
 - [User guide](/USER_GUIDE) — experiment, goals, journey, variants, resources, refresh
 - [Refresh](/guide/refresh) an existing flow instead of duplicating it
 - [Examples](/examples/) — copy-ready A/B and multivariate setups
+- [Contact](/contact) — questions, bugs, or feature ideas

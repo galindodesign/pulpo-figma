@@ -13,7 +13,7 @@ The experiment section drives the **overview card** on your canvas — what you'
 | Title | Yes | Experiment name in the overview header |
 | Status | No | Status badge (Draft, Planned, Running, Paused, Concluded) |
 | Description | No | Summary section |
-| Hypothesis, notes, dates, audience, sample size, owner | No | Details section (collapsible) |
+| **Details** (expand on Experiment tab) | No | Hypothesis, notes, dates, audience, sample size, owner |
 | Rolled-out variant | When Concluded | Winner / rollout badge |
 
 **Resources** live on the Experiment tab but render in their own section on the card — not inside Details.

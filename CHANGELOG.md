@@ -1,8 +1,8 @@
 # Changelog
 
-Maintainer log for **Pulpo** — optional detail between releases. Designers see [What's new](docs/changelog.md) instead; keep that page short and user-facing.
+Release notes for contributors. **Designers:** see [What's new](https://galindodesign.github.io/pulpo-figma/changelog) on the docs site instead.
 
-Bump the version in [package.json](package.json) only when you ship to Figma users — it flows to the plugin footer, docs site, and [site-constants.ts](site-constants.ts).
+Bump the version in [package.json](package.json) when you ship to Figma users — it flows to the plugin footer, docs site, and [site-constants.ts](site-constants.ts).
 
 The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
