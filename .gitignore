@@ -7,6 +7,10 @@ ui.css.map
 *.js.map
 *.css.map
 node_modules
+node_modules/.package-lock.json
+
+# Local npm config (per-machine)
+.npmrc
 dist/
 
 # VitePress output
