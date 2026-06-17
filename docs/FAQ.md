@@ -20,7 +20,7 @@ Yes. Add as many variants as you need (A/B/C/… or multivariate).
 
 ## How do I update an existing flow?
 
-Open the plugin, edit the form, then click **Refresh**. See [Refresh vs create](/guide/refresh).
+Change fields in the plugin, then click **Create flow** again. Pulpo replaces the previous diagram for that experiment. See [Updating your flow](/guide/refresh).
 
 ## Which link types are supported?
 

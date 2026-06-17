@@ -32,4 +32,4 @@ A horizontal journey spine on the canvas with touchpoint cards, connector lines,
 ## Next
 
 - [Variants](/guide/variants)
-- [Refresh vs create](/guide/refresh)
+- [Updating your flow](/guide/refresh)

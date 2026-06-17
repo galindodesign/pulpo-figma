@@ -64,7 +64,7 @@ export default defineConfig({
             { text: 'Journey mapping', link: '/guide/journey' },
             { text: 'Variants', link: '/guide/variants' },
             { text: 'Resources', link: '/guide/resources' },
-            { text: 'Refresh vs create', link: '/guide/refresh' },
+            { text: 'Update your flow', link: '/guide/refresh' },
             { text: 'Examples', link: '/examples/' },
             { text: 'Best practices', link: '/best-practices' },
             { text: 'Glossary', link: '/glossary' },

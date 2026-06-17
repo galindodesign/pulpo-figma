@@ -29,7 +29,8 @@ Full walkthrough: [Quick start guide](https://galindodesign.github.io/pulpo-figm
 - **Journey** — entry, touchpoints, and experiment step on a connected spine
 - **Variants** — A/B, multivariate, traffic splits, control/winner badges, Figma frame thumbnails
 - **Resource links** — icons for Figma, Jira, Miro, Notion, Linear, GitHub, Slack, and more
-- **Refresh** — update connector lines on an existing flow without rebuilding it
+- **Create flow** — build or replace the experiment diagram from your form (re-running it updates the canvas)
+- **Connector lines** — adjust automatically when you move frames on the canvas
 
 ---
 

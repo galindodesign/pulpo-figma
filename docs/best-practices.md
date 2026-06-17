@@ -32,6 +32,6 @@ Avoid these common documentation mistakes:
 | Variants without journey context | High | Readers don't know where the test runs |
 | Stale status | Medium | Diagram misleads stakeholders about experiment state |
 | Metrics without direction | Medium | "Improve conversion" is ambiguous without increase/decrease |
-| Duplicate flows instead of refresh | Medium | Canvas clutter; conflicting sources of truth |
+| Stale diagram after form edits | Medium | Run **Create flow** again so the canvas matches the plugin form |
 | Too many touchpoints | Low | Diagram becomes unreadable; focus on the critical path |
 | Missing resource links | Low | Teammates hunt for designs and tickets elsewhere |

@@ -24,7 +24,7 @@ An experiment overview frame with status, title, summary fields, goals table, an
 
 ## Tips
 
-- Start with just a **title** — you can add the rest later and **Refresh**.
+- Start with just a **title** — run **Create flow** again as you add more detail.
 - Set **Concluded** when the test ends, then choose the rolled-out variant.
 
 ## Common mistakes

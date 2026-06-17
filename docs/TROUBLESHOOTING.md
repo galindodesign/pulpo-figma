@@ -10,7 +10,7 @@ For local development builds, use **Plugins → Development → Import plugin fr
 
 - Ensure **Experiment name** is filled in
 - Check the toast message for validation issues under **Experiment**, **Goals**, or **Journey**
-- If a flow already exists, try **Refresh** instead of **Create flow**
+- If a flow already exists, edit the form and click **Create flow** again — Pulpo replaces the previous diagram
 
 ## Fonts look wrong
 

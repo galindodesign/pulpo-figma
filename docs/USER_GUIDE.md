@@ -11,7 +11,7 @@ Pulpo turns experiment metadata into a **flow diagram on the Figma canvas**. Onl
 | [Journey mapping](/guide/journey) | Entry, touchpoints, experiment step, exit, connector spine | Entry, touchpoints, experiment step |
 | [Variants](/guide/variants) | Control/variant cards, traffic splits, winner badges | Control, splits, winner, thumbnails |
 | [Resources](/guide/resources) | Smart icons for Figma, Jira, Linear, Notion, GitHub, and more | Link designs, tickets, briefs |
-| [Refresh vs create](/guide/refresh) | Updates an existing diagram without duplicating nodes | When to refresh instead of recreate |
+| [Updating your flow](/guide/refresh) | Re-run **Create flow** after form edits; connectors auto-update when you move frames | When to recreate vs move cards on canvas |
 
 ## Validation
 

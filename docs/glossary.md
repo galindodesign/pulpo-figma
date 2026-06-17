@@ -11,7 +11,8 @@ Terms used in Pulpo and growth experiment documentation.
 | **Journey** | The path users take from entry to exit, including touchpoints before and after the experiment. |
 | **Multivariate test** | An experiment with three or more variants at the same step. |
 | **Primary metric** | The metric that decides whether the experiment succeeded — always the **first goal** in Pulpo. |
-| **Refresh** | Update an existing Pulpo flow on the canvas without creating a duplicate diagram. |
+| **Create flow** | Generates (or replaces) the experiment diagram from your current form data. |
+| **Connector auto-update** | After you move Pulpo frames on the canvas, connector lines adjust in the background. |
 | **Rolled-out variant** | The variant shipped to production after a concluded experiment. |
 | **Touchpoint** | A step in the user journey (e.g. landing page, checkout). |
 | **Traffic split** | The percentage of users assigned to each variant (e.g. 50/50). |
