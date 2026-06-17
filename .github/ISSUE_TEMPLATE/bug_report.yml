@@ -37,23 +37,27 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
+      description: What did you do, in order, before things went wrong?
       placeholder: |
-        1. Open Pulpo
-        2. ...
+        1. Open Pulpo in a Figma file
+        2. Click Load example → Create flow
+        3. ...
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
       label: Expected behavior
+      description: What should have happened?
+      placeholder: e.g. Connectors should stay attached to the cards after I move them.
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
       label: Actual behavior
-    validations:
-      required: true
+      description: What happened instead?
+      placeholder: e.g. The connector line stayed in the old position.
   - type: textarea
     id: screenshots
     attributes:

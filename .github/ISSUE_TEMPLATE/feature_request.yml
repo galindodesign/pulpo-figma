@@ -18,21 +18,23 @@ body:
     id: problem
     attributes:
       label: Problem
-      description: What pain are you hitting today?
-      placeholder: When documenting multivariate tests, I need to...
+      description: What are you trying to do, and what's difficult or missing today?
+      placeholder: |
+        I'm trying to ___ but ___.
     validations:
       required: true
   - type: textarea
     id: solution
     attributes:
       label: Proposed solution
-      description: What would Pulpo do differently?
+      description: How would you like Pulpo to help? A rough idea is fine.
+      placeholder: |
+        It would help if Pulpo could ___.
     validations:
       required: true
   - type: textarea
     id: audience
     attributes:
-      label: Who benefits
-      description: Growth teams, designers, researchers, etc.
-    validations:
-      required: false
+      label: Who benefits (optional)
+      description: Who is this for, and when would they use it?
+      placeholder: e.g. Anyone documenting experiments in Figma who needs to ___.
