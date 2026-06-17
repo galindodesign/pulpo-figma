@@ -18,6 +18,10 @@ import { DOCS_BTN } from './.vitepress/theme/docs-labels'
 
 <p class="pulpo-contact__intro">Questions, bugs, and ideas — pick the option that fits.</p>
 
+::: tip From the Figma plugin
+On the **intro screen**, use **Contact & feedback**. While editing an experiment, use **Contact** in the form footer (next to the version). Both open this page.
+:::
+
 <div class="pulpo-feedback-grid">
 
 <div class="pulpo-feedback-card" id="questions">

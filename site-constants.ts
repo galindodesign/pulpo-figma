@@ -33,7 +33,7 @@ export const GITHUB_REPO_URL = 'https://github.com/galindodesign/pulpo-figma';
  */
 export const DEMO_VIDEO_URL = '';
 
-/** Inbox for in-plugin feedback mailto. Leave empty to hide the feedback button. */
+/** Optional inbox on the docs contact page. Leave empty to hide the email button there. */
 export const FEEDBACK_EMAIL = 'galindo.designer@gmail.com';
 
 export const GITHUB_ISSUES_URL = `${GITHUB_REPO_URL}/issues`;

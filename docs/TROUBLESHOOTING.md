@@ -36,4 +36,6 @@ Use full URLs including `https://`. Unsupported domains fall back to a generic l
 
 ## Still stuck?
 
-[FAQ](/FAQ) · [Contact](/contact) · [GitHub issues](https://github.com/galindodesign/pulpo-figma/issues)
+Open **Contact** from the plugin (intro or form footer), or visit [Contact](/contact) for FAQ, optional email, and GitHub options.
+
+[FAQ](/FAQ) · [GitHub issues](https://github.com/galindodesign/pulpo-figma/issues)

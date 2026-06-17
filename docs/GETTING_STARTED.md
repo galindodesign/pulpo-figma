@@ -49,4 +49,9 @@ Click **Create flow**. Pulpo generates the diagram on **your canvas**:
 - [User guide](/USER_GUIDE) — experiment, goals, journey, variants, resources
 - [Updating your flow](/guide/refresh) — change the form and run **Create flow** again
 - [Examples](/examples/) — copy-ready A/B and multivariate setups
-- [Contact](/contact) — questions, bugs, or feature ideas
+
+## Get help
+
+- **Intro screen** — **Learn how to use Pulpo** (docs) or **Contact & feedback**
+- **Experiment form** — **Contact** in the footer (next to the version)
+- [Contact](/contact) — FAQ, optional email for questions, GitHub for bugs and feature requests

@@ -43,7 +43,9 @@ Full walkthrough: [Quick start guide](https://galindodesign.github.io/pulpo-figm
 | [Contact](https://galindodesign.github.io/pulpo-figma/contact) | Questions, bugs, feature requests |
 | [What's new](https://galindodesign.github.io/pulpo-figma/changelog) | Release highlights |
 
-Bug or idea? [Open an issue](https://github.com/galindodesign/pulpo-figma/issues).
+**In the plugin:** **Contact & feedback** on the intro screen, or **Contact** in the form footer — both open the contact page above.
+
+Bug or idea? Use **Report a bug** or **Request a feature** on the contact page (GitHub issues).
 
 ---
 
@@ -81,7 +83,7 @@ Use `npm run watch` to rebuild on save while developing.
 
 ### Configuration
 
-Edit [`site-constants.ts`](site-constants.ts) for docs URL, Figma Community link, and feedback email.
+Edit [`site-constants.ts`](site-constants.ts) for docs URL, Figma Community link, and optional contact-page email (`FEEDBACK_EMAIL`).
 
 - **Docs deploy:** pushes to `main` deploy via [GitHub Actions](.github/workflows/deploy.yml)
 - **Issue email notifications:** [docs/dev/notifications.md](docs/dev/notifications.md)

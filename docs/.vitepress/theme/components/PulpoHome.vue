@@ -26,7 +26,7 @@ import PulpoIcon from './PulpoIcon.vue'
       </div>
       <p class="pulpo-hero__contact">
         Questions or ideas?
-        <a :href="withBase('/contact')">Contact us</a>
+        <a :href="withBase('/contact')">Contact &amp; feedback</a>
       </p>
     </section>
 

@@ -11,7 +11,7 @@ const siteConstantsUrl = `${GITHUB_REPO_URL}/blob/main/site-constants.ts`
 
 # Email notifications
 
-Get an email when someone reports a bug or requests a feature from the [Contact](/contact) page (via GitHub Issues).
+Get an email when someone reports a bug or requests a feature from the [Contact](/contact) page (via GitHub Issues). The Figma plugin links to that page — it does not send email directly.
 
 ## 1. GitHub repo secrets
 
@@ -29,7 +29,7 @@ The workflow <a :href="issueNotifyUrl">`.github/workflows/issue-notify.yml`</a> 
 
 ## 2. Contact page email (optional)
 
-To show **Email us** on the [Contact](/contact) page and in the Figma plugin footer, set in <a :href="siteConstantsUrl">`site-constants.ts`</a>:
+To show **Email us** on the [Contact](/contact) page, set in <a :href="siteConstantsUrl">`site-constants.ts`</a>:
 
 ```ts
 export const FEEDBACK_EMAIL = 'galindo.designer@gmail.com';

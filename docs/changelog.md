@@ -13,7 +13,7 @@ Highlights from **Pulpo releases** — things that change how you work in Figma.
 Current version: **v{{ PLUGIN_VERSION }}** (shown in the plugin footer).
 
 ::: tip Looking for help?
-For how-to guides, see [Quick start](/GETTING_STARTED) and [FAQ](/FAQ).
+For how-to guides, see [Quick start](/GETTING_STARTED) and [FAQ](/FAQ). To send feedback, use **Contact & feedback** in the plugin or the [Contact](/contact) page.
 :::
 
 ## 1.0.0 — May 13, 2026

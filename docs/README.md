@@ -8,7 +8,7 @@ User guides for the **Pulpo** Figma plugin live in this folder and publish to:
 
 - [Quick start](GETTING_STARTED.md) — install and create your first flow
 - [User guide](USER_GUIDE.md) — experiment, goals, journey, variants
-- [FAQ](FAQ.md) · [Troubleshooting](TROUBLESHOOTING.md) · [Contact](contact.md)
+- [FAQ](FAQ.md) · [Troubleshooting](TROUBLESHOOTING.md) · [Contact](contact.md) — also linked from the plugin intro and form footer
 
 ## For contributors
 

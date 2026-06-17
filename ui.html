@@ -4307,8 +4307,30 @@
     .footer-version {
       font-size: var(--body-sm-size);
       color: var(--text-secondary);
-      margin-right: auto;
       user-select: none;
+    }
+
+    .footer-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-8);
+      margin-right: auto;
+    }
+
+    .footer-contact-link {
+      font-size: var(--body-sm-size);
+      font-weight: 500;
+      color: var(--text-link);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .footer-contact-link:hover {
+      color: var(--color-royal-blue-700);
+    }
+
+    :root[data-figma-theme="dark"] .footer-contact-link:hover {
+      color: var(--color-electric-violet-200);
     }
 
     /* Buttons */
@@ -5016,7 +5038,7 @@
         </div>
         <div class="intro-screen__footer">
           <a class="intro-screen__footer-link" id="introDocsLink" href="@PULPO_DOCS_GETTING_STARTED_URL@" target="_blank" rel="noopener noreferrer">Learn how to use Pulpo</a>
-          <a class="intro-screen__footer-link" id="introFeatureRequestLink" href="@PULPO_DOCS_FEATURE_REQUEST_URL@" target="_blank" rel="noopener noreferrer">Request a feature</a>
+          <a class="intro-screen__footer-link" id="introContactLink" href="@PULPO_DOCS_CONTACT_URL@" target="_blank" rel="noopener noreferrer">Contact &amp; feedback</a>
         </div>
       </div>
     </div>
@@ -5308,31 +5330,21 @@
         <button type="submit" class="Button brand">Create flow</button>
         <button type="button" id="cancel" class="Button secondary">Cancel</button>
         <button type="button" id="refreshConnectors" class="Button secondary" title="Refresh flow" style="display:none">Refresh</button>
-        <span class="footer-version" id="pluginVersion" aria-label="Plugin version">v—</span>
-        <button
-          type="button"
-          id="emailMeBtn"
-          class="Button secondary"
-          aria-label="Email us"
-          data-tooltip="Email us"
-          data-tooltip-position="top"
-          data-tooltip-align="center"
-          data-tooltip-cursor="pointer"
-        >
-          <span class="Button__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="5" width="18" height="14" rx="2"></rect>
-              <path d="m3 7 9 6 9-6"></path>
-            </svg>
-          </span>
-          <span class="Button__label">Email us</span>
-        </button>
+        <div class="footer-meta">
+          <span class="footer-version" id="pluginVersion" aria-label="Plugin version">v—</span>
+          <a
+            class="footer-contact-link"
+            id="footerContactLink"
+            href="@PULPO_DOCS_CONTACT_URL@"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Contact</a>
+        </div>
       </footer>
     </form>
   </div>
 
   <script>
-        window.__pulpoFeedbackEmail = '@PULPO_FEEDBACK_EMAIL@';
         window.__pulpoDocsSiteUrl = '@PULPO_DOCS_SITE_URL@';
 
         const FIGMA_THEME_ATTRIBUTE = 'data-figma-theme';
@@ -5500,29 +5512,6 @@
           window._pulpoShowForm();
         };
 
-        const emailMeBtn = document.getElementById('emailMeBtn');
-        if (emailMeBtn) {
-          emailMeBtn.addEventListener('click', () => {
-            const TO = (typeof window.__pulpoFeedbackEmail === 'string' && window.__pulpoFeedbackEmail.trim()) || '';
-            if (!TO) return;
-            const pluginVersion = (document.getElementById('pluginVersion') || {}).textContent || '';
-            const expName = (document.getElementById('experimentName') || {}).value || '';
-            const subject = encodeURIComponent('Pulpo — Feedback');
-            const body = encodeURIComponent(
-`Hi,
-
-I have feedback about Pulpo for Figma.
-
----
-${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion || 'unknown'}
----
-
-[Write your feedback here]
-`
-            );
-            window.open(`mailto:${TO}?subject=${subject}&body=${body}`);
-          });
-        }
     /**
      * Lucide Icons - Centralized icon definitions
      * Official SVG paths from https://github.com/lucide-icons/lucide/tree/main/icons
@@ -7800,19 +7789,15 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       return raw.endsWith('/') ? raw : `${raw}/`;
     }
 
-    function applyPulpoIntroLinks() {
+    function applyPulpoSiteLinks() {
       const base = pulpoDocsBaseUrl();
       const docsLink = document.getElementById('introDocsLink');
-      const featureLink = document.getElementById('introFeatureRequestLink');
+      const introContactLink = document.getElementById('introContactLink');
+      const footerContactLink = document.getElementById('footerContactLink');
       if (docsLink) docsLink.href = `${base}GETTING_STARTED`;
-      if (featureLink) featureLink.href = `${base}contact#feature-request`;
-    }
-
-    function applyPulpoFeedbackButton() {
-      const btn = document.getElementById('emailMeBtn');
-      if (!btn) return;
-      const em = (typeof window.__pulpoFeedbackEmail === 'string' && window.__pulpoFeedbackEmail.trim()) || '';
-      btn.style.display = em ? '' : 'none';
+      const contactUrl = `${base}contact`;
+      if (introContactLink) introContactLink.href = contactUrl;
+      if (footerContactLink) footerContactLink.href = contactUrl;
     }
 
     function installPulpoMainThreadMessageListener() {
@@ -7825,13 +7810,11 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
           return;
         }
         if (msg.type === 'plugin-config') {
-          window.__pulpoFeedbackEmail = typeof msg.feedbackEmail === 'string' ? msg.feedbackEmail : '';
           if (typeof msg.docsSiteUrl === 'string' && msg.docsSiteUrl.trim()) {
             window.__pulpoDocsSiteUrl = msg.docsSiteUrl.trim();
           }
           if (typeof msg.fileKey === 'string') window.__pulpoFileKey = msg.fileKey;
-          applyPulpoFeedbackButton();
-          applyPulpoIntroLinks();
+          applyPulpoSiteLinks();
           return;
         }
         if (msg.type === 'current-file-context' && typeof msg.fileKey === 'string') {
@@ -10113,8 +10096,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       initRolledoutDropdown();
       initDetailsSection();
       initExpandButton();
-      applyPulpoFeedbackButton();
-      applyPulpoIntroLinks();
+      applyPulpoSiteLinks();
     }
 
     if (document.readyState === 'loading') {

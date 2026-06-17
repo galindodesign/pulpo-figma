@@ -22,3 +22,4 @@ If something blocks the flow from building, Pulpo shows a **toast in the plugin*
 - [Examples](/examples/) — copy-ready A/B and multivariate setups
 - [Glossary](/glossary) · [Best practices](/best-practices)
 - [FAQ](/FAQ) · [Troubleshooting](/TROUBLESHOOTING) · [Contact](/contact)
+- **In the plugin** — **Contact & feedback** (intro) or **Contact** (form footer)

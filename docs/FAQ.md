@@ -41,3 +41,7 @@ Yes — **Figma Design**, **FigJam**, **Figma Slides**, and **Buzz**.
 ## Where can I get help?
 
 [Troubleshooting](/TROUBLESHOOTING) · [Glossary](/glossary) · [Contact](/contact) · [What's new](/changelog)
+
+## How do I send feedback or report a bug?
+
+Use **Contact & feedback** on the Pulpo intro screen, or **Contact** in the experiment form footer. That opens the [Contact](/contact) page — browse the FAQ, email a question, or open a GitHub issue for bugs and feature requests.

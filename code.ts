@@ -28,7 +28,7 @@ import {
 } from './experiment-node';
 import { createExperimentOutcomeCard, createOutcomeCardFromExperimentData } from './experiment-outcome-card';
 import { loadFonts } from './load-fonts';
-import { DOCS_SITE_URL, FEEDBACK_EMAIL, PLUGIN_VERSION } from './site-constants';
+import { DOCS_SITE_URL, PLUGIN_VERSION } from './site-constants';
 import type { 
   MetricDefinition, 
   VariantStatus, 
@@ -2624,7 +2624,6 @@ if (figma.editorType === 'figma') {
   const startupFileKey = getPluginFileKey() || '';
   figma.ui.postMessage({
     type: 'plugin-config',
-    feedbackEmail: FEEDBACK_EMAIL,
     docsSiteUrl: DOCS_SITE_URL,
     fileKey: startupFileKey,
   });

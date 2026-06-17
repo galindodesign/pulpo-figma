@@ -16,11 +16,9 @@ const ROOT = path.join(__dirname, '..');
 const {
   DOCS_SITE_URL,
   DOCS_GETTING_STARTED_URL,
-  DOCS_FEATURE_REQUEST_URL,
   DOCS_FAQ_URL,
   DOCS_TROUBLESHOOTING_URL,
   DOCS_CONTACT_URL,
-  FEEDBACK_EMAIL,
 } = await loadSiteConstants();
 
 const srcHtml = path.join(ROOT, 'ui.html');
@@ -35,9 +33,8 @@ if (!fs.existsSync(srcHtml)) {
 
 const replacements = new Map([
   ['@PULPO_DOCS_SITE_URL@', DOCS_SITE_URL],
-  ['@PULPO_FEEDBACK_EMAIL@', FEEDBACK_EMAIL],
   ['@PULPO_DOCS_GETTING_STARTED_URL@', DOCS_GETTING_STARTED_URL],
-  ['@PULPO_DOCS_FEATURE_REQUEST_URL@', DOCS_FEATURE_REQUEST_URL],
+  ['@PULPO_DOCS_CONTACT_URL@', DOCS_CONTACT_URL],
 ]);
 
 let html = fs.readFileSync(srcHtml, 'utf8');

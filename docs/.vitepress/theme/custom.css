@@ -490,15 +490,15 @@ html:not(.dark) {
 
 .pulpo-feedback-grid {
   display: grid;
-  gap: 20px;
+  gap: 24px;
   grid-template-columns: 1fr;
-  margin: 0;
+  margin: 8px 0 0;
 }
 
-/* 3 equal columns when the content area is wide enough */
-@container (min-width: 560px) {
+/* Wrap columns when there isn't room — avoids cramped 3-up in the doc column */
+@container (min-width: 640px) {
   .pulpo-feedback-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   }
 }
 
@@ -506,25 +506,25 @@ html:not(.dark) {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 28px;
+  padding: 32px 28px;
   border-radius: 12px;
   border: 1px solid var(--vp-c-divider);
   background: var(--vp-c-bg-soft);
 }
 
 .pulpo-feedback-card h3 {
-  margin: 0 0 12px !important;
+  margin: 0 0 16px !important;
   padding: 0;
   border: 0;
   font-size: 1.125rem;
-  line-height: 1.35;
+  line-height: 1.4;
 }
 
 .pulpo-feedback-card p {
-  margin: 0 0 20px;
+  margin: 0 0 28px;
   color: var(--vp-c-text-2);
   font-size: 14px;
-  line-height: 1.55;
+  line-height: 1.65;
   flex: 1;
 }
 
@@ -532,8 +532,9 @@ html:not(.dark) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
   margin-top: auto;
+  padding-top: 4px;
 }
 
 .pulpo-feedback-card .pulpo-btn {
