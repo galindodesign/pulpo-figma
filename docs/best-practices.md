@@ -1,6 +1,6 @@
 # Best practices
 
-See the [glossary](/glossary) for terms like primary metric, experiment step, and control.
+See the [glossary](/glossary) for terms like primary metric and rolled-out variant.
 
 ## Name experiments clearly
 
@@ -20,7 +20,7 @@ Link to designs, tickets, and briefs to keep context in one place.
 
 ## Update status regularly
 
-Set Draft → Planned → Running → Concluded and mark the winner.
+Set **Draft** → **Running** → **Paused** or **Concluded**, and choose **Rolled out** when the test ships.
 
 ## Experiment anti-patterns
 

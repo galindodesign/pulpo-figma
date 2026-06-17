@@ -4,13 +4,13 @@ Resources link your experiment diagram to **designs, tickets, and briefs** — s
 
 ## Where to find it
 
-**Experiment** tab → Resources section.
+**Experiment** section → Resources.
 
 ## How to use it
 
 Paste full URLs (include `https://`). Pulpo detects the service and shows the right icon.
 
-**Supported services:** Figma, Jira, Miro, Notion, Asana, Linear, GitHub, Slack, Trello, Confluence, Monday, ClickUp, and generic URLs.
+**Supported services:** Figma, Jira, Miro, Notion, Amplitude, Asana, Linear, GitHub, Slack, Trello, Confluence, Monday, ClickUp, and generic URLs.
 
 ## Expected result
 

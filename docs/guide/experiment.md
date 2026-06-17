@@ -4,19 +4,19 @@ The experiment section drives the **overview card** on your canvas — what you'
 
 ## Where to find it
 
-**Experiment** tab in the plugin.
+**Experiment** section at the top of the plugin form.
 
 ## What to fill in
 
 | Field | Required | On canvas |
 | --- | --- | --- |
 | Title | Yes | Experiment name in the overview header |
-| Status | No | Status badge (Draft, Planned, Running, Paused, Concluded) |
+| Status | No | Status badge (Draft, Running, Paused, Concluded) |
 | Description | No | Summary section |
-| **Details** (expand on Experiment tab) | No | Hypothesis, notes, dates, audience, sample size, owner |
-| Rolled-out variant | When Concluded | Winner / rollout badge |
+| **Details** (expand below title) | No | Hypothesis, notes, dates, audience, sample size, owner |
+| Rolled-out variant | When Concluded | Highlights the shipped variant on the canvas |
 
-**Resources** live on the Experiment tab but render in their own section on the card — not inside Details.
+**Resources** live in the Experiment section but render in their own block on the overview card — not inside Details.
 
 ## Expected result
 
@@ -25,7 +25,7 @@ An experiment overview frame with status, title, summary fields, goals table, an
 ## Tips
 
 - Start with just a **title** — run **Create flow** again as you add more detail.
-- Set **Concluded** when the test ends, then choose the rolled-out variant.
+- Set **Concluded** when the test ends, then choose **Rolled out** for the variant you shipped.
 
 ## Common mistakes
 

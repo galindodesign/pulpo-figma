@@ -8,24 +8,24 @@ Test three onboarding checklist layouts to find the highest activation rate.
 
 **Experiment**
 - Name: Onboarding checklist layout test
-- Status: Planned
+- Status: Draft
 - Hypothesis: A progress-focused layout will improve activation
 
 **Goals**
 1. Primary: Activation rate — increase
-2. Guardrail: Time to complete onboarding — no increase
+2. Guardrail: Time to complete onboarding — no increase (neutral direction)
 
 **Journey**
-- Entry → Signup → **Experiment step** (checklist) → Dashboard → Exit
+- Entry → Signup → **Onboarding checklist** (touchpoint with variants) → Dashboard → Exit
 
-**Variants**
-- Control: Vertical checklist (34%)
-- Variant A: Horizontal steps (33%)
-- Variant B: Card grid (33%)
+**Variants** (on the checklist touchpoint)
+- Vertical checklist
+- Horizontal steps
+- Card grid
 
 ## Expected output
 
-Three variant cards with traffic splits, primary metric on the experiment card, and a journey showing where the multivariate test runs.
+Three variant cards on the canvas, primary metric on the experiment overview, and a journey showing where the multivariate test runs.
 
 ## Related
 

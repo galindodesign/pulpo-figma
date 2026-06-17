@@ -10,7 +10,7 @@ Create a complete experiment flow in about five minutes.
 
 Or open [Pulpo on Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo).
 
-Works in **Figma Design**, **FigJam**, **Figma Slides**, and **Buzz**.
+Works in **Figma Design** (FigJam, Slides, and Buzz are not supported in the current release).
 
 ## Create your first flow
 
@@ -31,6 +31,8 @@ Click **Load example** on the intro screen. Pulpo pre-fills a sample experiment 
 </figure>
 
 You can edit any field before creating the flow. Only the **experiment name** is required if you start from scratch instead.
+
+The form has three sections — **Experiment**, **Goals**, and **Journey** — on one scrollable page. Use the expand icon (top right) for a larger plugin window.
 
 ### 3. Create the flow
 

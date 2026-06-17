@@ -16,15 +16,17 @@ Test whether a violet CTA button increases homepage conversion vs. the current n
 2. Guardrail: Bounce rate — decrease
 
 **Journey**
-- Entry → Landing page → **Experiment step** (CTA button) → Signup page → Exit
+- Entry → Landing page → **Pricing page** (touchpoint with variants) → Signup page → Exit
 
-**Variants**
-- Control: Neutral gray button (50%)
-- Variant A: Violet brand button (50%)
+**Variants** (on the pricing page touchpoint)
+- Blue button
+- Red button
+
+Add Figma frame links on each variant for thumbnails.
 
 ## Expected output
 
-Pulpo generates an experiment info card, journey spine with the experiment step highlighted, and two variant outcome cards with traffic splits.
+An experiment overview card, journey spine, and two variant cards branching from the touchpoint where you added them.
 
 ## Related
 

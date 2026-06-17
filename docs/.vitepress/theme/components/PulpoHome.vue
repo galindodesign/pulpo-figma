@@ -42,7 +42,7 @@ import PulpoIcon from './PulpoIcon.vue'
         </a>
         <a class="pulpo-card pulpo-card--link" :href="withBase('/USER_GUIDE')">
           <h3 class="pulpo-card__title">{{ DOCS_BTN.USER_GUIDE }}</h3>
-          <p class="pulpo-card__body">Experiment, goals, journey, variants, resources, and refresh.</p>
+          <p class="pulpo-card__body">Experiment, goals, journey, variants, resources, and updating your flow.</p>
           <span class="pulpo-card__link">{{ DOCS_BTN.USER_GUIDE }}</span>
         </a>
       </div>

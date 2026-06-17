@@ -1,5 +1,7 @@
 # GitBook Content Design — Pulpo
 
+> **Internal / archived.** This IA predates the current plugin UI (scrollable sections, variants on any touchpoint, no traffic/control fields). Use the published guides under `docs/` as the source of truth.
+
 ## Purpose
 Provide a clear, task‑first documentation experience for Pulpo users (product, growth, and design teams) and plugin maintainers.
 

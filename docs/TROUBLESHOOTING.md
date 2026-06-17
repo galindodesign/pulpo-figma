@@ -2,7 +2,7 @@
 
 ## I can't find Pulpo in Figma
 
-Install it from [Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo), then run **Plugins → Pulpo**.
+Install it from [Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo), then run **Plugins → Pulpo** in a **Figma Design** file.
 
 For local development builds, use **Plugins → Development → Import plugin from manifest…**
 
@@ -16,19 +16,19 @@ For local development builds, use **Plugins → Development → Import plugin fr
 
 Install the **Figtree** font in Figma and restart the app. Pulpo uses Figtree in the plugin UI and on generated canvas frames.
 
-## Winner badge not showing
+## Rolled-out variant not highlighted on canvas
 
 - Set status to **Concluded**
-- Select a **rolled-out** variant
-- Mark the winner in the variants list
+- Choose the shipped variant in the **Rolled out** dropdown on the experiment row
+- Click **Create flow** again if you changed status or rollout after the last build
 
 ## Can't add variants
 
-Only the **Experiment step** touchpoint can hold variants. Mark that step on the **Journey** tab first.
+Open the **Journey** section, pick the touchpoint where the test runs, and click **Add design variant**. Variants attach to individual touchpoints — there is no separate "mark experiment step" control.
 
 ## Variant thumbnails are missing
 
-Add a full **figma.com** link on each variant card in the plugin form — use **Copy link to selection** on the frame you want to show.
+Open the variant menu (⋮) and paste a full **figma.com** link — use **Copy link to selection** on the frame you want to show. Links must be in the same file.
 
 ## Links show a generic icon
 

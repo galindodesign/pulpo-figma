@@ -7,7 +7,7 @@ Pulpo helps growth teams, designers, and PMs document what they're testing witho
 **Docs:** [galindodesign.github.io/pulpo-figma](https://galindodesign.github.io/pulpo-figma/)  
 **Install:** [Pulpo on Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo)
 
-Works in **Figma Design**, **FigJam**, **Figma Slides**, and **Buzz**.
+Works in **Figma Design** (FigJam, Slides, and Buzz are not supported in the current release).
 
 ---
 
@@ -16,7 +16,7 @@ Works in **Figma Design**, **FigJam**, **Figma Slides**, and **Buzz**.
 1. Install Pulpo from [Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo)
 2. Open any file → **Plugins → Pulpo**
 3. Click **Load example** to try a sample, or **New experiment** to start fresh
-4. Fill in **Experiment**, **Goals**, and **Journey** → **Create flow**
+4. Fill in **Experiment**, **Goals**, and **Journey** sections → **Create flow**
 
 Full walkthrough: [Quick start guide](https://galindodesign.github.io/pulpo-figma/GETTING_STARTED)
 
@@ -24,11 +24,11 @@ Full walkthrough: [Quick start guide](https://galindodesign.github.io/pulpo-figm
 
 ## What you can do
 
-- **Experiment details** — name, status, timeline, audience, owner, resource links
-- **Goals** — multiple metrics with direction and targets; first goal is primary
-- **Journey** — entry, touchpoints, and experiment step on a connected spine
-- **Variants** — A/B, multivariate, traffic splits, control/winner badges, Figma frame thumbnails
-- **Resource links** — icons for Figma, Jira, Miro, Notion, Linear, GitHub, Slack, and more
+- **Experiment details** — name, status (Draft / Running / Paused / Concluded), timeline, audience, owner, resource links, rolled-out variant when concluded
+- **Goals** — multiple metrics with direction (increase, decrease, neutral) and thresholds; first goal is primary
+- **Journey** — entry, touchpoints, variants on any step, exit on a connected spine
+- **Variants** — A/B or multivariate (auto-detected), Figma frame thumbnails, rollout highlight when concluded
+- **Resource links** — icons for Figma, Jira, Miro, Notion, Amplitude, Linear, GitHub, Slack, and more
 - **Create flow** — build or replace the experiment diagram from your form (re-running it updates the canvas)
 - **Connector lines** — adjust automatically when you move frames on the canvas
 

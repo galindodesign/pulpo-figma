@@ -9,5 +9,5 @@ New to Pulpo? Start with the [quick start](/GETTING_STARTED) guide.
 | Example | What it tests | Link |
 | --- | --- | --- |
 | A/B test | Single change, two variants, one primary metric | [A/B test](/examples/ab-test) |
-| Multivariate | Multiple variants with traffic splits | [Multivariate](/examples/multivariate) |
+| Multivariate | Three or more variants at one touchpoint | [Multivariate](/examples/multivariate) |
 | Lifecycle / retention | Re-engagement flow with guardrail metrics | [Lifecycle](/examples/lifecycle) |

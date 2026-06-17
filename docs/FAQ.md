@@ -12,7 +12,7 @@ Only the **experiment name**. See the [user guide](/USER_GUIDE) for what each fi
 
 ## How do I mark a winner?
 
-Set status to **Concluded**, choose the **rolled-out** variant, then mark the winner in the variants list.
+Set status to **Concluded**, then choose the **Rolled out** variant on the experiment row. Pulpo highlights that variant on the canvas.
 
 ## Can I have more than 2 variants?
 
@@ -24,7 +24,7 @@ Change fields in the plugin, then click **Create flow** again. Pulpo replaces th
 
 ## Which link types are supported?
 
-Figma, Jira, Miro, Notion, Asana, Linear, GitHub, Slack, Trello, Confluence, Monday, ClickUp, and generic URLs.
+Figma, Jira, Miro, Notion, Amplitude, Asana, Linear, GitHub, Slack, Trello, Confluence, Monday, ClickUp, and generic URLs.
 
 ## Why don't I see variant thumbnails?
 
@@ -34,9 +34,9 @@ Paste a **Figma frame link** on each variant (Copy link to selection on a frame)
 
 No. Pulpo runs inside Figma. Your experiment data stays in your Figma file — nothing is sent to external servers.
 
-## Does Pulpo work in FigJam and Slides?
+## Which Figma editors does Pulpo support?
 
-Yes — **Figma Design**, **FigJam**, **Figma Slides**, and **Buzz**.
+**Figma Design** today. FigJam, Slides, and Buzz are listed in the plugin manifest but are not supported in the current release.
 
 ## Where can I get help?
 

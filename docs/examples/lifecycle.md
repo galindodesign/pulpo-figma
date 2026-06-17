@@ -9,7 +9,7 @@ Re-engage users who haven't opened the app in 14 days with a personalized email 
 **Experiment**
 - Name: Dormant user re-engagement
 - Status: Concluded
-- Rolled-out variant: Variant B (winner)
+- Rolled out: Variant B (personalized activity summary)
 
 **Goals**
 1. Primary: 7-day return rate — increase, target +8%
@@ -17,15 +17,15 @@ Re-engage users who haven't opened the app in 14 days with a personalized email 
 3. Guardrail: Support contact rate — decrease
 
 **Journey**
-- Entry → Email sent → **Experiment step** (in-app prompt) → App open → Exit
+- Entry → Email sent → **In-app prompt** (touchpoint with variants) → App open → Exit
 
-**Variants**
-- Control: Generic "We miss you" (50%)
-- Variant B: Personalized activity summary (50%) — **winner**
+**Variants** (on the in-app prompt touchpoint)
+- Generic "We miss you"
+- Personalized activity summary — **rolled out**
 
 ## Expected output
 
-Concluded status with winner badge on Variant B, three goals on the experiment card, and a journey showing the email → in-app touchpoints.
+**Concluded** status, rolled-out highlight on Variant B, three goals on the experiment card, and a journey showing the email → in-app touchpoints.
 
 ## Related
 

@@ -4,13 +4,13 @@ Goals define **what success looks like**. Each goal becomes a metric row on the 
 
 ## Where to find it
 
-**Goals** tab in the plugin.
+**Goals** section in the plugin (below Experiment).
 
 ## How to use it
 
-1. Add one or more goals — each goal is a metric you measure
+1. Add one or more goals with the inline **Add goal…** row
 2. The **first goal is primary** and drives the outcome summary
-3. Set **direction** (increase or decrease) and optional **thresholds**
+3. Set **direction** (increase, decrease, or **neutral**) and optional **thresholds** — neutral hides the threshold field
 4. Drag to reorder — move your primary metric to the top
 
 ## Expected result
@@ -24,7 +24,7 @@ A goals table on the experiment overview, with variant rows showing metric value
 
 ## Common mistakes
 
-- Adding many goals without marking which one decides the test — keep one primary.
+- Adding many goals without deciding which one drives the test — keep one primary at the top.
 
 ## Next
 

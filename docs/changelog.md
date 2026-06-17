@@ -21,7 +21,7 @@ For how-to guides, see [Quick start](/GETTING_STARTED) and [FAQ](/FAQ). To send 
 **First release**
 
 - Build experiment flows on the canvas — journey, goals, and variants in one diagram
-- Use **Experiment**, **Goals**, and **Journey** tabs to fill in your test
+- Use **Experiment**, **Goals**, and **Journey** sections to fill in your test
 - Try **Load example** on the intro screen for a ready-made sample
 - Link Figma frames as variant thumbnails
 - Add resource links (Figma, Jira, Miro, Notion, and more) with service icons
