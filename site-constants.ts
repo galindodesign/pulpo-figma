@@ -18,6 +18,12 @@ export const FIGMA_COMMUNITY_URL =
 /** Public docs site (GitHub Pages). Update base when adding a custom domain. */
 export const DOCS_SITE_URL = 'https://galindodesign.github.io/pulpo-figma/';
 
+/** VitePress `base` — derived from {@link DOCS_SITE_URL}. */
+export const DOCS_SITE_BASE_PATH = (() => {
+  const path = new URL(DOCS_SITE_URL).pathname;
+  return path.endsWith('/') ? path : `${path}/`;
+})();
+
 /** GitHub repository for issues and feature requests. */
 export const GITHUB_REPO_URL = 'https://github.com/galindodesign/pulpo-figma';
 
@@ -37,3 +43,11 @@ export const GITHUB_NEW_BUG_URL =
 
 export const GITHUB_NEW_FEATURE_URL =
   `${GITHUB_REPO_URL}/issues/new?template=feature_request.yml`;
+
+export const CHANGELOG_URL = `${GITHUB_REPO_URL}/blob/main/CHANGELOG.md`;
+
+export const DOCS_GETTING_STARTED_URL = `${DOCS_SITE_URL}GETTING_STARTED`;
+export const DOCS_FAQ_URL = `${DOCS_SITE_URL}FAQ`;
+export const DOCS_TROUBLESHOOTING_URL = `${DOCS_SITE_URL}TROUBLESHOOTING`;
+export const DOCS_CONTACT_URL = `${DOCS_SITE_URL}contact`;
+export const DOCS_FEATURE_REQUEST_URL = `${DOCS_SITE_URL}contact#feature-request`;

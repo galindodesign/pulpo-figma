@@ -1,3 +1,11 @@
+---
+title: Developer docs
+---
+
+<script setup>
+import { GITHUB_REPO_URL } from '../../site-constants'
+</script>
+
 # Developer docs
 
 Reference for maintaining the Pulpo Figma plugin. End users can start with the [quick start](/GETTING_STARTED) guide instead.
@@ -12,4 +20,4 @@ Reference for maintaining the Pulpo Figma plugin. End users can start with the [
 
 ## Repo
 
-Source and issues: [github.com/galindodesign/pulpo-figma](https://github.com/galindodesign/pulpo-figma)
+Source and issues: <a :href="GITHUB_REPO_URL">{{ GITHUB_REPO_URL.replace('https://', '') }}</a>

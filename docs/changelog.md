@@ -3,12 +3,12 @@ title: What's new
 ---
 
 <script setup>
-import { PLUGIN_VERSION } from '../site-constants'
+import { CHANGELOG_URL, PLUGIN_VERSION } from '../site-constants'
 </script>
 
 # What's new
 
-Current release: **v{{ PLUGIN_VERSION }}**. See the full [CHANGELOG](https://github.com/galindodesign/pulpo-figma/blob/main/CHANGELOG.md) on GitHub.
+Current release: **v{{ PLUGIN_VERSION }}**. See the full <a :href="CHANGELOG_URL">CHANGELOG</a> on GitHub.
 
 ## Unreleased
 

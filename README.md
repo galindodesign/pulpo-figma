@@ -77,7 +77,7 @@ This plugin helps you quickly create clean, Growth Labs–style **experiment flo
 ### Development
 This plugin uses TypeScript and NPM for development.
 
-**Site URLs and feedback:** edit [`site-constants.ts`](site-constants.ts) for the docs site URL, Figma Community link, and `FEEDBACK_EMAIL` (leave empty to hide the in-plugin mail button).
+**Site URLs and feedback:** edit [`site-constants.ts`](site-constants.ts) for `DOCS_SITE_URL`, `FIGMA_COMMUNITY_URL`, `GITHUB_REPO_URL`, and `FEEDBACK_EMAIL` (leave empty to hide the in-plugin mail button).
 
 **Email on new issues:** add GitHub Actions secrets (`NOTIFY_EMAIL`, `SMTP_*`) — see [docs/dev/notifications.md](docs/dev/notifications.md).
 

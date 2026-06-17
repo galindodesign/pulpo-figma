@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress'
 import {
+  DOCS_SITE_BASE_PATH,
   DOCS_SITE_URL,
   FIGMA_COMMUNITY_URL,
   GITHUB_REPO_URL,
@@ -9,7 +10,7 @@ import {
 export default defineConfig({
   title: 'Pulpo',
   description: 'Create professional experiment flow diagrams in Figma',
-  base: '/pulpo-figma/',
+  base: DOCS_SITE_BASE_PATH,
   ignoreDeadLinks: true,
   srcExclude: [
     'GITBOOK_CONTENT_DESIGN.md',
