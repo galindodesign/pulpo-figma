@@ -360,6 +360,10 @@
   line-height: 1.55;
 }
 
+.pulpo-contact {
+  container-type: inline-size;
+}
+
 .pulpo-contact h1 {
   margin: 0 0 12px;
 }
@@ -387,13 +391,21 @@
 .pulpo-feedback-grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   margin: 0;
+}
+
+/* 3 equal columns when the content area is wide enough */
+@container (min-width: 560px) {
+  .pulpo-feedback-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .pulpo-feedback-card {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   padding: 28px;
   border-radius: 12px;
   border: 1px solid var(--vp-c-divider);
