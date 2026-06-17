@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { FIGMA_COMMUNITY_URL } from '../../../../site-constants'
+import { DOCS_BTN } from '../docs-labels'
+import PulpoButton from './PulpoButton.vue'
 </script>
 
 <template>
-  <a
-    class="install-cta"
+  <PulpoButton
     :href="FIGMA_COMMUNITY_URL"
-    target="_blank"
-    rel="noopener noreferrer"
+    variant="primary"
+    size="nav"
+    icon="figma"
+    external
   >
-    Install in Figma
-  </a>
+    {{ DOCS_BTN.INSTALL_FIGMA }}
+  </PulpoButton>
 </template>

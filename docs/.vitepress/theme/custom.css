@@ -90,24 +90,8 @@ html:not(.dark) {
   color: var(--vp-c-text-2);
 }
 
-.VPNavBar .install-cta {
+.VPNavBar .pulpo-btn--nav {
   margin-left: 12px;
-  padding: 0 16px;
-  height: 36px;
-  line-height: 36px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  background: var(--pulpo-violet-600);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background 0.2s;
-}
-
-.VPNavBar .install-cta:hover {
-  background: var(--pulpo-violet-500);
-  color: #fff;
 }
 
 .pulpo-home {
@@ -155,10 +139,6 @@ html:not(.dark) {
 }
 
 .pulpo-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
   margin-bottom: 16px;
 }
 
@@ -166,12 +146,54 @@ html:not(.dark) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   padding: 12px 24px;
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
-  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.pulpo-btn--nav {
+  padding: 0 16px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.pulpo-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pulpo-btn__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pulpo-btn--nav .pulpo-btn__icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pulpo-btn__label {
+  display: inline-block;
+}
+
+.pulpo-btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.pulpo-btn-group--center {
+  margin-top: 20px;
 }
 
 .pulpo-btn--primary {
@@ -265,13 +287,26 @@ html:not(.dark) {
 }
 
 .pulpo-card__link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   margin-top: 12px;
   font-size: 14px;
   font-weight: 500;
   color: var(--pulpo-link);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
+}
+
+.pulpo-card__link::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m13 6 6 6-6 6'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
 }
 
 .pulpo-card--link {
@@ -521,7 +556,7 @@ html:not(.dark) {
 }
 
 @media (max-width: 640px) {
-  .VPNavBar .install-cta {
+  .VPNavBar .pulpo-btn--nav {
     display: none;
   }
 }

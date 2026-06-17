@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { withBase } from 'vitepress'
 import { DEMO_VIDEO_URL, FIGMA_COMMUNITY_URL } from '../../../../site-constants'
+import { DOCS_BTN } from '../docs-labels'
+import PulpoButton from './PulpoButton.vue'
 
 function embedUrl(url: string): string {
   const trimmed = url.trim()
@@ -43,14 +45,14 @@ const videoEmbed = embedUrl(DEMO_VIDEO_URL)
       />
     </figure>
 
-    <p style="text-align: center; margin-top: 20px;">
-      <a class="pulpo-btn pulpo-btn--primary" :href="FIGMA_COMMUNITY_URL" target="_blank" rel="noopener noreferrer">
-        Install in Figma
-      </a>
-      <a class="pulpo-btn pulpo-btn--secondary" style="margin-left: 12px;" :href="withBase('/GETTING_STARTED')">
-        Quick start
-      </a>
-    </p>
+    <div class="pulpo-btn-group pulpo-btn-group--center">
+      <PulpoButton :href="FIGMA_COMMUNITY_URL" icon="figma" external>
+        {{ DOCS_BTN.INSTALL_FIGMA }}
+      </PulpoButton>
+      <PulpoButton :href="withBase('/GETTING_STARTED')" variant="secondary" icon="arrow">
+        {{ DOCS_BTN.QUICK_START }}
+      </PulpoButton>
+    </div>
   </section>
 </template>
 

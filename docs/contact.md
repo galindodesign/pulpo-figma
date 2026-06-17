@@ -9,6 +9,7 @@ import {
   GITHUB_NEW_BUG_URL,
   GITHUB_NEW_FEATURE_URL,
 } from '../site-constants'
+import { DOCS_BTN } from './.vitepress/theme/docs-labels'
 </script>
 
 <div class="pulpo-contact">
@@ -26,12 +27,13 @@ import {
 Most answers are already in the docs. Start with [FAQ](/FAQ) and [Troubleshooting](/TROUBLESHOOTING).
 
 <div class="pulpo-feedback-card__actions">
-  <a class="pulpo-btn pulpo-btn--secondary" href="/FAQ">Browse FAQ</a>
-  <a
+  <PulpoButton href="/FAQ" variant="secondary" icon="arrow">{{ DOCS_BTN.BROWSE_FAQ }}</PulpoButton>
+  <PulpoButton
     v-if="FEEDBACK_EMAIL"
-    class="pulpo-btn pulpo-btn--secondary"
     :href="'mailto:' + FEEDBACK_EMAIL"
-  >Email us</a>
+    variant="secondary"
+    icon="mail"
+  >{{ DOCS_BTN.EMAIL_US }}</PulpoButton>
 </div>
 
 </div>
@@ -43,7 +45,7 @@ Most answers are already in the docs. Start with [FAQ](/FAQ) and [Troubleshootin
 Found something broken? Open a GitHub issue with steps to reproduce, your Figma editor, and the Pulpo version.
 
 <div class="pulpo-feedback-card__actions">
-  <a class="pulpo-btn pulpo-btn--primary" :href="GITHUB_NEW_BUG_URL" target="_blank" rel="noopener noreferrer">Report a bug</a>
+  <PulpoButton :href="GITHUB_NEW_BUG_URL" icon="external">{{ DOCS_BTN.REPORT_BUG }}</PulpoButton>
 </div>
 
 </div>
@@ -55,7 +57,7 @@ Found something broken? Open a GitHub issue with steps to reproduce, your Figma 
 Tell us what problem you're solving and who would benefit. Check <a :href="GITHUB_ISSUES_URL">existing issues</a> first and add a 👍 if it's already there.
 
 <div class="pulpo-feedback-card__actions">
-  <a class="pulpo-btn pulpo-btn--primary" :href="GITHUB_NEW_FEATURE_URL" target="_blank" rel="noopener noreferrer">Request a feature</a>
+  <PulpoButton :href="GITHUB_NEW_FEATURE_URL" icon="external">{{ DOCS_BTN.REQUEST_FEATURE }}</PulpoButton>
 </div>
 
 </div>

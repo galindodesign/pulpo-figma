@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { withBase } from 'vitepress'
 import { FIGMA_COMMUNITY_URL, PLUGIN_VERSION } from '../../../../site-constants'
-import PulpoIcon from './PulpoIcon.vue'
+import { DOCS_BTN } from '../docs-labels'
 import DemoPreview from './DemoPreview.vue'
+import PulpoButton from './PulpoButton.vue'
+import PulpoIcon from './PulpoIcon.vue'
 </script>
 
 <template>
@@ -14,15 +16,17 @@ import DemoPreview from './DemoPreview.vue'
         Experiments belong on the canvas, not in slides. Pulpo turns what you're testing into a flow your whole team can follow.
       </p>
       <p class="pulpo-hero__version">v{{ PLUGIN_VERSION }}</p>
-      <div class="pulpo-hero__actions">
-        <a class="pulpo-btn pulpo-btn--primary" :href="FIGMA_COMMUNITY_URL" target="_blank" rel="noopener noreferrer">
-          Install in Figma
-        </a>
-        <a class="pulpo-btn pulpo-btn--secondary" :href="withBase('/GETTING_STARTED')">Quick start</a>
+      <div class="pulpo-hero__actions pulpo-btn-group">
+        <PulpoButton :href="FIGMA_COMMUNITY_URL" icon="figma" external>
+          {{ DOCS_BTN.INSTALL_FIGMA }}
+        </PulpoButton>
+        <PulpoButton :href="withBase('/GETTING_STARTED')" variant="secondary" icon="arrow">
+          {{ DOCS_BTN.QUICK_START }}
+        </PulpoButton>
       </div>
       <p class="pulpo-hero__contact">
         Questions or ideas?
-        <a :href="withBase('/FAQ')">Get help</a>
+        <a :href="withBase('/contact')">Contact us</a>
       </p>
     </section>
 
@@ -32,14 +36,14 @@ import DemoPreview from './DemoPreview.vue'
       <h2 class="pulpo-section__title">Learn Pulpo</h2>
       <div class="pulpo-grid pulpo-grid--2">
         <a class="pulpo-card pulpo-card--link" :href="withBase('/GETTING_STARTED')">
-          <h3 class="pulpo-card__title">Quick start</h3>
+          <h3 class="pulpo-card__title">{{ DOCS_BTN.QUICK_START }}</h3>
           <p class="pulpo-card__body">Install, fill the form, and create your first flow in five minutes.</p>
-          <span class="pulpo-card__link">Get started →</span>
+          <span class="pulpo-card__link">{{ DOCS_BTN.QUICK_START }}</span>
         </a>
         <a class="pulpo-card pulpo-card--link" :href="withBase('/USER_GUIDE')">
-          <h3 class="pulpo-card__title">User guide</h3>
+          <h3 class="pulpo-card__title">{{ DOCS_BTN.USER_GUIDE }}</h3>
           <p class="pulpo-card__body">Experiment, goals, journey, variants, resources, and refresh.</p>
-          <span class="pulpo-card__link">Read the guide →</span>
+          <span class="pulpo-card__link">{{ DOCS_BTN.USER_GUIDE }}</span>
         </a>
       </div>
     </section>
