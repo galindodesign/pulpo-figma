@@ -1,125 +1,99 @@
-3. To build once:
-   npm run build
-4. To watch and auto-build on save:
-   npm run watch
+# Pulpo
 
-#### Linting
-Run lint checks with:
-   npm run lint
-Auto-fix lint issues with:
-   npm run lint:fix
+**Experiment flows for Figma** — journey, goals, and variants in one diagram on the canvas.
 
-#### More info
-For Figma plugin API docs, see: https://www.figma.com/plugin-docs/
-For TypeScript info: https://www.typescriptlang.org/
+Pulpo helps growth teams, designers, and PMs document what they're testing without leaving Figma. Fill in a short form, click **Create flow**, and get a readable experiment diagram your team can align on.
 
-### Project Maintenance
-**Feb 2026 - Code Cleanup & Optimization:**
-- ✅ Removed ~1.1 MB of build artifacts from root directory (source maps, compiled JS)
-- ✅ Archived 13 historical process documents to `_archive/` folder for cleaner root
-## Pulpo (Figma plugin)
+**Docs:** [galindodesign.github.io/pulpo-figma](https://galindodesign.github.io/pulpo-figma/)  
+**Install:** [Pulpo on Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo)
 
-**Pulpo** is the customer-facing name in Figma (see [`manifest.json`](manifest.json)). The npm package may still be named `growthlab-flow-builder`.
+Works in **Figma Design**, **FigJam**, **Figma Slides**, and **Buzz**.
 
-This plugin helps you quickly create clean, Growth Labs–style **experiment flows** on the Figma canvas: journey, goals, and variants in one diagram.
+---
 
-**Font:** This plugin uses the [Figtree](https://fonts.google.com/specimen/Figtree) font for all UI and generated nodes. Make sure Figtree is available in your Figma environment for best results.
+## Quick start
 
-### Features
+1. Install Pulpo from [Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo)
+2. Open any file → **Plugins → Pulpo**
+3. Click **Load example** to try a sample, or **New experiment** to start fresh
+4. Fill in **Experiment**, **Goals**, and **Journey** → **Create flow**
 
-#### Core experiment documentation
-- Title, description, status, timeline, audience, sample size, owner
-- Status tracking: Draft, Planned, Running, Paused, Concluded
-- Collapsible **Details** for status, rolled-out variant (when concluded), owner, and resource links
-- Hypothesis is **not** shown in the current plugin form (field is reserved for examples / future use)
+Full walkthrough: [Quick start guide](https://galindodesign.github.io/pulpo-figma/GETTING_STARTED)
 
-#### Goals
-- Add multiple goals (each goal is a **metric** in the payload and on the canvas)
-- The **first** goal is the primary goal and drives the outcome summary
-- Direction and threshold targets per goal
-- Drag-and-drop reordering
+---
 
-#### Journey
-- Entry/exit nodes and touchpoint steps
-- Experiment-step designation for variants
-- Auto layout and connected flow spine
+## What you can do
 
-#### Variants
-- Unlimited variants (A/B, A/B/C, multivariate)
-- Control and winner badges
-- Traffic splits and color badges
-- Drag-and-drop ordering
+- **Experiment details** — name, status, timeline, audience, owner, resource links
+- **Goals** — multiple metrics with direction and targets; first goal is primary
+- **Journey** — entry, touchpoints, and experiment step on a connected spine
+- **Variants** — A/B, multivariate, traffic splits, control/winner badges, Figma frame thumbnails
+- **Resource links** — icons for Figma, Jira, Miro, Notion, Linear, GitHub, Slack, and more
+- **Refresh** — update connector lines on an existing flow without rebuilding it
 
-#### Resources and links
-- Smart link detection with service icons (Figma, Jira, Miro, Notion, Asana, Linear, GitHub, Slack, Trello, Confluence, Monday, ClickUp)
-- Multiple links per experiment
+---
 
-#### UX and design
-- Modern compact UI with Figtree font
-- Auto Layout for all generated frames
-- **Refresh** (when shown) updates connector lines on an existing flow
+## Help & feedback
 
-### Usage
-1. Open your Figma file and run **Pulpo**
-2. Fill in the experiment title and optional fields
-3. Add goals and set order (first = primary)
-4. Define journey touchpoints and mark the experiment step
-5. Configure variants and traffic splits
-6. Click **Create flow** to generate the diagram
+| | |
+|---|---|
+| [FAQ](https://galindodesign.github.io/pulpo-figma/FAQ) | Common questions |
+| [Troubleshooting](https://galindodesign.github.io/pulpo-figma/TROUBLESHOOTING) | Something not working |
+| [Contact](https://galindodesign.github.io/pulpo-figma/contact) | Questions, bugs, feature requests |
+| [What's new](https://galindodesign.github.io/pulpo-figma/changelog) | Release highlights |
 
-**Optional workflows**
-- Select **Concluded** and choose the rolled-out variant to show the winner
-- Add resource links (Figma, Jira, Miro, Notion, etc.)
-- Use **Refresh** when the plugin shows it to update connectors without recreating the whole flow
+Bug or idea? [Open an issue](https://github.com/galindodesign/pulpo-figma/issues).
 
-**Note:** A legacy main-thread path exists for **create from selection** (frames as thumbnails), but the current UI does not expose it—build a flow from the form instead.
+---
 
-### Development
-This plugin uses TypeScript and NPM for development.
+## Development
 
-**Site URLs and feedback:** edit [`site-constants.ts`](site-constants.ts) for `DOCS_SITE_URL`, `FIGMA_COMMUNITY_URL`, `GITHUB_REPO_URL`, and `FEEDBACK_EMAIL` (leave empty to hide the in-plugin mail button).
+For plugin contributors and maintainers.
 
-**Email on new issues:** add GitHub Actions secrets (`NOTIFY_EMAIL`, `SMTP_*`) — see [docs/dev/notifications.md](docs/dev/notifications.md).
+### Prerequisites
 
-**Docs site:** `npm run docs:dev` locally; `npm run docs:build` for production. Deploys to GitHub Pages on push to `main` ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)).
+- [Node.js](https://nodejs.org/) 20+
+- [Figma desktop app](https://www.figma.com/downloads/) (for running the plugin locally)
 
-#### Setup
-1. Install Node.js (includes NPM): https://nodejs.org/en/download/
-2. Install dependencies:
-   npm install
-3. To build once:
-   npm run build
-4. To watch and auto-build on save:
-   npm run watch
+### Setup
 
-#### Linting
-Run lint checks with:
-   npm run lint
-Auto-fix lint issues with:
-   npm run lint:fix
+```bash
+git clone https://github.com/galindodesign/pulpo-figma.git
+cd pulpo-figma
+npm install
+npm run build
+```
 
-#### More info
-For Figma plugin API docs, see: https://www.figma.com/plugin-docs/
-For TypeScript info: https://www.typescriptlang.org/
+In Figma: **Plugins → Development → Import plugin from manifest…** → select `manifest.json` in this repo.
 
-### Project Maintenance
-**Feb 2026 - Code Cleanup & Optimization:**
-- ✅ Removed ~1.1 MB of build artifacts from root directory (source maps, compiled JS)
-- ✅ Archived 13 historical process documents to `_archive/` folder for cleaner root
-- ✅ Removed 52+ debug console.log/warn/error statements throughout codebase
-- ✅ Removed QA debug panel from UI (visual debugging helper)
-- ✅ Deleted unused `scripts/` and `assets/` folders
-- ✅ Reorganized TypeScript imports (all imports now at top of files)
-- ✅ Improved type safety (eliminated `any` types, added proper interfaces)
-- ✅ Updated `.gitignore` to prevent build artifacts from being tracked
-- **Result:** Cleaner codebase, better maintainability, zero TypeScript errors
+Use `npm run watch` to rebuild on save while developing.
 
-### Docs
-**For users**
-- [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)
-- [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
-- [docs/FAQ.md](docs/FAQ.md)
-- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+### Scripts
 
-**For developers**
-- [docs/dev/](docs/dev/) — plugin maintainer reference
+| Command | Purpose |
+|---|---|
+| `npm run build` | Build plugin (`build/code.js`, `build/ui.html`) |
+| `npm run watch` | Rebuild on file changes |
+| `npm run lint` | ESLint |
+| `npm run docs:dev` | Docs site locally → `http://localhost:5173/pulpo-figma/` |
+| `npm run docs:build` | Production docs build |
+
+### Configuration
+
+Edit [`site-constants.ts`](site-constants.ts) for docs URL, Figma Community link, and feedback email.
+
+- **Docs deploy:** pushes to `main` deploy via [GitHub Actions](.github/workflows/deploy.yml)
+- **Issue email notifications:** [docs/dev/notifications.md](docs/dev/notifications.md)
+- **Maintainer docs:** [docs/dev/](docs/dev/)
+
+### Project notes
+
+- Customer-facing name: **Pulpo** ([`manifest.json`](manifest.json))
+- Generated flows use the [Figtree](https://fonts.google.com/specimen/Figtree) font — install it in Figma for best results
+- npm package name (`growthlab-flow-builder`) is legacy; safe to ignore
+
+---
+
+## License
+
+See repository for license details.
