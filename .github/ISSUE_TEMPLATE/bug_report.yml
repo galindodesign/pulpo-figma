@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting. Check [FAQ](https://galindolala1990.github.io/growthlab-infigma/FAQ) and [Troubleshooting](https://galindolala1990.github.io/growthlab-infigma/TROUBLESHOOTING) first.
+        Thanks for reporting. Check [FAQ](https://galindodesign.github.io/growthlab-infigma/FAQ) and [Troubleshooting](https://galindodesign.github.io/growthlab-infigma/TROUBLESHOOTING) first.
   - type: input
     id: version
     attributes:

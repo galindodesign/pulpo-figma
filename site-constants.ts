@@ -16,10 +16,10 @@ export const FIGMA_COMMUNITY_URL =
   'https://www.figma.com/community/search?resource_type=plugins&q=Pulpo';
 
 /** Public docs site (GitHub Pages). Update base when adding a custom domain. */
-export const DOCS_SITE_URL = 'https://galindolala1990.github.io/growthlab-infigma/';
+export const DOCS_SITE_URL = 'https://galindodesign.github.io/growthlab-infigma/';
 
 /** GitHub repository for issues and feature requests. */
-export const GITHUB_REPO_URL = 'https://github.com/galindolala1990/growthlab-infigma';
+export const GITHUB_REPO_URL = 'https://github.com/galindodesign/growthlab-infigma';
 
 /**
  * Optional demo video URL (YouTube, Loom, Vimeo embed URL).
