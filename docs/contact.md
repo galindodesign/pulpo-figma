@@ -1,5 +1,5 @@
 ---
-layout: page
+title: Contact & feedback
 ---
 
 <script setup>
@@ -11,9 +11,11 @@ import {
 } from '../site-constants'
 </script>
 
+<div class="pulpo-contact">
+
 # Contact & feedback
 
-We're building Pulpo with growth teams — tell us what you need.
+<p class="pulpo-contact__intro">Questions, bugs, and ideas — pick the option that fits.</p>
 
 <div class="pulpo-feedback-grid">
 
@@ -23,13 +25,14 @@ We're building Pulpo with growth teams — tell us what you need.
 
 Most answers are already in the docs. Start with [FAQ](/FAQ) and [Troubleshooting](/TROUBLESHOOTING).
 
-<a class="pulpo-btn pulpo-btn--secondary" href="/FAQ">Browse FAQ</a>
-
-<template v-if="FEEDBACK_EMAIL">
-  <p style="margin-top: 16px;">
-    <a class="pulpo-btn pulpo-btn--secondary" :href="'mailto:' + FEEDBACK_EMAIL">Email us</a>
-  </p>
-</template>
+<div class="pulpo-feedback-card__actions">
+  <a class="pulpo-btn pulpo-btn--secondary" href="/FAQ">Browse FAQ</a>
+  <a
+    v-if="FEEDBACK_EMAIL"
+    class="pulpo-btn pulpo-btn--secondary"
+    :href="'mailto:' + FEEDBACK_EMAIL"
+  >Email us</a>
+</div>
 
 </div>
 
@@ -39,7 +42,9 @@ Most answers are already in the docs. Start with [FAQ](/FAQ) and [Troubleshootin
 
 Found something broken? Open a GitHub issue with steps to reproduce, your Figma editor, and the Pulpo version.
 
-<a class="pulpo-btn pulpo-btn--primary" :href="GITHUB_NEW_BUG_URL" target="_blank" rel="noopener noreferrer">Report a bug</a>
+<div class="pulpo-feedback-card__actions">
+  <a class="pulpo-btn pulpo-btn--primary" :href="GITHUB_NEW_BUG_URL" target="_blank" rel="noopener noreferrer">Report a bug</a>
+</div>
 
 </div>
 
@@ -49,12 +54,16 @@ Found something broken? Open a GitHub issue with steps to reproduce, your Figma 
 
 Tell us what problem you're solving and who would benefit. Check [existing issues](https://github.com/galindolala1990/growthlab-infigma/issues) first and add a 👍 if it's already there.
 
-<a class="pulpo-btn pulpo-btn--primary" :href="GITHUB_NEW_FEATURE_URL" target="_blank" rel="noopener noreferrer">Request a feature</a>
-
+<div class="pulpo-feedback-card__actions">
+  <a class="pulpo-btn pulpo-btn--primary" :href="GITHUB_NEW_FEATURE_URL" target="_blank" rel="noopener noreferrer">Request a feature</a>
 </div>
 
 </div>
 
-<p style="margin-top: 32px; font-size: 14px; color: var(--vp-c-text-3);">
+</div>
+
+<p class="pulpo-contact__footer">
   All issues: <a :href="GITHUB_ISSUES_URL">GitHub Issues</a>
 </p>
+
+</div>
