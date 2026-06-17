@@ -5,7 +5,6 @@
   --vp-c-brand-1: #551ee3;
   --vp-c-brand-2: #4718bf;
   --vp-c-brand-3: #3b169c;
-  --vp-c-brand-soft: #f4f2ff;
   --pulpo-violet-500: #6f4cff;
   --pulpo-violet-600: #6330f7;
   --pulpo-violet-700: #551ee3;
@@ -15,6 +14,11 @@
   --pulpo-link: var(--pulpo-violet-700);
   --pulpo-link-hover: #4718bf;
   --pulpo-image-radius: 12px;
+}
+
+/* Light-only — :root also matches html.dark, so never set brand-soft there */
+html:not(.dark) {
+  --vp-c-brand-soft: #f4f2ff;
 }
 
 .dark {
@@ -48,6 +52,42 @@
 
 .vp-doc .custom-block-title {
   color: var(--vp-c-text-1);
+}
+
+.dark .vp-doc .custom-block.tip,
+.dark .vp-doc .custom-block.info,
+.dark .vp-doc .custom-block.note,
+.dark .vp-doc .custom-block.details {
+  background-color: rgba(99, 48, 247, 0.18);
+  border-color: rgba(99, 48, 247, 0.35);
+  color: var(--vp-c-text-1);
+}
+
+.dark .vp-doc .custom-block.warning {
+  background-color: rgba(234, 179, 8, 0.16);
+  border-color: rgba(234, 179, 8, 0.35);
+  color: var(--vp-c-text-1);
+}
+
+.dark .vp-doc .custom-block.danger {
+  background-color: rgba(244, 63, 94, 0.16);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: var(--vp-c-text-1);
+}
+
+.dark .vp-doc .custom-block.important {
+  background-color: rgba(139, 92, 246, 0.16);
+  border-color: rgba(139, 92, 246, 0.35);
+  color: var(--vp-c-text-1);
+}
+
+.dark .vp-doc .custom-block p,
+.dark .vp-doc .custom-block-title {
+  color: var(--vp-c-text-1);
+}
+
+.dark .vp-doc .custom-block p:not(.custom-block-title) {
+  color: var(--vp-c-text-2);
 }
 
 .VPNavBar .install-cta {
