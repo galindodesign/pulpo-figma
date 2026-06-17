@@ -6,9 +6,6 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 
 ## [Unreleased]
 
-### Changed
-- Rebrand from Petri to **Pulpo** (plugin name, intro screen logo, copy, and docs).
-
 ### Maintenance
 - Add your changes under **Unreleased** during development, then move them under a dated heading when you cut a release.
 

@@ -8,13 +8,18 @@ import { CHANGELOG_URL, PLUGIN_VERSION } from '../site-constants'
 
 # What's new
 
-Current release: **v{{ PLUGIN_VERSION }}**. See the full <a :href="CHANGELOG_URL">CHANGELOG</a> on GitHub.
+Current release: **v{{ PLUGIN_VERSION }}**.
 
-## Unreleased
+## 1.0.0 — May 13, 2026
 
-### Changed
-- Rebrand from Petri to **Pulpo** (plugin name, intro screen logo, copy, and docs).
+First public release of Pulpo.
 
-## 1.0.0 — 2026-05-13
+- Create experiment flows on the Figma canvas — journey, goals, and variants in one diagram
+- Tabbed form: **Experiment**, **Goals**, and **Journey**
+- **Load example** to try a sample flow in one click
+- Variant thumbnails from linked Figma frames
+- Resource links with icons for Figma, Jira, Miro, Notion, and more
 
-Initial documented release: Pulpo-branded UI, structured validation, tabbed form (Experiment / Goals / Journey), goals and journey UX cleanup, thumbnails via variant Figma links.
+<p class="pulpo-changelog__footer">
+  Full history for contributors: <a :href="CHANGELOG_URL">CHANGELOG on GitHub</a>
+</p>
