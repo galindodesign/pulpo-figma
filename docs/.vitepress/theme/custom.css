@@ -21,8 +21,33 @@
   --vp-c-brand-1: #b9b1ff;
   --vp-c-brand-2: #d6d4ff;
   --vp-c-brand-3: #e9e8ff;
+  --vp-c-brand-soft: rgba(99, 48, 247, 0.18);
   --pulpo-link: #b9b1ff;
   --pulpo-link-hover: #d6d4ff;
+}
+
+/* VitePress callouts (::: tip, warning, info, danger, note, details) */
+.vp-doc .custom-block {
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .custom-block p {
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc .custom-block a {
+  color: var(--pulpo-link);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.vp-doc .custom-block a:hover {
+  color: var(--pulpo-link-hover);
+}
+
+.vp-doc .custom-block-title {
+  color: var(--vp-c-text-1);
 }
 
 .VPNavBar .install-cta {
