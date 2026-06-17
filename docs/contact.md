@@ -52,7 +52,7 @@ Found something broken? Open a GitHub issue with steps to reproduce, your Figma 
 
 ### Request a feature
 
-Tell us what problem you're solving and who would benefit. Check [existing issues](https://github.com/galindodesign/growthlab-infigma/issues) first and add a 👍 if it's already there.
+Tell us what problem you're solving and who would benefit. Check [existing issues](https://github.com/galindodesign/pulpo-figma/issues) first and add a 👍 if it's already there.
 
 <div class="pulpo-feedback-card__actions">
   <a class="pulpo-btn pulpo-btn--primary" :href="GITHUB_NEW_FEATURE_URL" target="_blank" rel="noopener noreferrer">Request a feature</a>

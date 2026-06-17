@@ -8,7 +8,7 @@ import { PLUGIN_VERSION } from '../site-constants'
 
 # What's new
 
-Current release: **v{{ PLUGIN_VERSION }}**. See the full [CHANGELOG](https://github.com/galindodesign/growthlab-infigma/blob/main/CHANGELOG.md) on GitHub.
+Current release: **v{{ PLUGIN_VERSION }}**. See the full [CHANGELOG](https://github.com/galindodesign/pulpo-figma/blob/main/CHANGELOG.md) on GitHub.
 
 ## Unreleased
 

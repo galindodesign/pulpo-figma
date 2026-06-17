@@ -9,7 +9,7 @@ import {
 export default defineConfig({
   title: 'Pulpo',
   description: 'Create professional experiment flow diagrams in Figma',
-  base: '/growthlab-infigma/',
+  base: '/pulpo-figma/',
   ignoreDeadLinks: true,
   srcExclude: [
     'GITBOOK_CONTENT_DESIGN.md',

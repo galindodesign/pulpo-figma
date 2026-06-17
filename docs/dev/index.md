@@ -12,4 +12,4 @@ Reference for maintaining the Pulpo Figma plugin. End users can start with the [
 
 ## Repo
 
-Source and issues: [github.com/galindodesign/growthlab-infigma](https://github.com/galindodesign/growthlab-infigma)
+Source and issues: [github.com/galindodesign/pulpo-figma](https://github.com/galindodesign/pulpo-figma)

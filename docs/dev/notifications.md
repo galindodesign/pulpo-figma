@@ -14,11 +14,11 @@ In your repo: **Settings → Secrets and variables → Actions → New repositor
 | `SMTP_USERNAME` | `you@gmail.com` | SMTP login (often same as email) |
 | `SMTP_PASSWORD` | *(app password)* | Not your normal password — use an [app password](https://support.google.com/accounts/answer/185833) for Gmail |
 
-The workflow [`.github/workflows/issue-notify.yml`](https://github.com/galindodesign/growthlab-infigma/blob/main/.github/workflows/issue-notify.yml) runs on every new issue. If any secret is missing, it skips silently (no failure).
+The workflow [`.github/workflows/issue-notify.yml`](https://github.com/galindodesign/pulpo-figma/blob/main/.github/workflows/issue-notify.yml) runs on every new issue. If any secret is missing, it skips silently (no failure).
 
 ## 2. Contact page email (optional)
 
-To show **Email us** on the [Contact](/contact) page and in the Figma plugin footer, set in [`site-constants.ts`](https://github.com/galindodesign/growthlab-infigma/blob/main/site-constants.ts):
+To show **Email us** on the [Contact](/contact) page and in the Figma plugin footer, set in [`site-constants.ts`](https://github.com/galindodesign/pulpo-figma/blob/main/site-constants.ts):
 
 ```ts
 export const FEEDBACK_EMAIL = 'galindo.designer@gmail.com';
