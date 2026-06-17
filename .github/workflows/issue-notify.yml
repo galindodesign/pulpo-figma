@@ -6,14 +6,23 @@ on:
 
 jobs:
   notify:
-    if: >-
-      ${{ secrets.NOTIFY_EMAIL != '' &&
-          secrets.SMTP_SERVER != '' &&
-          secrets.SMTP_USERNAME != '' &&
-          secrets.SMTP_PASSWORD != '' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Check email secrets are configured
+        id: gate
+        shell: bash
+        env:
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+        run: |
+          if [ -n "$NOTIFY_EMAIL" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Email secrets not configured — skipping notification."
+          fi
+
       - name: Send email notification
+        if: steps.gate.outputs.enabled == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.SMTP_SERVER }}
