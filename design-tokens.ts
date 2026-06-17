@@ -194,14 +194,14 @@ export const TOKENS = {
   fillsSurface: '#ffffff', // --fills-surface
   fillsBrand: '#6f4cff', // --fills-brand
   fillsSuccess: '#0eab4319', // --fills-success
-  fillsLinkDefault: '#2563eb', // --fills-link-default
+  fillsLinkDefault: '#1d5bd8', // --fills-link-default
   textPrimary: '#333b47', // --text-primary-default
   textPrimaryInverted: '#ffffff', // --text-primary-inverted
   textSecondary: '#7f7f7f', // --text-secondary-default
   textSecondaryInverted: '#afbbca', // --text-secondary-inverted
   textTertiary: '#647993', // --text-tertiary-default
   textTertiaryInverted: '#d4dae3', // --text-tertiary-inverted
-  textLink: '#2563eb', // --text-link-default
+  textLink: '#1d5bd8', // --text-link-default
   textLabel: '#d8dbdf', // --text-label-default
   textStatesSuccess: '#126930', // --text-states-success
   textMuted: '#3f4c5f', // --text-muted
@@ -220,7 +220,7 @@ export const TOKENS = {
   typographyMetaColor: '#647993', // --typography-meta-color
   typographyBodyColor: '#333b47', // --typography-body-color
   typographyMutedColor: '#7f7f7f', // --typography-muted-color
-  typographyLinkColor: '#2563eb', // --typography-link-color
+  typographyLinkColor: '#1d5bd8', // --typography-link-color
   pluginCardSurface: '#ffffff', // --plugin-card-surface
   pluginCardBorder: '#edeef1', // --plugin-card-border
   pluginCardRadius: 16, // --plugin-card-radius

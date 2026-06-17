@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest an improvement for Pulpo
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tell us what problem you're solving. Search [existing issues](https://github.com/galindolala1990/growthlab-infigma/issues) first and add a 👍 if it's already there.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What pain are you hitting today?
+      placeholder: When documenting multivariate tests, I need to...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would Pulpo do differently?
+    validations:
+      required: true
+  - type: textarea
+    id: audience
+    attributes:
+      label: Who benefits
+      description: Growth teams, designers, researchers, etc.
+    validations:
+      required: false

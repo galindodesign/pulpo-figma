@@ -28,7 +28,7 @@ import {
 } from './experiment-node';
 import { createExperimentOutcomeCard, createOutcomeCardFromExperimentData } from './experiment-outcome-card';
 import { loadFonts } from './load-fonts';
-import { FEEDBACK_EMAIL } from './plugin-constants';
+import { DOCS_SITE_URL, FEEDBACK_EMAIL, PLUGIN_VERSION } from './site-constants';
 import type { 
   MetricDefinition, 
   VariantStatus, 
@@ -2607,8 +2607,6 @@ if (figma.editorType === 'figma') {
   }
 
   const MIN_UI_WIDTH = 500;
-  // Keep in sync with package.json version
-  const PLUGIN_VERSION = '1.0.0';
   let isCreatingFlow = false;
 
   function notifyFlowCreateFinished(): void {
@@ -2627,6 +2625,7 @@ if (figma.editorType === 'figma') {
   figma.ui.postMessage({
     type: 'plugin-config',
     feedbackEmail: FEEDBACK_EMAIL,
+    docsSiteUrl: DOCS_SITE_URL,
     fileKey: startupFileKey,
   });
   figma.ui.postMessage({ type: 'current-file-context', fileKey: startupFileKey });

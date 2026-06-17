@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to **Pulpo** (this Figma plugin) are documented here. Versions follow [package.json](package.json) (`version` field) and should match what you publish in **Figma Community** (or your org’s distribution).
+All notable changes to **Pulpo** (this Figma plugin) are documented here. Bump the version in [package.json](package.json) only — it flows to the plugin footer, docs site, and [site-constants.ts](site-constants.ts). Match what you publish in **Figma Community** (or your org’s distribution).
 
 The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 

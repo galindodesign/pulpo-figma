@@ -4,7 +4,7 @@
 - Publish a plugin: https://www.figma.com/plugin-docs/publishing/
 
 ## Checklist
-- Update version (package.json and UI footer)
+- Bump `version` in [package.json](../../package.json) (plugin footer + docs site update automatically)
 - Run `npm run lint`
 - Run build
 - Smoke test in Figma

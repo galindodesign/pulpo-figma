@@ -256,7 +256,7 @@
       --text-primary: var(--figma-color-text, #22272f);
       --text-primary-inverse: var(--figma-color-text-onbrand, var(--color-white-100));
       --text-secondary: var(--figma-color-text-secondary, #7F7F7F);
-      --text-link: var(--figma-color-text-brand, var(--color-royal-blue-600));
+      --text-link: var(--figma-color-text-brand, var(--color-royal-blue-700));
       --border: var(--figma-color-border, var(--color-pale-sky-200));
       --border-dark: var(--figma-color-border-strong, var(--color-azure-300));
       --accent-success: var(--color-white-100);
@@ -418,6 +418,7 @@
 
     :root[data-figma-theme="dark"] {
       color-scheme: dark;
+      --text-link: var(--figma-color-text-brand, var(--color-electric-violet-300));
       --section-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.24);
       --primary-button-bg: var(--color-white-100);
       --primary-button-hover-bg: color-mix(in srgb, var(--color-white-100) 88%, var(--background) 12%);
@@ -744,6 +745,35 @@
       pointer-events: auto;
     }
 
+    .intro-screen__footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-12) var(--space-16);
+      margin-top: var(--space-16);
+      width: 100%;
+    }
+
+    .intro-screen__footer-link {
+      font-size: var(--body-md-size);
+      font-weight: 500;
+      color: var(--text-link);
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .intro-screen__footer-link:hover {
+      color: var(--color-royal-blue-700);
+      text-decoration: underline;
+    }
+
+    :root[data-figma-theme="dark"] .intro-screen__footer-link:hover {
+      color: var(--color-electric-violet-200);
+    }
+
     /* Back to intro link */
    .back-to-intro-link-container {
       padding: var(--space-12) var(--space-12) var(--space-0) var(--space-16);
@@ -755,6 +785,8 @@
       display: inline-block;
       font-size: var(--body-sm-size);
       color: var(--text-link);
+      text-decoration: underline;
+      text-underline-offset: 2px;
       text-decoration: none;
       cursor: pointer;
       border: none;
@@ -766,6 +798,10 @@
     .back-to-intro-link:hover {
       color: var(--color-royal-blue-700);
       text-decoration: underline;
+    }
+
+    :root[data-figma-theme="dark"] .back-to-intro-link:hover {
+      color: var(--color-electric-violet-200);
     }
 
     /* Expand button in top bar */
@@ -4978,6 +5014,10 @@
           </button>
           <button type="button" class="Button secondary intro-screen__btn-secondary" id="btnLoadExample">Load example</button>
         </div>
+        <div class="intro-screen__footer">
+          <a class="intro-screen__footer-link" id="introDocsLink" href="https://galindolala1990.github.io/growthlab-infigma/GETTING_STARTED" target="_blank" rel="noopener noreferrer">Learn how to use Pulpo</a>
+          <a class="intro-screen__footer-link" id="introFeatureRequestLink" href="https://galindolala1990.github.io/growthlab-infigma/contact#feature-request" target="_blank" rel="noopener noreferrer">Request a feature</a>
+        </div>
       </div>
     </div>
   </div>
@@ -5292,6 +5332,7 @@
 
   <script>
         window.__pulpoFeedbackEmail = '';
+        window.__pulpoDocsSiteUrl = 'https://galindolala1990.github.io/growthlab-infigma/';
 
         const FIGMA_THEME_ATTRIBUTE = 'data-figma-theme';
 
@@ -7753,6 +7794,19 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       showToast(body, null, null, 9000);
     }
 
+    function pulpoDocsBaseUrl() {
+      const raw = (typeof window.__pulpoDocsSiteUrl === 'string' && window.__pulpoDocsSiteUrl.trim()) || '';
+      return raw.endsWith('/') ? raw : `${raw}/`;
+    }
+
+    function applyPulpoIntroLinks() {
+      const base = pulpoDocsBaseUrl();
+      const docsLink = document.getElementById('introDocsLink');
+      const featureLink = document.getElementById('introFeatureRequestLink');
+      if (docsLink) docsLink.href = `${base}GETTING_STARTED`;
+      if (featureLink) featureLink.href = `${base}contact#feature-request`;
+    }
+
     function applyPulpoFeedbackButton() {
       const btn = document.getElementById('emailMeBtn');
       if (!btn) return;
@@ -7771,8 +7825,12 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
         }
         if (msg.type === 'plugin-config') {
           window.__pulpoFeedbackEmail = typeof msg.feedbackEmail === 'string' ? msg.feedbackEmail : '';
+          if (typeof msg.docsSiteUrl === 'string' && msg.docsSiteUrl.trim()) {
+            window.__pulpoDocsSiteUrl = msg.docsSiteUrl.trim();
+          }
           if (typeof msg.fileKey === 'string') window.__pulpoFileKey = msg.fileKey;
           applyPulpoFeedbackButton();
+          applyPulpoIntroLinks();
           return;
         }
         if (msg.type === 'current-file-context' && typeof msg.fileKey === 'string') {
@@ -10055,6 +10113,7 @@ ${ expName ? `Experiment: ${expName}\n` : '' }Plugin version: ${pluginVersion ||
       initDetailsSection();
       initExpandButton();
       applyPulpoFeedbackButton();
+      applyPulpoIntroLinks();
     }
 
     if (document.readyState === 'loading') {

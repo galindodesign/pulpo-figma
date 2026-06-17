@@ -1,5 +1,4 @@
 /**
- * Plugin runtime constants (edit before release).
- * FEEDBACK_EMAIL: inbox for in-plugin feedback. Leave empty to hide the feedback button.
+ * Plugin runtime constants — re-exported from site-constants for backwards compatibility.
  */
-export const FEEDBACK_EMAIL = '';
+export { FEEDBACK_EMAIL, PLUGIN_VERSION } from './site-constants';

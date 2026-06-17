@@ -248,7 +248,7 @@
   --fills-component-hover: var(--color-azure-light-alpha-400);
   --fills-success: var(--color-malachite-alpha-100);
   --fills-blur: var(--color-azure-light-alpha-50);
-  --fills-link-default: var(--color-royal-blue-600);
+  --fills-link-default: var(--color-royal-blue-700);
   --fills-link-inverse: var(--color-royal-blue-50);
 
   /* --- Text --- */
@@ -258,7 +258,7 @@
   --text-secondary-inverted: var(--color-azure-300);
   --text-tertiary-default: var(--color-azure-500);
   --text-tertiary-inverted: var(--color-azure-200);
-  --text-link-default: var(--color-royal-blue-600);
+  --text-link-default: var(--color-royal-blue-700);
   --text-label-default: var(--color-pale-sky-200);
   --text-states-success: var(--color-malachite-800);
 

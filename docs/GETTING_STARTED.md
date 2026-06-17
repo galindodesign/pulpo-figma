@@ -1,33 +1,47 @@
-# Getting Started
+# Quick start
 
-Create a complete experiment flow in minutes.
+Create a complete experiment flow in about five minutes.
 
-## 1) Run the plugin
-Open your Figma file → Plugins → **Pulpo**.
+## Install Pulpo
 
-## 2) Fill in the basics
-- **Experiment name** (required)
-- **Status** (Draft, Planned, Running, Paused, Concluded)
-- **Description** (optional)
+1. Open Figma → **Plugins** → **Manage plugins in Community**
+2. Search for **Pulpo**
+3. Click **Install**
 
-## 3) Add goals
-- Add one or more goals (each goal is a metric on the canvas)
-- The **first** goal is **primary**
-- Set direction/thresholds as needed
+## Create your first flow
 
-## 4) Define the journey
-- Add touchpoints
-- Mark the **Experiment Step** (this is where variants live)
+### 1. Open Pulpo
 
-## 5) Configure variants
-- Control + one or more variants
-- Set traffic splits
-- Optionally set a winner if status is **Concluded**
+In any Figma file, run **Plugins → Pulpo**.
 
-## 6) Create the flow
-Click **Create flow** to generate the diagram.
+<figure class="pulpo-figure pulpo-figure--plugin">
+  <img src="/images/plugin-intro.png" alt="Pulpo intro screen" loading="lazy" />
+</figure>
 
-## Optional workflows
-- **Refresh** to update an existing flow
-- **Create from selection** to use up to 3 selected frames as variant thumbnails
-- Add **Resources** (Figma, Jira, Miro, Notion, etc.)
+### 2. Load example
+
+Click **Load example** on the intro screen. Pulpo pre-fills a sample experiment — title, goals, journey touchpoints, and variants.
+
+<figure class="pulpo-figure pulpo-figure--plugin">
+  <img src="/images/plugin-form-ready.png" alt="Review the pre-filled experiment form" loading="lazy" />
+</figure>
+
+You can edit any field before creating the flow. Only the **experiment name** is required if you start from scratch instead.
+
+### 3. Create the flow
+
+Click **Create flow**. Pulpo generates the diagram on **your canvas**:
+
+<figure class="pulpo-figure">
+  <img src="/images/experiment-overview.png" alt="Experiment overview on the canvas" loading="lazy" />
+</figure>
+
+<figure class="pulpo-figure">
+  <img src="/images/experiment-flow.png?v=7" alt="Journey and variant flow on the canvas" loading="lazy" />
+</figure>
+
+## What's next
+
+- [User guide](/USER_GUIDE) — experiment, goals, journey, variants, resources, refresh
+- [Refresh](/guide/refresh) an existing flow instead of duplicating it
+- [Examples](/examples/) — copy-ready A/B and multivariate setups

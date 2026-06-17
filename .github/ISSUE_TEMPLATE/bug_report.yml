@@ -1,0 +1,55 @@
+name: Bug report
+description: Report something broken in Pulpo
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Check [FAQ](https://galindolala1990.github.io/growthlab-infigma/FAQ) and [Troubleshooting](https://galindolala1990.github.io/growthlab-infigma/TROUBLESHOOTING) first.
+  - type: input
+    id: version
+    attributes:
+      label: Pulpo version
+      description: Shown in the plugin footer (e.g. v1.0.0)
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: editor
+    attributes:
+      label: Figma editor
+      options:
+        - Figma Design
+        - FigJam
+        - Figma Slides
+        - Buzz
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Pulpo
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag images here or paste links
