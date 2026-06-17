@@ -1,0 +1,33 @@
+name: Email on new issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  notify:
+    if: >-
+      ${{ secrets.NOTIFY_EMAIL != '' &&
+          secrets.SMTP_SERVER != '' &&
+          secrets.SMTP_USERNAME != '' &&
+          secrets.SMTP_PASSWORD != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[Pulpo] ${{ github.event.issue.title }}"
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: Pulpo <${{ secrets.SMTP_USERNAME }}>
+          html_body: |
+            <h2>New Pulpo issue</h2>
+            <p><strong>${{ github.event.issue.title }}</strong></p>
+            <p>Opened by <strong>@${{ github.event.issue.user.login }}</strong></p>
+            <p><a href="${{ github.event.issue.html_url }}">Open on GitHub</a></p>
+            <hr>
+            <pre style="white-space:pre-wrap;font-family:system-ui,sans-serif">${{ github.event.issue.body }}</pre>

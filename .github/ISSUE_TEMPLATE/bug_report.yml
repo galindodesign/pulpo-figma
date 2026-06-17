@@ -16,6 +16,12 @@ body:
       placeholder: v1.0.0
     validations:
       required: true
+  - type: input
+    id: email
+    attributes:
+      label: Email (optional)
+      description: If you'd like a reply outside GitHub
+      placeholder: you@company.com
   - type: dropdown
     id: editor
     attributes:

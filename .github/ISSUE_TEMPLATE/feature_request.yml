@@ -8,6 +8,12 @@ body:
     attributes:
       value: |
         Tell us what problem you're solving. Search [existing issues](https://github.com/galindolala1990/growthlab-infigma/issues) first and add a 👍 if it's already there.
+  - type: input
+    id: email
+    attributes:
+      label: Email (optional)
+      description: If you'd like a reply outside GitHub
+      placeholder: you@company.com
   - type: textarea
     id: problem
     attributes:

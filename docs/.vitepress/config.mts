@@ -42,6 +42,7 @@ export default defineConfig({
             { text: 'Messaging', link: '/dev/messaging' },
             { text: 'UX guidelines', link: '/dev/ux-guidelines' },
             { text: 'Release checklist', link: '/dev/release-checklist' },
+            { text: 'Email notifications', link: '/dev/notifications' },
           ],
         },
       ],

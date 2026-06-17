@@ -79,6 +79,8 @@ This plugin uses TypeScript and NPM for development.
 
 **Site URLs and feedback:** edit [`site-constants.ts`](site-constants.ts) for the docs site URL, Figma Community link, and `FEEDBACK_EMAIL` (leave empty to hide the in-plugin mail button).
 
+**Email on new issues:** add GitHub Actions secrets (`NOTIFY_EMAIL`, `SMTP_*`) — see [docs/dev/notifications.md](docs/dev/notifications.md).
+
 **Docs site:** `npm run docs:dev` locally; `npm run docs:build` for production. Deploys to GitHub Pages on push to `main` ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)).
 
 #### Setup

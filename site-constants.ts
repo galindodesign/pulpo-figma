@@ -28,7 +28,7 @@ export const GITHUB_REPO_URL = 'https://github.com/galindolala1990/growthlab-inf
 export const DEMO_VIDEO_URL = '';
 
 /** Inbox for in-plugin feedback mailto. Leave empty to hide the feedback button. */
-export const FEEDBACK_EMAIL = '';
+export const FEEDBACK_EMAIL = 'galindo.designer@gmail.com';
 
 export const GITHUB_ISSUES_URL = `${GITHUB_REPO_URL}/issues`;
 
