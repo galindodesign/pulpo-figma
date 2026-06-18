@@ -7,7 +7,7 @@ Pulpo helps growth teams, designers, and PMs document what they're testing witho
 **Docs:** [galindodesign.github.io/pulpo-figma](https://galindodesign.github.io/pulpo-figma/)  
 **Install:** [Pulpo on Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo)
 
-Works in **Figma Design** (FigJam, Slides, and Buzz are not supported in the current release).
+Works in **Figma Design** only.
 
 ---
 

@@ -11,4 +11,5 @@
 - `networkAccess`
 
 ## In this project
-- Manifest file: [manifest.json](../manifest.json)
+- Manifest file: [manifest.json](../../manifest.json)
+- `editorType` is `["figma"]` only — Pulpo targets Figma Design files and must not claim FigJam, Slides, or Buzz until those editors are supported.

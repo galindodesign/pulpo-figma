@@ -36,7 +36,7 @@ No. Pulpo runs inside Figma. Your experiment data stays in your Figma file — n
 
 ## Which Figma editors does Pulpo support?
 
-**Figma Design** today. FigJam, Slides, and Buzz are listed in the plugin manifest but are not supported in the current release.
+**Figma Design** only.
 
 ## Where can I get help?
 
