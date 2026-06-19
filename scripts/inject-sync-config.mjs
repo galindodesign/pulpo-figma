@@ -60,7 +60,7 @@ function injectFile(filePath) {
   console.log('Injected sync config into', path.relative(ROOT, filePath));
 }
 
-const syncConfigOut = path.join(ROOT, 'build', 'sync-config.js');
+const syncConfigOut = path.join(ROOT, 'build-dev', 'sync-config.js');
 fs.mkdirSync(path.dirname(syncConfigOut), { recursive: true });
 fs.copyFileSync(path.join(ROOT, 'sync-config.js'), syncConfigOut);
 injectFile(syncConfigOut);

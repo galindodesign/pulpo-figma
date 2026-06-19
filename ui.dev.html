@@ -9547,7 +9547,7 @@
         if (!window.PulpoSync) {
           syncBtn.onclick = (e) => {
             e.preventDefault();
-            alert('Pulpo sync failed to load. Re-import build/manifest.json (Pulpo Connect Dev) from the latest build.');
+            alert('Pulpo sync failed to load. Re-import build-dev/manifest.json (Pulpo Connect Dev) from the latest build.');
           };
         } else {
           syncBtn.onclick = async (e) => {
@@ -10550,7 +10550,7 @@
 
       const openPanel = () => {
         if (!window.PulpoSync) {
-          alert('Pulpo sync failed to load. Re-import build/manifest.json from the latest build.');
+          alert('Pulpo sync failed to load. Re-import build-dev/manifest.json from the latest build.');
           return;
         }
         if (panel) {
@@ -10572,7 +10572,7 @@
 
       if (!window.PulpoSync) {
         if (statusEl) {
-          statusEl.textContent = 'Sync module failed to load — re-import build/manifest.json.';
+          statusEl.textContent = 'Sync module failed to load — re-import build-dev/manifest.json.';
           statusEl.className = 'pulpo-sync-panel__status err';
         }
         return;
