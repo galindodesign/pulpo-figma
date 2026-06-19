@@ -1,0 +1,21 @@
+{
+  "name": "Pulpo Connect (Dev)",
+  "id": "1587429600000000001",
+  "api": "1.0.0",
+  "main": "build/code.js",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "documentAccess": "dynamic-page",
+  "editorType": [
+    "figma"
+  ],
+  "ui": "build/ui.dev.html",
+  "networkAccess": {
+    "allowedDomains": [
+      "https://fonts.googleapis.com",
+      "https://fonts.gstatic.com",
+      "https://*.supabase.co"
+    ],
+    "reasoning": "Pair and sync experiment flows to Pulpo workspaces on Supabase."
+  }
+}
