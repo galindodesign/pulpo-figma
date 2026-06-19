@@ -10,6 +10,7 @@
     "generate:site-urls": "node scripts/inject-site-urls.mjs",
     "build": "npm run generate:tokens && npm run generate:brand-icons && npm run generate:brand-logo && node esbuild.config.js && npm run postbuild",
     "postbuild": "mkdir -p build/fonts build/assets && cp design-tokens.css build/design-tokens.css && cp ui.css build/ui.css && npm run generate:site-urls && cp fonts/*.woff2 build/fonts/ && cp assets/*.png build/assets/",
+    "build:dev": "mkdir -p build-dev && cp ui.dev.html build-dev/ui.dev.html && node scripts/generate-dev-manifest.mjs && node scripts/inject-sync-config.mjs",
     "build:tsc": "tsc -p tsconfig.json",
     "lint": "eslint --ext .ts --ignore-pattern node_modules .",
     "lint:fix": "eslint --ext .ts --ignore-pattern node_modules --fix .",

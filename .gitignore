@@ -1,4 +1,5 @@
 # Ignore build outputs
+build-dev/
 build/code.js
 build/code.js.map
 ui.js
