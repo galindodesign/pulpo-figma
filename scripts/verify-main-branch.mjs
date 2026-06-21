@@ -36,10 +36,15 @@ const DEV_ONLY_PATHS = [
 const FORBIDDEN_UI_MARKERS = [
   'Connect to Pulpo',
   'btnPulpoConnect',
+  'btnPulpoConnectIntro',
+  'btnPulpoConnectFooter',
+  'pulpoSyncPanel',
+  'pulpoSyncBadge',
+  'intro-screen__sync-badge',
   'PulpoSync',
   'sync-to-pulpo',
-  'pulpoSyncPanel',
   'syncToPulpo',
+  'Web sync enabled',
 ];
 
 function checkFile(relativePath, forbiddenMarkers = FORBIDDEN_UI_MARKERS) {
