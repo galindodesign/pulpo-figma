@@ -1,7 +1,9 @@
 // esbuild.config.js
 const esbuild = require('esbuild');
 
-esbuild.build({
+const watch = process.argv.includes('--watch');
+
+const options = {
   entryPoints: ['code.ts'],
   bundle: true,
   outfile: 'build/code.js',
@@ -12,4 +14,17 @@ esbuild.build({
   external: [],
   logLevel: 'info',
   loader: { '.ts': 'ts', '.js': 'js' },
-}).catch(() => process.exit(1));
+};
+
+async function main() {
+  if (watch) {
+    const ctx = await esbuild.context(options);
+    await ctx.watch();
+    console.log('Watching code.ts → build/code.js');
+    return;
+  }
+
+  await esbuild.build(options);
+}
+
+main().catch(() => process.exit(1));
