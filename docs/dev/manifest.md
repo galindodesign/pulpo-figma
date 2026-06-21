@@ -1,40 +1,20 @@
-# Plugin manifests
+# Plugin manifest (live)
 
 Figma only accepts a file named **`manifest.json`** on import.
 
-## Two plugins, two UI files
+**Branch workflow:** [BRANCHES.md](./BRANCHES.md)
 
-| Source | Built output | Plugin | Web sync |
-|--------|--------------|--------|----------|
-| **`ui.html`** | `build/ui.html` | **Pulpo** (Community / `main`) | No |
-| **`ui.dev.html`** | `build-dev/ui.dev.html` | **Pulpo Connect (Dev)** | Yes |
-
-**Rule:** All sync/connect UI work goes in **`ui.dev.html` only**. Do not edit `ui.html` until ready to ship sync to Community.
-
-| Manifest template | Import in Figma |
-|-------------------|-----------------|
-| root `manifest.json` | Community build (`npm run build`) |
-| `manifest.sync.json` → `build-dev/manifest.json` | Dev build (`npm run build:dev`) |
-
-## Pulpo Connect (Dev)
+## Pulpo (live) — main branch
 
 ```bash
-git checkout feature/pulpo-web-sync
-npm run build:dev
-```
-
-**Plugins → Development → Import** → `build-dev/manifest.json` (uses `build-dev/ui.dev.html`).
-
-## Pulpo (Community)
-
-```bash
-git checkout main   # or build without dev steps
+git checkout main
 npm run build
+npm run verify:main
 ```
 
-**Plugins → Development → Import** → root `manifest.json` (uses `build/ui.html`).
+**Plugins → Development → Import** → root **`manifest.json`** (uses `build/ui.html`).
 
-See [sync-to-pulpo.md](../guide/sync-to-pulpo.md).
+Web sync sandbox is on the **`dev-work`** branch only.
 
 ## Official reference
 

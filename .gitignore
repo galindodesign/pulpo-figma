@@ -18,5 +18,9 @@ dist/
 docs/.vitepress/dist
 docs/.vitepress/cache
 
+# macOS
+.DS_Store
+**/.DS_Store
+
 # Archived documentation (historical process docs)
 _archive/
