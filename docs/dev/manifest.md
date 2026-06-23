@@ -2,19 +2,16 @@
 
 Figma only accepts a file named **`manifest.json`** on import.
 
-**Branch workflow:** [BRANCHES.md](./BRANCHES.md)
-
-## Pulpo (live) — main branch
+## Pulpo for Figma
 
 ```bash
-git checkout main
 npm run build
 npm run verify:main
 ```
 
 **Plugins → Development → Import** → root **`manifest.json`** (uses `build/ui.html`).
 
-Web sync sandbox is on the **`dev-work`** branch only.
+Publish to Community from that import only. There is no separate dev/sync plugin in this repo.
 
 ## Official reference
 

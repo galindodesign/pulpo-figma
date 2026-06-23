@@ -32,8 +32,8 @@ if (!buildUi.includes("window.__PULPO_PLUGIN_BUILD__ = 'live-main'")) {
 
 console.log('\nLive plugin is ready to import in Figma Desktop.\n');
 console.log(`Manifest: ${manifestPath}`);
-console.log('\nIn Figma Desktop (required for Community publish):');
-console.log('  1. Plugins → Development → Remove any old Pulpo dev imports');
+console.log('\nIn Figma Desktop:');
+console.log('  1. Plugins → Development → Remove "Pulpo Connect (Dev)" and any duplicate Pulpo imports');
 console.log('  2. Plugins → Development → Import plugin from manifest…');
 console.log(`     → ${manifestPath}`);
 console.log('  3. Run the plugin — console should show: [Pulpo] build live-main — no sync UI');

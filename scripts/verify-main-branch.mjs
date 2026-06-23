@@ -22,7 +22,7 @@ if (ifMainOnly && branch !== 'main') {
 
 const errors = [];
 
-const DEV_ONLY_PATHS = [
+const FORBIDDEN_DEV_PATHS = [
   'ui.dev.html',
   'sync-to-pulpo.js',
   'sync-config.js',
@@ -58,9 +58,9 @@ function checkFile(relativePath, forbiddenMarkers = FORBIDDEN_UI_MARKERS) {
   }
 }
 
-for (const relativePath of DEV_ONLY_PATHS) {
+for (const relativePath of FORBIDDEN_DEV_PATHS) {
   if (fs.existsSync(path.join(ROOT, relativePath))) {
-    errors.push(`${relativePath} must not exist on main (dev-work only)`);
+    errors.push(`${relativePath} must not exist in the live plugin repo`);
   }
 }
 
@@ -95,7 +95,7 @@ if (errors.length) {
   for (const err of errors) {
     console.error(`  • ${err}`);
   }
-  console.error('\nLive plugin work belongs on main only. Sync sandbox belongs on dev-work.');
+  console.error('\nRemove dev/sync plugin files — live Pulpo uses ui.html → build/ui.html only.');
   process.exit(1);
 }
 
