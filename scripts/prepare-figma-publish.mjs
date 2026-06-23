@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build and verify the live plugin, then print Figma Desktop publish steps.
+ * Build and verify the plugin, then print Figma Desktop publish steps.
  * Run: npm run prepare:publish
  */
 
@@ -22,22 +22,24 @@ function run(label, cmd, args) {
 }
 
 run('Build', 'npm', ['run', 'build']);
-run('Verify', 'npm', ['run', 'verify:main']);
+run('Verify', 'npm', ['run', 'verify:plugin']);
 
+const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 const buildUi = fs.readFileSync(path.join(ROOT, 'build', 'ui.html'), 'utf8');
-if (!buildUi.includes("window.__PULPO_PLUGIN_BUILD__ = 'live-main'")) {
-  console.error('build/ui.html is missing live build marker.');
+if (!buildUi.includes(`[Pulpo] v${pkg.version}`)) {
+  console.error('build/ui.html is missing the version console marker.');
   process.exit(1);
 }
 
-console.log('\nLive plugin is ready to import in Figma Desktop.\n');
+console.log('\nPlugin is ready to import in Figma Desktop.\n');
 console.log(`Manifest: ${manifestPath}`);
+console.log(`Version: v${pkg.version}`);
 console.log('\nIn Figma Desktop:');
-console.log('  1. Plugins → Development → Remove "Pulpo Connect (Dev)" and any duplicate Pulpo imports');
+console.log('  1. Plugins → Development → Remove duplicate Pulpo imports (keep one)');
 console.log('  2. Plugins → Development → Import plugin from manifest…');
 console.log(`     → ${manifestPath}`);
-console.log('  3. Run the plugin — console should show: [Pulpo] build live-main — no sync UI');
-console.log('  4. Intro should have New experiment / Load example only (no Connect to Pulpo)');
+console.log(`  3. Run the plugin — console should show: [Pulpo] v${pkg.version}`);
+console.log('  4. Intro should have New experiment / Load example only');
 console.log('  5. Plugins → Development → Publish → Publish update to Community');
 console.log('\nFigma web (figma.com) uses the last Community publish, not local files.');
 console.log('After step 5, hard-refresh Figma in the browser to pick up the update.\n');

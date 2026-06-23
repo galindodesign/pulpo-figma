@@ -9,7 +9,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BUILD = path.join(__dirname, '..', 'build');
+const ROOT = path.join(__dirname, '..');
+const BUILD = path.join(ROOT, 'build');
+
+const LEGACY_DIRS = ['build-dev'];
+for (const dir of LEGACY_DIRS) {
+  const target = path.join(ROOT, dir);
+  if (fs.existsSync(target)) {
+    fs.rmSync(target, { recursive: true, force: true });
+  }
+}
 
 const FILES = [
   'code.js',

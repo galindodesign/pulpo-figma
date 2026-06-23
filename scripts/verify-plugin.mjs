@@ -1,28 +1,19 @@
 #!/usr/bin/env node
 /**
- * Ensures the repo matches main-branch (live / customer-facing) requirements.
- * Run on main before publish: npm run verify:main
- *
- * With --if-main: no-op when not on main (used by npm run build on main).
+ * Ensures the repo contains only the Pulpo for Figma plugin (no sync/connect UI).
+ * Run before publish: npm run verify:plugin
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getGitBranchName } from './git-branch-name.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const ifMainOnly = process.argv.includes('--if-main');
-const branch = getGitBranchName();
-
-if (ifMainOnly && branch !== 'main') {
-  process.exit(0);
-}
 
 const errors = [];
 
-const FORBIDDEN_DEV_PATHS = [
+const FORBIDDEN_PATHS = [
   'ui.dev.html',
   'sync-to-pulpo.js',
   'sync-config.js',
@@ -31,6 +22,8 @@ const FORBIDDEN_DEV_PATHS = [
   'scripts/generate-dev-manifest.mjs',
   'scripts/inject-sync-config.mjs',
   'scripts/ensure-dev-branch.mjs',
+  'scripts/clean-dev-artifacts.mjs',
+  'build-dev',
 ];
 
 const FORBIDDEN_UI_MARKERS = [
@@ -45,6 +38,7 @@ const FORBIDDEN_UI_MARKERS = [
   'sync-to-pulpo',
   'syncToPulpo',
   'Web sync enabled',
+  '__PULPO_PLUGIN_BUILD__',
 ];
 
 function checkFile(relativePath, forbiddenMarkers = FORBIDDEN_UI_MARKERS) {
@@ -53,14 +47,14 @@ function checkFile(relativePath, forbiddenMarkers = FORBIDDEN_UI_MARKERS) {
   const content = fs.readFileSync(full, 'utf8');
   for (const marker of forbiddenMarkers) {
     if (content.includes(marker)) {
-      errors.push(`${relativePath} must not contain "${marker}" on main`);
+      errors.push(`${relativePath} must not contain "${marker}"`);
     }
   }
 }
 
-for (const relativePath of FORBIDDEN_DEV_PATHS) {
+for (const relativePath of FORBIDDEN_PATHS) {
   if (fs.existsSync(path.join(ROOT, relativePath))) {
-    errors.push(`${relativePath} must not exist in the live plugin repo`);
+    errors.push(`${relativePath} must not exist`);
   }
 }
 
@@ -71,34 +65,27 @@ const manifestPath = path.join(ROOT, 'manifest.json');
 if (fs.existsSync(manifestPath)) {
   const manifest = fs.readFileSync(manifestPath, 'utf8');
   if (/ui\.dev\.html/i.test(manifest)) {
-    errors.push('manifest.json must not reference ui.dev.html on main');
+    errors.push('manifest.json must not reference ui.dev.html');
   }
   if (/supabase\.co/i.test(manifest)) {
-    errors.push('manifest.json must not allow supabase.co on main');
+    errors.push('manifest.json must not allow supabase.co');
   }
 }
 
 const packagePath = path.join(ROOT, 'package.json');
 if (fs.existsSync(packagePath)) {
   const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-  if (pkg.scripts?.['build:dev']) {
-    errors.push('package.json must not define build:dev on main');
+  if (pkg.scripts?.['build:dev'] || pkg.scripts?.['clean:dev']) {
+    errors.push('package.json must not define build:dev or clean:dev scripts');
   }
-}
-
-if (branch && branch !== 'main' && !ifMainOnly) {
-  console.warn(`Note: current branch is "${branch}" — verify:main checks live (main) requirements.`);
 }
 
 if (errors.length) {
-  console.error('Main branch verification failed:\n');
+  console.error('Plugin verification failed:\n');
   for (const err of errors) {
     console.error(`  • ${err}`);
   }
-  console.error('\nRemove dev/sync plugin files — live Pulpo uses ui.html → build/ui.html only.');
   process.exit(1);
 }
 
-if (!ifMainOnly) {
-  console.log('Main branch verification passed.');
-}
+console.log('Plugin verification passed.');

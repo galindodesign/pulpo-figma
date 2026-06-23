@@ -14,6 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 
 const {
+  PLUGIN_VERSION,
   DOCS_SITE_URL,
   DOCS_GETTING_STARTED_URL,
   DOCS_FAQ_URL,
@@ -32,6 +33,7 @@ if (!fs.existsSync(srcHtml)) {
 }
 
 const replacements = new Map([
+  ['@PULPO_PLUGIN_VERSION@', PLUGIN_VERSION],
   ['@PULPO_DOCS_SITE_URL@', DOCS_SITE_URL],
   ['@PULPO_DOCS_GETTING_STARTED_URL@', DOCS_GETTING_STARTED_URL],
   ['@PULPO_DOCS_CONTACT_URL@', DOCS_CONTACT_URL],
