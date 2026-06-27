@@ -5,7 +5,7 @@
 Pulpo helps growth teams, designers, and PMs document what they're testing without leaving Figma. Fill in a short form, click **Create flow**, and get a readable experiment diagram your team can align on.
 
 **Docs:** [galindodesign.github.io/pulpo-figma](https://galindodesign.github.io/pulpo-figma/)  
-**Install:** [Pulpo on Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo)
+**Install:** [Pulpo on Figma Community](https://www.figma.com/community/plugin/1579196395853602242/pulpo-for-figma)
 
 Works in **Figma Design** only.
 
@@ -13,7 +13,7 @@ Works in **Figma Design** only.
 
 ## Quick start
 
-1. Install Pulpo from [Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo)
+1. Install Pulpo from [Figma Community](https://www.figma.com/community/plugin/1579196395853602242/pulpo-for-figma)
 2. Open any file → **Plugins → Pulpo**
 3. Click **Load example** to try a sample, or **New experiment** to start fresh
 4. Fill in **Experiment**, **Goals**, and **Journey** sections → **Create flow**

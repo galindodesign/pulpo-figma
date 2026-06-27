@@ -4,7 +4,7 @@
 
 In Figma: **Plugins → Manage plugins in Community** → search **Pulpo** → **Install**.
 
-Or open [Pulpo on Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo).
+Or open [Pulpo on Figma Community](https://www.figma.com/community/plugin/1579196395853602242/pulpo-for-figma).
 
 ## What's the minimum to create a flow?
 

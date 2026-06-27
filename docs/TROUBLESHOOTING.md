@@ -2,7 +2,7 @@
 
 ## I can't find Pulpo in Figma
 
-Install it from [Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo), then run **Plugins → Pulpo** in a **Figma Design** file.
+Install it from [Figma Community](https://www.figma.com/community/plugin/1579196395853602242/pulpo-for-figma), then run **Plugins → Pulpo** in a **Figma Design** file.
 
 For local development builds, use **Plugins → Development → Import plugin from manifest…**
 

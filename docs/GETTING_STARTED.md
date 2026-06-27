@@ -8,7 +8,7 @@ Create a complete experiment flow in about five minutes.
 2. Search for **Pulpo**
 3. Click **Install**
 
-Or open [Pulpo on Figma Community](https://www.figma.com/community/search?resource_type=plugins&q=Pulpo).
+Or open [Pulpo on Figma Community](https://www.figma.com/community/plugin/1579196395853602242/pulpo-for-figma).
 
 Works in **Figma Design** only.
 

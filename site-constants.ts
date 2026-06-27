@@ -13,7 +13,7 @@ export const PLUGIN_VERSION = pkg.version;
 
 /** Figma Community plugin page — update when published. */
 export const FIGMA_COMMUNITY_URL =
-  'https://www.figma.com/community/search?resource_type=plugins&q=Pulpo';
+  'https://www.figma.com/community/plugin/1579196395853602242/pulpo-for-figma';
 
 /** Public docs site (GitHub Pages). Update base when adding a custom domain. */
 export const DOCS_SITE_URL = 'https://galindodesign.github.io/pulpo-figma/';
